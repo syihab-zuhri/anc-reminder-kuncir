@@ -59,10 +59,12 @@ bukan credential.
 ```powershell
 npm run verify
 npm run db:verify:phase1
+npm run test:smoke:idempotency
 ```
 
 `verify` menjalankan format check, lint, typecheck, test, build, dan secret-pattern scan. Dependency audit dijalankan terpisah lewat `npm run security:dependencies` dan pada CI.
 `db:verify:phase1` membutuhkan `DATABASE_URL` yang telah dimigrasikan dan menguji constraint Phase 1 dengan data sintetis yang selalu di-rollback.
+`test:smoke:idempotency` membutuhkan build package terbaru dan database termigrasi; row sintetis dibersihkan setelah test.
 
 ## Invariant implementasi
 

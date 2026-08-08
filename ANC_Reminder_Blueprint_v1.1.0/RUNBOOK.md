@@ -37,6 +37,8 @@ Staff login; mother name+code; dashboard; K3 confirm by Bidan; Bidan denied deta
 The implemented Phase 1 subset is automated by `npm run test:smoke:auth`: login, identity lookup,
 single-use refresh rotation, old-token rejection, Puskesmas-scoped village/facility/Bidan/assignment
 management, Bidan management denial, disable-triggered session revocation, and logout.
+`npm run test:smoke:idempotency` verifies one execution/one replay under concurrent same-key requests
+and rejects same-key/different-request reuse.
 
 ## 6. Rollback
 Stop new worker claims if needed → roll back application version → apply compatible DB recovery strategy → verify reminder dedupe before resuming worker.
@@ -83,6 +85,8 @@ Disable the affected Bidan from the Puskesmas staff endpoint or revoke the speci
 required reason. Both paths invalidate access on the next request and create immutable audit evidence.
 Rotating `SESSION_SECRET` invalidates all outstanding staff token hashes and therefore requires an
 explicit all-user reauthentication plan.
+Rotating `IDEMPOTENCY_SECRET` makes a pre-rotation key/fingerprint pair fail closed as `409`; operators
+must reconcile the referenced mutation state before the client issues a new idempotency key.
 
 ### Bumil lost code
 Puskesmas reissues; old credential revoked.

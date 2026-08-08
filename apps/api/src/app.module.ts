@@ -43,6 +43,7 @@ import {
   type OrganizationScopeRepository,
 } from "./organization/organization-scope.repository.js";
 import { OrganizationScopeService } from "./organization/organization-scope.service.js";
+import { IdempotencyService } from "./idempotency/idempotency.service.js";
 
 export interface AppModuleOptions {
   readonly config: ApiConfig;
@@ -113,6 +114,7 @@ export class AppModule {
         StaffAuthGuard,
         OrganizationScopeService,
         ScopedAccessService,
+        IdempotencyService,
       ],
     };
   }

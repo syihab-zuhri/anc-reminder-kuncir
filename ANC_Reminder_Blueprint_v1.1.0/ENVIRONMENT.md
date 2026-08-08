@@ -24,6 +24,7 @@ No secrets in repository/docs. Validate required variables at startup. Separate 
 | `API_BASE_URL` | Yes | API origin |
 | `SESSION_SECRET` | Yes | Server session signing/encryption secret |
 | `MOTHER_SESSION_SECRET` | Yes | Restricted mother session secret |
+| `IDEMPOTENCY_SECRET` | Yes | Dedicated HMAC secret for request fingerprints; distinct from session secrets |
 | `STAFF_ACCESS_TOKEN_TTL_MINUTES` | API env | Staff access-token lifetime; default `15` |
 | `STAFF_REFRESH_TOKEN_TTL_DAYS` | API env | Staff refresh-token lifetime; default `7` |
 | `STAFF_LOGIN_MAX_FAILURES` | API env | Consecutive failures before lock; default `5` |
@@ -41,7 +42,7 @@ No secrets in repository/docs. Validate required variables at startup. Separate 
 
 No WhatsApp API key/token exists in MVP configuration.
 
-Production requires HTTPS for `APP_BASE_URL`, `API_BASE_URL`, and remote PostgreSQL TLS (`sslmode=require`, `verify-ca`, or `verify-full`). Session secrets are at least 32 characters and must be distinct. `REMINDER_INTERVAL_DAYS` is validated as the confirmed value `3`.
+Production requires HTTPS for `APP_BASE_URL`, `API_BASE_URL`, and remote PostgreSQL TLS (`sslmode=require`, `verify-ca`, or `verify-full`). Session/idempotency secrets are at least 32 characters and all must be distinct. `REMINDER_INTERVAL_DAYS` is validated as the confirmed value `3`.
 
 ## 3. `.env.example`
 
@@ -54,6 +55,7 @@ APP_BASE_URL=http://localhost:3000
 API_BASE_URL=http://localhost:3001/api/v1
 SESSION_SECRET=replace-with-at-least-32-random-characters
 MOTHER_SESSION_SECRET=replace-with-a-different-32-character-secret
+IDEMPOTENCY_SECRET=replace-with-a-third-distinct-32-character-secret
 STAFF_ACCESS_TOKEN_TTL_MINUTES=15
 STAFF_REFRESH_TOKEN_TTL_DAYS=7
 STAFF_LOGIN_MAX_FAILURES=5
@@ -80,7 +82,7 @@ Database available → migrations → seed synthetic care-plan version → serve
 
 ## 6. Secret Rotation Ownership
 
-DevOps owns infrastructure/FCM/session secret rotation with Backend support. Rotation procedure must avoid invalidating active sessions unexpectedly unless incident response requires it.
+DevOps owns infrastructure/FCM/session/idempotency secret rotation with Backend support. Rotation procedure must avoid invalidating active sessions unexpectedly unless incident response requires it. After `IDEMPOTENCY_SECRET` rotation, reuse of a pre-rotation key fails closed as HTTP `409`; reconcile the original resource before issuing a new key.
 
 ## 7. Seed Policy
 

@@ -111,6 +111,7 @@ export const apiEnvironmentSchema = z
     API_BASE_URL: httpUrl,
     SESSION_SECRET: requiredText.min(32),
     MOTHER_SESSION_SECRET: requiredText.min(32),
+    IDEMPOTENCY_SECRET: requiredText.min(32),
     STAFF_ACCESS_TOKEN_TTL_MINUTES: positiveInteger("15"),
     STAFF_REFRESH_TOKEN_TTL_DAYS: positiveInteger("7"),
     STAFF_LOGIN_MAX_FAILURES: positiveInteger("5"),
@@ -124,6 +125,17 @@ export const apiEnvironmentSchema = z
         code: "custom",
         message: "SESSION_SECRET and MOTHER_SESSION_SECRET must be distinct",
         path: ["MOTHER_SESSION_SECRET"],
+      });
+    }
+
+    if (
+      environment.IDEMPOTENCY_SECRET === environment.SESSION_SECRET ||
+      environment.IDEMPOTENCY_SECRET === environment.MOTHER_SESSION_SECRET
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "IDEMPOTENCY_SECRET must be distinct from session secrets",
+        path: ["IDEMPOTENCY_SECRET"],
       });
     }
 
@@ -148,6 +160,7 @@ export const apiEnvironmentSchema = z
     apiBaseUrl: environment.API_BASE_URL,
     sessionSecret: environment.SESSION_SECRET,
     motherSessionSecret: environment.MOTHER_SESSION_SECRET,
+    idempotencySecret: environment.IDEMPOTENCY_SECRET,
     staffAccessTokenTtlMinutes: environment.STAFF_ACCESS_TOKEN_TTL_MINUTES,
     staffRefreshTokenTtlDays: environment.STAFF_REFRESH_TOKEN_TTL_DAYS,
     staffLoginMaxFailures: environment.STAFF_LOGIN_MAX_FAILURES,

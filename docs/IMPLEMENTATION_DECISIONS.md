@@ -22,6 +22,7 @@ Catatan ini melengkapi—dan tidak menggantikan—ADR pada blueprint.
 - `health_centers` adalah batas organisasi Puskesmas. Foreign key komposit mencegah village/facility/mother terhubung lintas health center.
 - Puskesmas adalah superset capability Bidan. Super Admin hanya memiliki self-read dan ditolak dari health-data routine sampai break-glass diputuskan dan diimplementasikan.
 - Provisioning akun Puskesmas pertama adalah command eksplisit dengan confirmation phrase; endpoint staff biasa hanya dapat membuat akun `BIDAN` pada scope Puskesmas aktor.
+- Idempotency uses a PostgreSQL record scoped by actor + operation + UUID key, but persists only an HMAC request fingerprint and domain resource reference. A dedicated secret, separate from session secrets, keys the fingerprint. Advisory transaction locks serialize same-key races; serializable/deadlock errors retry at most three times. Domain unique constraints remain authoritative.
 
 ## Deferred sampai owner approval
 

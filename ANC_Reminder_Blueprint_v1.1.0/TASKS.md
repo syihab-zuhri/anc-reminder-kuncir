@@ -158,11 +158,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Depends on: TASK-P1-003, TASK-P1-004
   - Done when: Super Admin ditolak default dan expiry/audit test lulus, atau feature dipindah Deferred.
 
-- [ ] `TASK-P1-006` [M] Implement API validation, canonical errors, idempotency, dan concurrency helpers
+- [x] `TASK-P1-006` [M] Implement API validation, canonical errors, idempotency, dan concurrency helpers
   - Owner: Backend
   - References: DOC-API
   - Depends on: TASK-P0-005, TASK-P0-007
   - Done when: shared validation/error/idempotency tests lulus.
+  - Evidence: strict Zod parsing/canonical field errors, UUID idempotency contract, HMAC request fingerprint, resource-reference-only persistence, advisory-lock + serializable retry coordinator, conflict mapping, unit tests, migration `down → up`, dan concurrent PostgreSQL smoke lulus.
 
 - [ ] `TASK-P1-007` [M] Implement Web staff login/session/forbidden states
   - Owner: Frontend

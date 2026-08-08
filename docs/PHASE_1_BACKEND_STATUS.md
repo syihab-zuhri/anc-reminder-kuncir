@@ -1,7 +1,7 @@
 # Phase 1 Backend Security Status
 
 Date: 2026-08-08  
-Scope: `TASK-P1-001` through `TASK-P1-004`
+Scope: `TASK-P1-001` through `TASK-P1-004`, plus `TASK-P1-006`
 
 ## Implemented
 
@@ -12,14 +12,16 @@ Scope: `TASK-P1-001` through `TASK-P1-004`
 - Server-side mother-scope repository for Puskesmas center scope and Bidan explicit mother/area assignments.
 - Append-only audit repository with allowlisted, redacted metadata for authentication and organization security actions.
 - Explicit initial-Puskesmas provisioner with confirmation phrase and no credential output.
+- Shared idempotency/concurrency coordinator with keyed request fingerprint, safe resource replay, same-key conflict detection, and bounded serializable retry.
 
 ## Local verification
 
-- Full workspace: format, lint, strict typecheck, 52 tests, all production builds, secret scan, and dependency audit passed.
+- Full workspace: format, lint, strict typecheck, 60 tests, all production builds, secret scan, and dependency audit passed.
 - API: 6 files / 18 tests, including generic login failure, persistent lockout, concurrent refresh replay, immediate revocation, role/scope negatives, and audit redaction.
 - PostgreSQL 17: Phase 1 migration `up → down → up` passed while preserving the baseline.
 - Database verifier: required schema, absence of raw-token columns, cross-center composite FK rejection, and SQLSTATE `55000` append-only audit rejection passed.
 - Real API/database smoke: login, `/staff/me`, refresh rotation, old-token rejection, village/facility/Bidan/assignment CRUD path, Bidan `403`, disable-triggered session revocation, and logout passed.
+- Real concurrency smoke: two simultaneous same-key mutations produced one execution and one resource replay; same-key/different-request reuse was rejected.
 
 ## Security invariants
 
@@ -31,7 +33,6 @@ Scope: `TASK-P1-001` through `TASK-P1-004`
 ## Still pending in Phase 1
 
 - `TASK-P1-005`: break-glass remains `PROPOSED`; Super Admin is denied by default.
-- `TASK-P1-006`: generic idempotency/concurrency helpers beyond atomic refresh rotation.
 - `TASK-P1-007`: Web login/session-expired/forbidden/logout experience.
 - `TASK-P1-008`: owner decision and possible MFA implementation for Puskesmas/Super Admin.
 

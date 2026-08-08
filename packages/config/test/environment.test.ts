@@ -6,6 +6,7 @@ const commonEnvironment = {
   DATABASE_URL: "postgresql://anc:secret@localhost:5432/anc_test",
   PUSH_BACKOFF_SECONDS: "30, 120,600",
   WA_FALLBACK_ESCALATION_HOURS: "24",
+  IDEMPOTENCY_SECRET: "synthetic-idempotency-test-secret-001",
 };
 
 describe("loadApiConfig", () => {
@@ -27,6 +28,7 @@ describe("loadApiConfig", () => {
       apiBaseUrl: "http://localhost:3001",
       sessionSecret: "synthetic-api-test-secret-00000001",
       motherSessionSecret: "synthetic-mother-test-secret-000001",
+      idempotencySecret: "synthetic-idempotency-test-secret-001",
       staffAccessTokenTtlMinutes: 15,
       staffRefreshTokenTtlDays: 7,
       staffLoginMaxFailures: 5,
@@ -77,6 +79,7 @@ describe("loadApiConfig", () => {
         API_BASE_URL: "http://api.example.test",
         SESSION_SECRET: sharedSecret,
         MOTHER_SESSION_SECRET: sharedSecret,
+        IDEMPOTENCY_SECRET: sharedSecret,
       }),
     ).toThrow();
   });

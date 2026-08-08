@@ -75,6 +75,7 @@ Hosted CI passed, including migration rollback/forward evidence for `TASK-P0-005
 | Authorization | Puskesmas superset, Bidan/cross-center denial, Super Admin deny-by-default | Pass |
 | Audit | Allowlisted/redacted metadata and PostgreSQL SQLSTATE `55000` mutation rejection | Pass |
 | Migration | Phase 1 PostgreSQL 17 `up → down → up`, same-center composite FK verifier | Pass locally |
+| API safety | Strict validation, canonical conflict, HMAC idempotency metadata, concurrent execution/replay smoke | Pass locally |
 
 Protected pull-request CI repeats migration, database verification, static checks, tests, builds, API health,
 and real PostgreSQL Phase 1 smoke before merge.

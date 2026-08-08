@@ -291,6 +291,15 @@ Append-only.
 - `metadata jsonb` redacted
 - `created_at`
 
+### `api_idempotency_records`
+Shared mutation coordination metadata; no request/response body.
+- `id uuid PK`
+- `actor_key text`, `operation text`, `idempotency_key uuid`
+- `request_hash text` — keyed HMAC fingerprint only
+- `result_resource_type text`, `result_resource_id uuid`, `completed_at timestamptz` as one completion group
+- unique `(actor_key, operation, idempotency_key)`
+- `created_at`
+
 ## 3. Indexes by Query Pattern
 
 - `pregnancy_milestones (pregnancy_id, code)` unique.
@@ -302,6 +311,7 @@ Append-only.
 - `staff_sessions (access_token_hash, access_expires_at)` and `(refresh_token_hash, refresh_expires_at)` for active-session lookup.
 - `villages (health_center_id, status, name)` and `facilities (health_center_id, status, name)`.
 - `program_assessments (pregnancy_id, evaluated_at desc)`.
+- `api_idempotency_records (actor_key, operation, idempotency_key)` unique.
 
 ## 4. Sensitivity
 
