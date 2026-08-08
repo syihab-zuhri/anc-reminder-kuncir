@@ -124,29 +124,33 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
 
 ## Phase 1 — Data, Auth & Security Baseline
 
-- [ ] `TASK-P1-001` [L] Implement staff users, password hashing, login, refresh/session revocation
+- [x] `TASK-P1-001` [L] Implement staff users, password hashing, login, refresh/session revocation
   - Owner: Backend
   - References: FR-001, PRD-STAFF, API-AUTH-001–005
   - Depends on: TASK-P0-005, TASK-P0-007
   - Done when: auth/session security suite lulus.
+  - Evidence: salted scrypt, opaque hashed session credentials, persistent lockout, atomic single-use refresh, logout/revocation, 18 API tests, dan PostgreSQL-backed auth smoke lulus.
 
-- [ ] `TASK-P1-002` [M] Implement organization, village, facility, dan staff assignment tables/services
+- [x] `TASK-P1-002` [M] Implement organization, village, facility, dan staff assignment tables/services
   - Owner: Backend
   - References: FR-003, DOC-ERD
   - Depends on: TASK-P0-005, TASK-P0-007
   - Done when: scoped CRUD integration tests lulus.
+  - Evidence: migration, scoped CRUD integration tests, composite same-center FK test, dan real PostgreSQL organization smoke lulus.
 
-- [ ] `TASK-P1-003` [L] Implement centralized authorization policy dan scoped repositories di server
+- [x] `TASK-P1-003` [L] Implement centralized authorization policy dan scoped repositories di server
   - Owner: Backend + Security
   - References: FR-002, DOC-PERMISSION, `CR-2026-08-08`
   - Depends on: TASK-P1-001, TASK-P1-002
   - Done when: cross-role/cross-area negative tests lulus dan UI hiding bukan satu-satunya kontrol.
+  - Evidence: deny-by-default capability policy, server-side mother scope repository, Puskesmas-superset test, Super Admin default denial, Bidan/cross-center negative tests, dan HTTP 403 smoke lulus.
 
-- [ ] `TASK-P1-004` [M] Implement append-only audit service dengan safe metadata policy
+- [x] `TASK-P1-004` [M] Implement append-only audit service dengan safe metadata policy
   - Owner: Backend
   - References: FR-022, NFR-015, DOC-SECURITY
   - Depends on: TASK-P0-005, TASK-P0-006
   - Done when: konfirmasi/validasi dan critical actions memiliki immutable audit event.
+  - Evidence: audit service diterapkan pada auth, session, staff, organization, dan assignment security actions; metadata allowlist/redaction test serta PostgreSQL append-only mutation rejection lulus. Domain confirmation/validation akan memakai service ini pada owning task Phase 2.
 
 - [ ] `TASK-P1-005` [L] Implement break-glass grant/expiry/audit jika tetap P0 setelah review
   - Owner: Backend + Security

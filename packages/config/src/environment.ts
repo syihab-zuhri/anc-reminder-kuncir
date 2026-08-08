@@ -111,6 +111,10 @@ export const apiEnvironmentSchema = z
     API_BASE_URL: httpUrl,
     SESSION_SECRET: requiredText.min(32),
     MOTHER_SESSION_SECRET: requiredText.min(32),
+    STAFF_ACCESS_TOKEN_TTL_MINUTES: positiveInteger("15"),
+    STAFF_REFRESH_TOKEN_TTL_DAYS: positiveInteger("7"),
+    STAFF_LOGIN_MAX_FAILURES: positiveInteger("5"),
+    STAFF_LOGIN_LOCK_MINUTES: positiveInteger("15"),
   })
   .superRefine((environment, context) => {
     requireProductionDatabaseTls(environment, context);
@@ -144,6 +148,10 @@ export const apiEnvironmentSchema = z
     apiBaseUrl: environment.API_BASE_URL,
     sessionSecret: environment.SESSION_SECRET,
     motherSessionSecret: environment.MOTHER_SESSION_SECRET,
+    staffAccessTokenTtlMinutes: environment.STAFF_ACCESS_TOKEN_TTL_MINUTES,
+    staffRefreshTokenTtlDays: environment.STAFF_REFRESH_TOKEN_TTL_DAYS,
+    staffLoginMaxFailures: environment.STAFF_LOGIN_MAX_FAILURES,
+    staffLoginLockMinutes: environment.STAFF_LOGIN_LOCK_MINUTES,
     reminderIntervalDays: environment.REMINDER_INTERVAL_DAYS,
     pushMaxAttempts: environment.PUSH_MAX_ATTEMPTS,
     pushBackoffSeconds: environment.PUSH_BACKOFF_SECONDS,

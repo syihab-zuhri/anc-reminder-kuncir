@@ -9,7 +9,8 @@
 > **Depends On:** DOC-ENV, DOC-ARCH
 
 ## 1. Status
-Design-ready; execute only after implementation.
+Phase 1 staff authentication, scoped organization management, and audit path are executable. Later
+domain/worker/Web smoke items remain design-ready until their owning phase is implemented.
 
 ## 2. Prerequisites
 Approved build, migrations reviewed, secrets provisioned, FCM configured, clinical rule seed approved for environment, backup ready.
@@ -20,8 +21,22 @@ DB migration → API → worker → Web → Android WebView release/config → s
 ## 4. Database Migration
 Backup/restore point before breaking migration. Forward migration preferred; destructive schema changes require explicit rollback/recovery plan.
 
+For Phase 1 rehearsal: `npm run db:migrate` → `npm run db:verify:phase1`. The verifier uses only
+synthetic rows inside a rollback transaction. Validate `npm run db:rollback` → `npm run db:migrate`
+in staging before production rollout.
+
+### Initial Puskesmas operator
+
+After migration, set the transient `PROVISION_*` inputs documented in `DOC-ENV`, including the exact
+confirmation phrase `CREATE_INITIAL_PUSKESMAS`, then run `npm run staff:provision:puskesmas`.
+The command refuses a second Puskesmas account for the same health center and never prints the password.
+
 ## 5. Smoke Tests
 Staff login; mother name+code; dashboard; K3 confirm by Bidan; Bidan denied detail write; Puskesmas detail validation; forced push terminal failure creates WA action; WA link generation; program status read.
+
+The implemented Phase 1 subset is automated by `npm run test:smoke:auth`: login, identity lookup,
+single-use refresh rotation, old-token rejection, Puskesmas-scoped village/facility/Bidan/assignment
+management, Bidan management denial, disable-triggered session revocation, and logout.
 
 ## 6. Rollback
 Stop new worker claims if needed → roll back application version → apply compatible DB recovery strategy → verify reminder dedupe before resuming worker.
@@ -62,6 +77,12 @@ Transaction/idempotency should suppress. Pause affected worker partition if repe
 
 ### Server unavailable
 Web/WebView shows retry; check DB/API/runtime; clients do not switch to local authoritative mode.
+
+### Staff credential or session incident
+Disable the affected Bidan from the Puskesmas staff endpoint or revoke the specific session with a
+required reason. Both paths invalidate access on the next request and create immutable audit evidence.
+Rotating `SESSION_SECRET` invalidates all outstanding staff token hashes and therefore requires an
+explicit all-user reauthentication plan.
 
 ### Bumil lost code
 Puskesmas reissues; old credential revoked.

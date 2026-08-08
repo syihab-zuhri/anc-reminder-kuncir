@@ -6,6 +6,12 @@ import type { DatabasePool } from "@anc/database";
 import { AppModule } from "./app.module.js";
 import type { DatabasePoolClose } from "./infrastructure/database-lifecycle.service.js";
 import type { DatabaseReadinessCheck } from "./health/health.service.js";
+import type { StaffAuthRepository } from "./auth/staff-auth.repository.js";
+import type { AuditRepository } from "./audit/audit.repository.js";
+import { AuditService } from "./audit/audit.service.js";
+import type { Clock } from "./auth/staff-auth.service.js";
+import type { OrganizationScopeRepository } from "./organization/organization-scope.repository.js";
+import type { ScopedAccessRepository } from "./authorization/scoped-access.repository.js";
 import { CanonicalErrorFilter } from "./errors/canonical-error.filter.js";
 import { HttpLoggingInterceptor } from "./observability/http-logging.interceptor.js";
 import { JsonLogger } from "./observability/json-logger.js";
@@ -20,6 +26,11 @@ export interface CreateApiApplicationOptions {
   readonly closePool?: DatabasePoolClose;
   readonly logger?: JsonLogger;
   readonly enableShutdownHooks?: boolean;
+  readonly staffAuthRepository?: StaffAuthRepository;
+  readonly organizationScopeRepository?: OrganizationScopeRepository;
+  readonly scopedAccessRepository?: ScopedAccessRepository;
+  readonly auditRepository?: AuditRepository;
+  readonly clock?: Clock;
 }
 
 export async function createApiApplication(
@@ -37,6 +48,19 @@ export async function createApiApplication(
       databasePool: options.databasePool,
       ...(options.readinessCheck === undefined ? {} : { readinessCheck: options.readinessCheck }),
       ...(options.closePool === undefined ? {} : { closePool: options.closePool }),
+      ...(options.staffAuthRepository === undefined
+        ? {}
+        : { staffAuthRepository: options.staffAuthRepository }),
+      ...(options.organizationScopeRepository === undefined
+        ? {}
+        : { organizationScopeRepository: options.organizationScopeRepository }),
+      ...(options.scopedAccessRepository === undefined
+        ? {}
+        : { scopedAccessRepository: options.scopedAccessRepository }),
+      ...(options.auditRepository === undefined
+        ? {}
+        : { auditRepository: options.auditRepository }),
+      ...(options.clock === undefined ? {} : { clock: options.clock }),
     }),
     { logger },
   );
@@ -44,7 +68,7 @@ export async function createApiApplication(
   app.use(requestContextMiddleware);
   app.setGlobalPrefix(API_GLOBAL_PREFIX);
   app.useGlobalInterceptors(new HttpLoggingInterceptor(logger));
-  app.useGlobalFilters(new CanonicalErrorFilter(logger));
+  app.useGlobalFilters(new CanonicalErrorFilter(logger, app.get(AuditService)));
 
   if (options.enableShutdownHooks === true) {
     app.enableShutdownHooks();

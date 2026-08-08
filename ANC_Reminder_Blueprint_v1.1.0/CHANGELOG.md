@@ -8,6 +8,26 @@
 > **Last Updated:** 2026-08-08  
 > **Depends On:** All project documents
 
+## [2026-08-08] — Phase 1 Backend Security Baseline
+
+### Added
+
+- Staff authentication with salted scrypt, persistent lockout, opaque access/refresh tokens, atomic rotation, logout, and scoped revocation.
+- Village, facility, Bidan staff, and assignment services bounded by the Puskesmas health-center scope.
+- Central capability policy and scoped mother-access repository with Puskesmas-superset and Super Admin deny-by-default behavior.
+- Safe append-only audit service, initial Puskesmas provisioner, Phase 1 database verifier, and real PostgreSQL auth/organization smoke.
+
+### Verified Locally
+
+- Full workspace format, lint, strict typecheck, 52 tests, production builds, secret scan, and dependency audit pass.
+- 18 API security/integration tests pass, including concurrent refresh replay and cross-role/cross-center negatives.
+- PostgreSQL 17 Phase 1 migration passes `up → down → up`; raw-token absence, composite scope FK, and immutable audit controls pass.
+- Protected CI now provisions a synthetic Puskesmas and repeats the complete auth, organization, assignment, disable, and logout smoke path.
+
+### Still Pending
+
+- Web staff access, generic idempotency helpers, break-glass, and MFA decision remain in `TASK-P1-005`–`TASK-P1-008`.
+
 ## [2026-08-08] — Implementation Foundation 0.1.0
 
 ### Added

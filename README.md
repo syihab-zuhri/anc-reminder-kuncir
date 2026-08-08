@@ -14,7 +14,8 @@ Implementasi server-driven untuk memantau milestone K1–K8 melalui Web responsi
 - `packages/config` — validasi environment saat startup.
 - `packages/database` — pool PostgreSQL dan migration framework.
 
-Status verifikasi dan batas foundation dicatat di [`docs/FOUNDATION_STATUS.md`](./docs/FOUNDATION_STATUS.md).
+Status verifikasi dicatat di [`docs/FOUNDATION_STATUS.md`](./docs/FOUNDATION_STATUS.md) dan
+[`docs/PHASE_1_BACKEND_STATUS.md`](./docs/PHASE_1_BACKEND_STATUS.md).
 
 ## Prasyarat
 
@@ -34,13 +35,34 @@ npm run dev:web
 
 Gunakan data sintetis saja di local/CI. Jangan memasukkan secret, NIK asli, atau data pasien produksi ke repository.
 
+### Provision akun Puskesmas pertama
+
+Jalankan migration lebih dahulu, lalu gunakan perintah eksplisit berikut. Password hanya ditempatkan
+sementara di environment proses dan tidak boleh disimpan di repository atau shell history bersama nilai produksi.
+
+```powershell
+$env:PROVISION_CONFIRM = "CREATE_INITIAL_PUSKESMAS"
+$env:PROVISION_HEALTH_CENTER_CODE = "PKM-KUNCIR"
+$env:PROVISION_HEALTH_CENTER_NAME = "Puskesmas Kuncir"
+$env:PROVISION_LOGIN_IDENTIFIER = "puskesmas.kuncir"
+$env:PROVISION_DISPLAY_NAME = "Operator Puskesmas Kuncir"
+$env:PROVISION_PASSWORD = "replace-with-strong-password-2026"
+npm run staff:provision:puskesmas
+Remove-Item Env:PROVISION_PASSWORD
+```
+
+Provisioner menolak pembuatan akun Puskesmas kedua pada health center yang sama dan hanya mencetak ID hasil,
+bukan credential.
+
 ## Pemeriksaan
 
 ```powershell
 npm run verify
+npm run db:verify:phase1
 ```
 
 `verify` menjalankan format check, lint, typecheck, test, build, dan secret-pattern scan. Dependency audit dijalankan terpisah lewat `npm run security:dependencies` dan pada CI.
+`db:verify:phase1` membutuhkan `DATABASE_URL` yang telah dimigrasikan dan menguji constraint Phase 1 dengan data sintetis yang selalu di-rollback.
 
 ## Invariant implementasi
 

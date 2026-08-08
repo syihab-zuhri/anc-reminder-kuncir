@@ -44,6 +44,19 @@ Detailed commands, scope, and intentionally deferred domain entities are recorde
 The public repository now protects `main` with mandatory pull requests and the strict
 `verify` status check, including admin enforcement and force-push/deletion prevention.
 
+## Phase 1 Backend Implementation Evidence — 2026-08-08
+
+- `TASK-P1-001`–`TASK-P1-004`: **implemented and verified locally**;
+- full workspace format/lint/typecheck/build and **52 tests: pass**;
+- API auth/authorization/organization/audit suite: **6 files / 18 tests pass**;
+- PostgreSQL Phase 1 migration `up -> down -> up`: **pass**;
+- raw-token-column absence, same-center foreign key, and append-only audit verifier: **pass**;
+- real PostgreSQL/API auth and scoped-organization smoke: **pass**;
+- Web staff access, generic idempotency helpers, break-glass, and MFA decision: **pending**.
+
+The protected pull-request workflow repeats this evidence before merge. This does not claim that later
+mother registry, clinical record, reminder, Web, or mobile requirements are implemented.
+
 ## Remaining Production Approvals
 
 `OPEN-CLIN-001`, `OPEN-CLIN-002`, `OPEN-LEGAL-001`, `OPEN-SCALE-001`, `OPEN-OPS-001`.

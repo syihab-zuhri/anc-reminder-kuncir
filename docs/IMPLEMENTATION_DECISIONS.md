@@ -14,6 +14,15 @@ Catatan ini melengkapi—dan tidak menggantikan—ADR pada blueprint.
 - Dependabot memantau mingguan, tetapi major toolchain upgrades harus dilakukan eksplisit sebagai migration task. Versi Capacitor `8.5.0` diabaikan sampai advisory transitif tersebut terselesaikan.
 - Web tetap memakai ESLint `9.x`, sedangkan root/server memakai `10.x`. Walaupun `eslint-config-next@16.3.0` mendeklarasikan ESLint `>=9`, plugin React bawaannya gagal pada API ESLint 10 (`contextOrFilename.getFilename`), sehingga konsolidasi ditunda sampai dependency tersebut kompatibel.
 
+## 2026-08-08 — Phase 1 authentication and scope
+
+- Staff password memakai salted scrypt `N=2^17, r=8, p=1` sesuai minimum profil scrypt OWASP; password mentah tidak disimpan atau dicatat.
+- Access dan refresh token adalah opaque random token. Database hanya menyimpan HMAC-SHA-256 token hash; refresh selalu dirotasi secara atomik dan single-use.
+- Setiap protected request memuat ulang session, status staff, status health center, dan assignment aktif dari PostgreSQL agar revocation berlaku segera.
+- `health_centers` adalah batas organisasi Puskesmas. Foreign key komposit mencegah village/facility/mother terhubung lintas health center.
+- Puskesmas adalah superset capability Bidan. Super Admin hanya memiliki self-read dan ditolak dari health-data routine sampai break-glass diputuskan dan diimplementasikan.
+- Provisioning akun Puskesmas pertama adalah command eksplisit dengan confirmation phrase; endpoint staff biasa hanya dapat membuat akun `BIDAN` pada scope Puskesmas aktor.
+
 ## Deferred sampai owner approval
 
 - Nilai target minggu/window K1–K8 production.

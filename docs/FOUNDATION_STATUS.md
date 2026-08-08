@@ -1,5 +1,8 @@
 # Phase-0 Foundation Status
 
+> Historical Phase-0 snapshot. Current auth/security backend progress is recorded in
+> [`PHASE_1_BACKEND_STATUS.md`](./PHASE_1_BACKEND_STATUS.md).
+
 Date: 2026-08-08  
 Scope: `TASK-P0-002` through `TASK-P0-006`
 
@@ -21,7 +24,7 @@ Scope: `TASK-P0-002` through `TASK-P0-006`
 - Staff sessions, organization/village/facility tables, dating revision history, and notification preferences are added in their owning Phase 1/2 migrations after their detailed contracts are reconciled. The baseline does not invent missing fields.
 - Clinical week windows, program criteria, retention, and production WhatsApp fallback SLA remain owner approvals.
 
-## Next implementation slice
+## Next implementation slice at Phase-0 close
 
 1. `TASK-P1-001` staff authentication/session lifecycle.
 2. `TASK-P1-002` organization, village, facility, and assignment data.
