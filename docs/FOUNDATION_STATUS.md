@@ -13,10 +13,10 @@ Scope: `TASK-P0-002` through `TASK-P0-006`
 - Secret-pattern scan and dependency audit with zero known vulnerabilities at moderate-or-higher severity.
 - Production config enforcement for HTTPS, remote PostgreSQL TLS, distinct 32-character secrets, fixed 3-day cadence, and trusted Android origin.
 - GitHub Actions [`verify` run 31244315334](https://github.com/syihab-zuhri/anc-reminder-kuncir/actions/runs/31244315334): clean checkout, PostgreSQL migration/rollback/forward, lint, typecheck, 37 tests, production builds, API smoke, secret scan, and dependency audit all passed.
+- Public GitHub repository with protected `main`: pull request and strict `verify` check required, admin enforcement enabled, linear history required, and force-push/deletion disabled.
 
 ## Intentionally pending
 
-- `TASK-P0-003`: hosted CI passes, but GitHub rejected branch protection on this private repository because the account needs GitHub Pro. Resolve by enabling GitHub Pro or explicitly approving a public repository.
 - Native Gradle project, secure-storage bridge, and FCM belong to `TASK-P4-004/P4-005`; Phase 0 only creates the Capacitor workspace, trusted-origin policy, and safe local fallback.
 - Staff sessions, organization/village/facility tables, dating revision history, and notification preferences are added in their owning Phase 1/2 migrations after their detailed contracts are reconciled. The baseline does not invent missing fields.
 - Clinical week windows, program criteria, retention, and production WhatsApp fallback SLA remain owner approvals.

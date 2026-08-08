@@ -78,12 +78,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Depends on: TASK-P0-001
   - Done when: clean checkout dapat build/test semua workspace dan client tidak memiliki domain-service implementation.
 
-- [ ] `TASK-P0-003` [M] Tambahkan CI untuk lint, type-check, unit/integration test, secret scan, dan dependency scan
+- [x] `TASK-P0-003` [M] Tambahkan CI untuk lint, type-check, unit/integration test, secret scan, dan dependency scan
   - Owner: DevOps
   - References: DOC-SECURITY, DOC-TESTING
   - Depends on: TASK-P0-002
   - Done when: protected branch menolak perubahan jika check wajib gagal.
-  - Evidence: workflow `verify` lulus lokal dan di GitHub Actions run `31244315334`; branch protection ditolak GitHub untuk private repository pada plan saat ini dan memerlukan GitHub Pro atau keputusan menjadikan repository public.
+  - Evidence: workflow `verify` lulus lokal dan di GitHub Actions; `main` mewajibkan pull request dan strict `verify`, berlaku untuk admin, linear history aktif, serta force-push/penghapusan branch dinonaktifkan.
 
 - [x] `TASK-P0-004` [S] Buat environment validation dan `.env.example`
   - Owner: Backend + DevOps
@@ -571,6 +571,6 @@ Dokumen authoritative dan turunannya sudah disinkronkan. Gate C berarti siap mul
 - P0 traceability: **Pass untuk document coverage serta evidence fondasi lokal dan hosted CI**
 - Security baseline: **Fondasi terverifikasi lokal; business authorization masih dimiliki Phase 1**
 - Deployment readiness: **Not Ready — environment deployment dan rehearsal pending**
-- Blocking implementation task: **Tidak ada untuk Phase 1; penutupan P0-003 memerlukan GitHub Pro atau keputusan repository public**
+- Blocking implementation task: **Tidak ada untuk Phase 1**
 - Production approval blockers: **clinical/program rules, privacy/legal, scale/ops SLA**
-- Recommended next agent: **Phase 1 Staff Auth + Organization/Scope + Authorization**, dengan keputusan branch protection paralel
+- Recommended next agent: **Phase 1 Staff Auth + Organization/Scope + Authorization**

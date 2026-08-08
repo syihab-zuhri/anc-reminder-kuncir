@@ -63,4 +63,4 @@ P0 documentation coverage: **Pass**. Phase-0 foundation implementation evidence 
 | Security hygiene | UUID-v4 request ID, log redaction, trusted WebView origin, production HTTPS/DB TLS config, secret scan | Pass locally |
 | Dependency scan | `npm audit --audit-level=moderate` | 0 vulnerabilities |
 
-Hosted CI run `31244315334` passed, including migration rollback/forward evidence for `TASK-P0-005`. Protected-branch enforcement remains pending under `TASK-P0-003` because GitHub Pro is required for the private repository; see `OPEN-REPO-001`. This foundation evidence does not mark FR-001–FR-043 as implemented.
+Hosted CI passed, including migration rollback/forward evidence for `TASK-P0-005`. Protected `main` now requires pull requests and a strict `verify` check, completing `TASK-P0-003`. This foundation evidence does not mark FR-001–FR-043 as implemented.
