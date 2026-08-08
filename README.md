@@ -60,11 +60,13 @@ bukan credential.
 npm run verify
 npm run db:verify:phase1
 npm run test:smoke:idempotency
+npm run test:smoke:web-session
 ```
 
 `verify` menjalankan format check, lint, typecheck, test, build, dan secret-pattern scan. Dependency audit dijalankan terpisah lewat `npm run security:dependencies` dan pada CI.
 `db:verify:phase1` membutuhkan `DATABASE_URL` yang telah dimigrasikan dan menguji constraint Phase 1 dengan data sintetis yang selalu di-rollback.
 `test:smoke:idempotency` membutuhkan build package terbaru dan database termigrasi; row sintetis dibersihkan setelah test.
+`test:smoke:web-session` membutuhkan build Web/API, akun staff sintetis, dan database termigrasi; test menyalakan Web lokal sementara serta memverifikasi login/refresh/logout tanpa mengekspos token ke JavaScript browser.
 
 ## Invariant implementasi
 

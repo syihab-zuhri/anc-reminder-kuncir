@@ -72,5 +72,6 @@ jobs:
       - run: npm run test:smoke:idempotency
       - run: npm run staff:provision:puskesmas
       - run: npm run test:smoke:auth
+      - run: npm run test:smoke:web-session
       - run: npm run security:secrets
       - run: npm audit --audit-level=high

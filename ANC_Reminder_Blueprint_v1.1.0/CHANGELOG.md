@@ -8,6 +8,23 @@
 > **Last Updated:** 2026-08-08  
 > **Depends On:** All project documents
 
+## [2026-08-08] — Phase 1 Staff Web Access
+
+### Added
+
+- Same-origin Next.js BFF for staff login, identity lookup, automatic refresh rotation, and logout.
+- Strict `HttpOnly` staff cookies, exact-origin mutation checks, safe identity-only responses, and validated upstream contracts.
+- Responsive staff login, generic failure/session notices, server-unavailable retry, 403 boundary, and role-aware workspace shell.
+- Web route/policy tests and a real API/PostgreSQL Web session smoke in protected CI.
+
+### Verified Locally
+
+- Production Web build, 12 Web tests, login/refresh/logout smoke, desktop/mobile visual QA, and WCAG A/AA automated audit pass.
+
+### Still Pending
+
+- Break-glass and privileged-account MFA remain explicit owner decisions in `TASK-P1-005` and `TASK-P1-008`.
+
 ## [2026-08-08] — Phase 1 Backend Security Baseline
 
 ### Added
@@ -27,7 +44,7 @@
 
 ### Still Pending
 
-- Web staff access, break-glass, and MFA decision remain in `TASK-P1-005`, `TASK-P1-007`, and `TASK-P1-008`.
+- Break-glass and MFA decision remain in `TASK-P1-005` and `TASK-P1-008`; Web staff access moved to the completed entry above.
 
 ## [2026-08-08] — Implementation Foundation 0.1.0
 

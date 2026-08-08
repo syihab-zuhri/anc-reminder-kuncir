@@ -20,6 +20,10 @@ Local synthetic data → CI ephemeral DB → staging with synthetic/pilot-approv
 
 | Test ID | Scenario | Type |
 |---|---|---|
+| TEST-STAFF-WEB-001 | Login body exposes identity only; access/refresh remain in strict HttpOnly cookies | Security integration/E2E |
+| TEST-STAFF-WEB-002 | Invalid access credential rotates through refresh cookie; replayed/expired session returns 401 | Security E2E |
+| TEST-STAFF-WEB-003 | Logout revokes server session, clears both cookies, and shows explicit safe notice | E2E |
+| TEST-STAFF-WEB-004 | Login/workspace/403 states are responsive, keyboard-readable, and WCAG A/AA audited | Accessibility E2E |
 | TEST-AUTH-001 | Bidan denied out-of-scope mother | Security E2E |
 | TEST-AUTH-002 | Bumil name+code anti-enumeration | Security |
 | TEST-REG-001 | Registration rejects missing name/NIK/address/phone/pregnancy start | E2E |

@@ -30,6 +30,7 @@
     "test:smoke:api": "node scripts/smoke-api.mjs",
     "test:smoke:auth": "node scripts/smoke-auth.mjs",
     "test:smoke:idempotency": "node scripts/smoke-idempotency.mjs",
+    "test:smoke:web-session": "node scripts/smoke-web-session.mjs",
     "db:migrate": "npm run migrate:up --workspace=@anc/database",
     "db:rollback": "npm run migrate:down --workspace=@anc/database",
     "db:verify:phase1": "node packages/database/scripts/verify-phase1.mjs",

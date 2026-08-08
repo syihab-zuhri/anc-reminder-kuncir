@@ -661,6 +661,20 @@ svg {
   border-bottom: 1px solid var(--line-strong);
 }
 
+.access-option-active {
+  transition:
+    color 180ms ease,
+    padding 180ms ease,
+    background 180ms ease;
+}
+
+.access-option-active:hover {
+  padding-right: 1rem;
+  padding-left: 1rem;
+  color: var(--paper-raised);
+  background: var(--ink);
+}
+
 .access-number {
   color: var(--accent);
   font-size: 0.65rem;
@@ -687,6 +701,18 @@ svg {
   background: rgba(201, 99, 73, 0.08);
   border-color: rgba(201, 99, 73, 0.22);
   white-space: nowrap;
+}
+
+.access-ready {
+  color: var(--paper-raised);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.access-option-active:hover .access-ready {
+  color: var(--ink);
+  background: var(--ochre);
+  border-color: var(--ochre);
 }
 
 .site-footer {

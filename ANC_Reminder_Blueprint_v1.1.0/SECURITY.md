@@ -61,8 +61,11 @@ Rate limiting, worker leases, DB protection, health/readiness, alerting.
 Salted scrypt (`N=2^17, r=8, p=1`), opaque random access/refresh credentials, HMAC-only token persistence,
 single-use refresh rotation, revocable server sessions, generic credential errors, and persistent per-account
 lockout are implemented. Exact network/edge throttling policy remains `PROPOSED` pending the pilot security
-profile. MFA remains `PROPOSED` for
-privileged Puskesmas/Super Admin.
+profile. The staff Web uses a same-origin BFF: access and refresh credentials are held only in `HttpOnly`,
+`SameSite=Strict`, path-scoped cookies (`Secure` in production), never returned in a browser-readable body, and
+never stored in local/session storage. Login/logout mutations require an exact trusted `Origin`; session identity
+and refresh responses are schema-validated before rendering. MFA remains `PROPOSED` for privileged
+Puskesmas/Super Admin.
 
 ### Bumil
 Name + unique code; code is authenticator. Store only hash. Reissue revokes old credential. Response failure is generic.

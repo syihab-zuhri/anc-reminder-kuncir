@@ -12,7 +12,7 @@
 
 | Requirement | Feature/PRD | API/UI | Data | Permission | Task | Test | Status |
 |---|---|---|---|---|---|---|---|
-| FR-001 | FEAT-STAFF | API-AUTH | staff_users/sessions | Staff | TASK-P1-001 | auth suite + PostgreSQL smoke | Backend Verified |
+| FR-001 | FEAT-STAFF | API-AUTH + staff Web BFF/UI | staff_users/sessions | Staff | TASK-P1-001/P1-007 | auth suite + PostgreSQL/API/Web smoke + accessibility QA | Backend + Web Access Verified |
 | FR-002 | FEAT-STAFF | all protected | assignments | Role/scope | TASK-P1-003 | role/scope negative + HTTP smoke | Backend Verified |
 | FR-003 | FEAT-STAFF/REGISTRY | staff/facility UI | staff/facility | Puskesmas | TASK-P1-002/P3-001 | scoped CRUD + PostgreSQL smoke | Backend Verified; UI Pending |
 | FR-004 | FEAT-REGISTRY | API-MOTHER-001 + registration UI | mothers/pregnancies/consent | Puskesmas | TASK-P2-001/P3-002 | AC-REG-001..004, TEST-REG-001..004 | Covered |
@@ -76,6 +76,7 @@ Hosted CI passed, including migration rollback/forward evidence for `TASK-P0-005
 | Audit | Allowlisted/redacted metadata and PostgreSQL SQLSTATE `55000` mutation rejection | Pass |
 | Migration | Phase 1 PostgreSQL 17 `up → down → up`, same-center composite FK verifier | Pass locally |
 | API safety | Strict validation, canonical conflict, HMAC idempotency metadata, concurrent execution/replay smoke | Pass locally |
+| Staff Web access | BFF-only HttpOnly credentials, origin checks, refresh rotation, logout, 401/403/unavailable UI, desktop/mobile QA | Pass locally |
 
 Protected pull-request CI repeats migration, database verification, static checks, tests, builds, API health,
-and real PostgreSQL Phase 1 smoke before merge.
+real PostgreSQL Phase 1 smoke, and the Web login/refresh/logout smoke before merge.
