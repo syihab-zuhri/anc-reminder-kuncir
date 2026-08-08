@@ -15,6 +15,9 @@ updates:
       - dependency-name: "@capacitor/core"
         versions:
           - "8.5.0"
+      - dependency-name: "@capacitor/cli"
+        versions:
+          - "8.5.0"
   - package-ecosystem: github-actions
     directory: /
     schedule:
