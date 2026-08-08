@@ -11,6 +11,8 @@ Catatan ini melengkapi—dan tidak menggantikan—ADR pada blueprint.
 - API, worker, Web, dan Android shell tetap menjadi deployment unit terpisah.
 - Tidak ada Redis, WhatsApp gateway, atau client-side domain engine pada foundation.
 - Capacitor dipin ke `8.4.2` sementara karena `8.5.0` membawa dependency CLI `xcode → uuid@7` dengan advisory moderat; Android runtime tidak memerlukan perubahan 8.5 untuk foundation ini.
+- Dependabot memantau mingguan, tetapi major toolchain upgrades harus dilakukan eksplisit sebagai migration task. Versi Capacitor `8.5.0` diabaikan sampai advisory transitif tersebut terselesaikan.
+- Web tetap memakai ESLint `9.x`, sedangkan root/server memakai `10.x`. Walaupun `eslint-config-next@16.3.0` mendeklarasikan ESLint `>=9`, plugin React bawaannya gagal pada API ESLint 10 (`contextOrFilename.getFilename`), sehingga konsolidasi ditunda sampai dependency tersebut kompatibel.
 
 ## Deferred sampai owner approval
 

@@ -5,6 +5,16 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
+      - dependency-name: "@capacitor/android"
+        versions:
+          - "8.5.0"
+      - dependency-name: "@capacitor/core"
+        versions:
+          - "8.5.0"
   - package-ecosystem: github-actions
     directory: /
     schedule:
