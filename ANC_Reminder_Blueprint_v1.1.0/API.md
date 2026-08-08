@@ -54,6 +54,13 @@ List endpoints use `cursor`, `limit` (server max), `sort`, and allowlisted filte
 | API-AUTH-004 | GET | `/staff/me` | Staff |
 | API-AUTH-005 | POST | `/staff/sessions/revoke` | Puskesmas/self policy |
 
+#### Staff Web BFF Boundary
+
+The browser calls same-origin `/api/staff-session/login`, `/api/staff-session/me`, and
+`/api/staff-session/logout`. These are Web adapter routes, not additional public domain endpoints. They map to
+`API-AUTH-001..004`, keep opaque credentials in `HttpOnly` cookies, rotate both cookies after refresh, and return
+only the validated staff identity or a safe canonical error. Login/logout reject missing or mismatched origins.
+
 ### Organization / Staff Scope
 
 | Operation ID | Method | Path | Actor |

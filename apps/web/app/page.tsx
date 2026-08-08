@@ -1,15 +1,5 @@
 import { landingCopy } from "@/content/id";
-
-function BrandMark() {
-  return (
-    <span className="brand-mark" aria-hidden="true">
-      <svg viewBox="0 0 48 48" role="img">
-        <path d="M24 6.5c-7.8 0-14 6.1-14 13.7 0 10.4 14 21.3 14 21.3s14-10.9 14-21.3C38 12.6 31.8 6.5 24 6.5Z" />
-        <path d="M17.6 21.8c3.9-1 6.2-3.6 6.4-7.8.2 4.2 2.5 6.8 6.4 7.8-3.9 1-6.2 3.6-6.4 7.8-.2-4.2-2.5-6.8-6.4-7.8Z" />
-      </svg>
-    </span>
-  );
-}
+import { BrandMark } from "@/components/brand-mark";
 
 function ArrowIcon() {
   return (
@@ -42,7 +32,7 @@ export default function HomePage() {
           <a href="#akses">{navigation.access}</a>
         </nav>
 
-        <a className="header-action" href="#akses">
+        <a className="header-action" href="/staff/login">
           {navigation.staff}
           <ArrowIcon />
         </a>
@@ -153,7 +143,7 @@ export default function HomePage() {
           </div>
 
           <div className="access-options" aria-label="Pilihan akses mendatang">
-            <article className="access-option">
+            <a className="access-option access-option-active" href="/staff/login">
               <div>
                 <span className="access-number" aria-hidden="true">
                   01
@@ -161,8 +151,8 @@ export default function HomePage() {
                 <h3>{access.staffTitle}</h3>
                 <p>{access.staffDescription}</p>
               </div>
-              <span className="coming-soon">{access.status}</span>
-            </article>
+              <span className="coming-soon access-ready">{access.staffStatus}</span>
+            </a>
 
             <article className="access-option">
               <div>
@@ -172,7 +162,7 @@ export default function HomePage() {
                 <h3>{access.motherTitle}</h3>
                 <p>{access.motherDescription}</p>
               </div>
-              <span className="coming-soon">{access.status}</span>
+              <span className="coming-soon">{access.motherStatus}</span>
             </article>
           </div>
         </section>

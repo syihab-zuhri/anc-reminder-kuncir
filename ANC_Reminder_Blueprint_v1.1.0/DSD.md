@@ -67,6 +67,14 @@ Button text: **“Buka WhatsApp”** or **“Siapkan Pengingat WhatsApp”**. Ne
 
 Loading skeleton; empty; validation error; 401/403; server unavailable; push permission denied; WA fallback ready; success; disabled. Offline/server-down must not present local health data as current authoritative state.
 
+### 10.1 Implemented Staff Access States
+
+The Phase 1 staff experience includes responsive login, generic credential failure, explicit session-expired
+and logged-out notices, a safe server-unavailable retry state, a non-enumerating 403 boundary, and a server-backed
+workspace shell. It never substitutes browser-cached domain data when session/API verification fails. Desktop
+and 390px mobile renders, semantic labels, keyboard-visible focus, and WCAG 2.1 A/AA automated checks are part
+of the implementation evidence.
+
 ## 11. Form Behavior
 
 Inline validation; destructive/correction actions need confirmation. Bidan confirm form contains no clinical fields. Puskesmas detail fields follow approved schema.

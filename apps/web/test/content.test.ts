@@ -14,4 +14,9 @@ describe("landing content invariants", () => {
     expect(serializedCopy).not.toContain("terkirim otomatis");
     expect(serializedCopy).not.toContain("whatsapp terkirim");
   });
+
+  it("distinguishes the active staff portal from pending mother access", () => {
+    expect(landingCopy.access.staffStatus).toBe("Buka portal");
+    expect(landingCopy.access.motherStatus).toBe("Segera tersedia");
+  });
 });

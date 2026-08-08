@@ -75,12 +75,13 @@ export const landingCopy = {
     eyebrow: "Akses bertahap",
     title: "Akses yang tepat, data yang secukupnya.",
     description:
-      "Portal petugas dan akses pribadi ibu hamil akan diaktifkan bersama layanan autentikasi. Fondasi antarmuka sudah siap untuk tahap integrasi berikutnya.",
+      "Portal petugas telah tersambung ke layanan autentikasi. Akses pribadi ibu hamil tetap menunggu tahap implementasinya sendiri.",
     staffTitle: "Portal petugas",
     staffDescription: "Untuk Puskesmas dan Bidan sesuai kewenangan.",
     motherTitle: "Akses ibu hamil",
     motherDescription: "Untuk melihat informasi kehamilan milik sendiri.",
-    status: "Segera tersedia",
+    staffStatus: "Buka portal",
+    motherStatus: "Segera tersedia",
   },
   footer: {
     statement: "Pendampingan ANC yang tenang, jelas, dan dapat ditindaklanjuti.",

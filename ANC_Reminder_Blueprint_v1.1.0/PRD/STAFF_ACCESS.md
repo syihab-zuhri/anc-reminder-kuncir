@@ -77,5 +77,6 @@ MFA mechanism remains `PROPOSED`; not a core-domain blocker.
 
 Backend acceptance for login, generic failure, lockout, refresh replay protection, logout/revocation,
 Puskesmas-superset scope, Bidan/cross-center denial, Super Admin default denial, and shared
-idempotency/concurrency helpers are verified. Web staff states, exact edge-throttling policy, break-glass,
-and MFA decision remain pending.
+idempotency/concurrency helpers are verified. Web login, session refresh/expiry, forbidden, unavailable, and
+logout states are implemented through a same-origin BFF; browser JavaScript receives identity only and cannot
+read access/refresh credentials. Exact edge-throttling policy, break-glass, and MFA decision remain pending.

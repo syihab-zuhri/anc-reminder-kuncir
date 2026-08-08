@@ -23,6 +23,7 @@ Catatan ini melengkapi—dan tidak menggantikan—ADR pada blueprint.
 - Puskesmas adalah superset capability Bidan. Super Admin hanya memiliki self-read dan ditolak dari health-data routine sampai break-glass diputuskan dan diimplementasikan.
 - Provisioning akun Puskesmas pertama adalah command eksplisit dengan confirmation phrase; endpoint staff biasa hanya dapat membuat akun `BIDAN` pada scope Puskesmas aktor.
 - Idempotency uses a PostgreSQL record scoped by actor + operation + UUID key, but persists only an HMAC request fingerprint and domain resource reference. A dedicated secret, separate from session secrets, keys the fingerprint. Advisory transaction locks serialize same-key races; serializable/deadlock errors retry at most three times. Domain unique constraints remain authoritative.
+- Staff Web memakai same-origin BFF. Access/refresh credential hanya ada di cookie `HttpOnly`, `SameSite=Strict`, `Secure` production; browser menerima identity DTO saja. Login/logout memvalidasi `Origin`, refresh diputar oleh route server, dan API tetap menjadi authorization boundary.
 
 ## Deferred sampai owner approval
 

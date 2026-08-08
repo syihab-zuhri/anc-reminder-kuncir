@@ -165,11 +165,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Done when: shared validation/error/idempotency tests lulus.
   - Evidence: strict Zod parsing/canonical field errors, UUID idempotency contract, HMAC request fingerprint, resource-reference-only persistence, advisory-lock + serializable retry coordinator, conflict mapping, unit tests, migration `down → up`, dan concurrent PostgreSQL smoke lulus.
 
-- [ ] `TASK-P1-007` [M] Implement Web staff login/session/forbidden states
+- [x] `TASK-P1-007` [M] Implement Web staff login/session/forbidden states
   - Owner: Frontend
   - References: PRD-STAFF, DOC-DSD
   - Depends on: TASK-P1-001
   - Done when: login/logout/session-expiry/403 E2E lulus.
+  - Evidence: same-origin BFF menyimpan access/refresh token hanya di cookie `HttpOnly` + `SameSite=Strict`, mutation origin check aktif, kontrak upstream divalidasi, login failure tetap generik, refresh/logout smoke terhadap API + PostgreSQL nyata lulus, dan login/workspace/forbidden/mobile states lolos QA aksesibilitas.
 
 - [ ] `TASK-P1-008` [M] Putuskan dan implement Admin/Super Admin MFA bila requirement tetap dipertahankan
   - Owner: Security + Backend + Frontend

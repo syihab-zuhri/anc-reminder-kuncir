@@ -1,7 +1,7 @@
-# Phase 1 Backend Security Status
+# Phase 1 Security & Staff Web Status
 
 Date: 2026-08-08  
-Scope: `TASK-P1-001` through `TASK-P1-004`, plus `TASK-P1-006`
+Scope: `TASK-P1-001` through `TASK-P1-004`, plus `TASK-P1-006` and `TASK-P1-007`
 
 ## Implemented
 
@@ -13,15 +13,19 @@ Scope: `TASK-P1-001` through `TASK-P1-004`, plus `TASK-P1-006`
 - Append-only audit repository with allowlisted, redacted metadata for authentication and organization security actions.
 - Explicit initial-Puskesmas provisioner with confirmation phrase and no credential output.
 - Shared idempotency/concurrency coordinator with keyed request fingerprint, safe resource replay, same-key conflict detection, and bounded serializable retry.
+- Same-origin staff Web BFF with strict HttpOnly cookies, exact-origin mutation checks, automatic refresh rotation, and identity-only browser responses.
+- Responsive login, session-expired/logged-out, forbidden, unavailable, and role-aware workspace states without client-cached domain truth.
 
 ## Local verification
 
-- Full workspace: format, lint, strict typecheck, 60 tests, all production builds, secret scan, and dependency audit passed.
-- API: 6 files / 18 tests, including generic login failure, persistent lockout, concurrent refresh replay, immediate revocation, role/scope negatives, and audit redaction.
+- Full workspace: format, lint, strict typecheck, 70 tests, all production builds, secret scan, and dependency audit passed.
+- API: 7 files / 21 tests, including generic login failure, persistent lockout, concurrent refresh replay, immediate revocation, role/scope negatives, and audit redaction.
 - PostgreSQL 17: Phase 1 migration `up → down → up` passed while preserving the baseline.
 - Database verifier: required schema, absence of raw-token columns, cross-center composite FK rejection, and SQLSTATE `55000` append-only audit rejection passed.
 - Real API/database smoke: login, `/staff/me`, refresh rotation, old-token rejection, village/facility/Bidan/assignment CRUD path, Bidan `403`, disable-triggered session revocation, and logout passed.
 - Real concurrency smoke: two simultaneous same-key mutations produced one execution and one resource replay; same-key/different-request reuse was rejected.
+- Real Web smoke: safe login body, HttpOnly cookies, access-token recovery through refresh rotation, logout/revocation, and anonymous 401 passed.
+- Browser QA: desktop and 390px mobile login/workspace/logout renders passed; workspace WCAG A/AA audit returned zero violations/incomplete findings.
 
 ## Security invariants
 
@@ -29,11 +33,11 @@ Scope: `TASK-P1-001` through `TASK-P1-004`, plus `TASK-P1-006`
 - Unknown, wrong-password, locked, disabled, and inactive-center login attempts share a generic credential error.
 - Raw password/access/refresh credentials do not enter audit metadata or application logs.
 - Organization writes and assignment targets cannot cross the actor's Puskesmas boundary.
+- Browser JavaScript cannot read staff credentials; no local/session storage is used for staff authentication.
 
 ## Still pending in Phase 1
 
 - `TASK-P1-005`: break-glass remains `PROPOSED`; Super Admin is denied by default.
-- `TASK-P1-007`: Web login/session-expired/forbidden/logout experience.
 - `TASK-P1-008`: owner decision and possible MFA implementation for Puskesmas/Super Admin.
 
 Hosted CI evidence is added by the protected pull-request workflow before merge.
