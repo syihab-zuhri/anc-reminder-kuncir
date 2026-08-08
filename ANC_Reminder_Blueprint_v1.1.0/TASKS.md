@@ -83,7 +83,7 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - References: DOC-SECURITY, DOC-TESTING
   - Depends on: TASK-P0-002
   - Done when: protected branch menolak perubahan jika check wajib gagal.
-  - Evidence: workflow dan seluruh check lulus lokal; hosted CI + branch protection menunggu remote repository.
+  - Evidence: workflow `verify` lulus lokal dan di GitHub Actions run `31244315334`; branch protection ditolak GitHub untuk private repository pada plan saat ini dan memerlukan GitHub Pro atau keputusan menjadikan repository public.
 
 - [x] `TASK-P0-004` [S] Buat environment validation dan `.env.example`
   - Owner: Backend + DevOps
@@ -91,12 +91,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Depends on: TASK-P0-002
   - Done when: server gagal start dengan aman jika config wajib tidak tersedia dan tidak ada secret asli di repository.
 
-- [ ] `TASK-P0-005` [M] Siapkan PostgreSQL migration framework dan baseline schema
+- [x] `TASK-P0-005` [M] Siapkan PostgreSQL migration framework dan baseline schema
   - Owner: Backend + Data
   - References: DOC-ERD
   - Depends on: TASK-P0-002
   - Done when: migration berjalan di CI database dan rollback/forward strategy terdokumentasi.
-  - Evidence: PostgreSQL 17 local disposable database lulus `up → down → up`; hosted CI execution menunggu remote repository.
+  - Evidence: PostgreSQL 17 local disposable database dan GitHub Actions run `31244315334` lulus `up → down → up`; rollback/forward strategy terdokumentasi.
 
 - [x] `TASK-P0-006` [M] Implement structured logging, correlation ID, redaction, health/readiness endpoint
   - Owner: Backend
@@ -568,9 +568,9 @@ Dokumen authoritative dan turunannya sudah disinkronkan. Gate C berarti siap mul
 ### Readiness Report
 
 - Documentation completeness: **100% untuk blueprint P0**
-- P0 traceability: **Pass untuk document coverage dan evidence fondasi lokal**
+- P0 traceability: **Pass untuk document coverage serta evidence fondasi lokal dan hosted CI**
 - Security baseline: **Fondasi terverifikasi lokal; business authorization masih dimiliki Phase 1**
-- Deployment readiness: **Not Ready — hosted CI, environment deployment, dan rehearsal pending**
-- Blocking implementation task: **Tidak ada untuk Phase 1; remote repository diperlukan untuk menutup P0-003/P0-005**
+- Deployment readiness: **Not Ready — environment deployment dan rehearsal pending**
+- Blocking implementation task: **Tidak ada untuk Phase 1; penutupan P0-003 memerlukan GitHub Pro atau keputusan repository public**
 - Production approval blockers: **clinical/program rules, privacy/legal, scale/ops SLA**
-- Recommended next agent: **Phase 1 Staff Auth + Organization/Scope + Authorization**, dengan hosted CI activation paralel
+- Recommended next agent: **Phase 1 Staff Auth + Organization/Scope + Authorization**, dengan keputusan branch protection paralel

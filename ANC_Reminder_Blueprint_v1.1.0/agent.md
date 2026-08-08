@@ -87,6 +87,6 @@ Stop and escalate if source docs conflict, implementation would require automati
 
 ## 7. Execution Start
 
-Gate C design is complete. Phase-0 workspace, environment validation, baseline migration, observability, Web shell, and Android foundation have passed local verification. Hosted CI/branch protection still needs a remote repository; baseline migration has passed local PostgreSQL `up → down → up` and API liveness/readiness smoke tests.
+Gate C design is complete. Phase-0 workspace, environment validation, baseline migration, observability, Web shell, and Android foundation have passed local and hosted CI verification. Baseline migration passed PostgreSQL `up → down → up` and API liveness/readiness smoke tests. Branch protection remains pending because GitHub Pro is required for the private repository.
 
 Continue with Phase 1 staff authentication, organization/scope data, centralized authorization, and append-only audit. Clinical/Privacy owners may resolve production approvals in parallel, but do not invent final week windows or legal retention.

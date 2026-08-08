@@ -17,15 +17,16 @@
 - PostgreSQL baseline migration dengan forward/down path, append-only audit/history controls, idempotency indexes, dan tanpa production clinical-week seed.
 - GitHub Actions CI, dependency/secret scanning, Web foundation, trusted-origin Android fallback, serta API smoke test.
 
-### Verified Locally
+### Verified Locally and in Hosted CI
 
 - Clean `npm ci`, format, ESLint, typecheck, 37 tests, seluruh build, dan secret scan lulus.
 - PostgreSQL 17 migration lulus `up → down → up`; API health smoke lulus `200/200`.
 - `npm audit --audit-level=moderate` melaporkan 0 vulnerability setelah Capacitor dipin ke versi aman yang kompatibel.
+- GitHub Actions run `31244315334` lulus seluruh check dari clean checkout, termasuk migration rollback/forward dan API smoke.
 
 ### Pending External Evidence
 
-- Hosted CI dan protected-branch enforcement menunggu remote repository (`OPEN-REPO-001`).
+- Protected-branch enforcement memerlukan GitHub Pro untuk private repository saat ini, atau keputusan eksplisit menjadikan repository public (`OPEN-REPO-001`).
 - Implementasi requirement bisnis P0, deployment rehearsal, serta approval clinical/privacy/operations tetap belum selesai.
 
 ## [2026-08-08] — 1.1.0 — Registration Data Contract

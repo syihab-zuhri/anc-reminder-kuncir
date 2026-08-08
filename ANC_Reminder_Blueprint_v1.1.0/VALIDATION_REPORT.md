@@ -40,8 +40,9 @@ provider tests, or clinical/legal approval have been executed.
 - repository secret scan: **pass**.
 
 Detailed commands, scope, and intentionally deferred domain entities are recorded in
-`docs/FOUNDATION_STATUS.md`. Hosted CI and branch-protection evidence remain pending
-until `OPEN-REPO-001` is resolved.
+`docs/FOUNDATION_STATUS.md`. Hosted CI run `31244315334` passed the complete workflow.
+Branch protection remains pending because GitHub requires Pro for this private repository;
+see `OPEN-REPO-001`.
 
 ## Remaining Production Approvals
 

@@ -1,5 +1,7 @@
 # Sistem Pengingat ANC Ibu Hamil
 
+[![CI](https://github.com/syihab-zuhri/anc-reminder-kuncir/actions/workflows/ci.yml/badge.svg)](https://github.com/syihab-zuhri/anc-reminder-kuncir/actions/workflows/ci.yml)
+
 Implementasi server-driven untuk memantau milestone K1–K8 melalui Web responsif dan Android WebView. Blueprint authoritative berada di [`ANC_Reminder_Blueprint_v1.1.0`](./ANC_Reminder_Blueprint_v1.1.0/agent.md).
 
 ## Workspace
