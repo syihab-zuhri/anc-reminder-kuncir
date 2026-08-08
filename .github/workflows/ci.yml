@@ -43,8 +43,8 @@ jobs:
       WA_FALLBACK_ESCALATION_HOURS: 24
       CAPACITOR_SERVER_URL: http://localhost:3000
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
           cache: npm

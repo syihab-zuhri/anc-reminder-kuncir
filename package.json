@@ -21,7 +21,7 @@
     "dev:web": "npm run dev --workspace=@anc/web",
     "dev:api": "npm run dev --workspace=@anc/api",
     "dev:worker": "npm run dev --workspace=@anc/worker",
-    "lint": "npm run lint --workspaces --if-present",
+    "lint": "npm run build:packages && npm run lint --workspaces --if-present",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "npm run build:packages && npm run typecheck --workspaces --if-present",
