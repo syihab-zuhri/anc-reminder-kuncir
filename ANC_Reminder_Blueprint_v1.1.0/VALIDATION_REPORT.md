@@ -41,8 +41,8 @@ provider tests, or clinical/legal approval have been executed.
 
 Detailed commands, scope, and intentionally deferred domain entities are recorded in
 `docs/FOUNDATION_STATUS.md`. Hosted CI run `31244315334` passed the complete workflow.
-Branch protection remains pending because GitHub requires Pro for this private repository;
-see `OPEN-REPO-001`.
+The public repository now protects `main` with mandatory pull requests and the strict
+`verify` status check, including admin enforcement and force-push/deletion prevention.
 
 ## Remaining Production Approvals
 

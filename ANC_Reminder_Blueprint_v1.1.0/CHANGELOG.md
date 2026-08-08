@@ -23,10 +23,10 @@
 - PostgreSQL 17 migration lulus `up → down → up`; API health smoke lulus `200/200`.
 - `npm audit --audit-level=moderate` melaporkan 0 vulnerability setelah Capacitor dipin ke versi aman yang kompatibel.
 - GitHub Actions run `31244315334` lulus seluruh check dari clean checkout, termasuk migration rollback/forward dan API smoke.
+- Public `main` dilindungi oleh pull request wajib, strict `verify`, admin enforcement, linear history, serta larangan force-push/penghapusan branch.
 
-### Pending External Evidence
+### Remaining Delivery Work
 
-- Protected-branch enforcement memerlukan GitHub Pro untuk private repository saat ini, atau keputusan eksplisit menjadikan repository public (`OPEN-REPO-001`).
 - Implementasi requirement bisnis P0, deployment rehearsal, serta approval clinical/privacy/operations tetap belum selesai.
 
 ## [2026-08-08] — 1.1.0 — Registration Data Contract

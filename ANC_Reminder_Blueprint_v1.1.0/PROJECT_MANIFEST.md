@@ -107,7 +107,6 @@ Tidak ada pertanyaan material tambahan untuk user saat ini. Berikut bukan blocke
 | OPEN-LEGAL-001 | Retention, lawful basis/consent, privacy notice, deletion/restriction process. | Privacy/Legal |
 | OPEN-SCALE-001 | Jumlah Bumil aktif, petugas concurrent, device aktif, dan reminder per bulan. | Product/Operations |
 | OPEN-OPS-001 | SLA fallback `wa.me` yang belum ditindaklanjuti. | Puskesmas Operations |
-| OPEN-REPO-001 | Remote private tersedia dan hosted CI lulus; aktifkan GitHub Pro atau setujui repository public agar branch protection dapat diterapkan. | Product/DevOps |
 
 ## 7. Readiness Report
 
@@ -118,4 +117,4 @@ Tidak ada pertanyaan material tambahan untuk user saat ini. Berikut bukan blocke
 - Blocking open questions for implementation: **0**
 - Blocking open questions for production: **5**
 - Current gate: **Gate C — Implementation Ready**
-- Recommended next agent: **Phase 1 Staff Auth + Organization/Scope + Authorization**, dengan keputusan branch protection paralel
+- Recommended next agent: **Phase 1 Staff Auth + Organization/Scope + Authorization**
