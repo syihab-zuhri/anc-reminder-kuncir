@@ -74,6 +74,10 @@ Bidan: explicit assignment/area scope. Puskesmas: Puskesmas organization/facilit
 
 Staff sessions revocable. Bumil session bound to validated name+code credential and revoked on credential reissue according to policy. WebView uses secure storage for sensitive session material.
 
+Implemented staff lifecycle uses short-lived opaque access credentials and rotating single-use refresh
+credentials. Only keyed hashes are persisted; protected requests re-check session, account, health-center, and
+active assignment state. Disabling a Bidan revokes all active sessions in the same transaction.
+
 ## 8. Break-glass
 
 `PROPOSED P1`: time-bound, reason required, audited before data read, auto-expiring. Not required for normal support workflows.

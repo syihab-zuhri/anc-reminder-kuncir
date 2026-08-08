@@ -7,6 +7,8 @@ import {
 } from "@nestjs/common";
 import { REQUEST_ID_HEADER, createCanonicalError, type RequestId } from "@anc/contracts";
 import type { Request, Response } from "express";
+import type { AuditService } from "../audit/audit.service.js";
+import type { AuthenticatedRequest } from "../auth/staff-auth.types.js";
 import { JsonLogger } from "../observability/json-logger.js";
 import {
   currentRequestId,
@@ -96,14 +98,21 @@ function resolveError(exception: unknown): ResolvedError {
 
 @Catch()
 export class CanonicalErrorFilter implements ExceptionFilter {
-  public constructor(private readonly logger: JsonLogger) {}
+  public constructor(
+    private readonly logger: JsonLogger,
+    private readonly audit?: AuditService,
+  ) {}
 
-  public catch(exception: unknown, host: ArgumentsHost): void {
+  public async catch(exception: unknown, host: ArgumentsHost): Promise<void> {
     const http = host.switchToHttp();
     const request = http.getRequest<RequestWithId>();
     const response = http.getResponse<Response>();
     const requestId = requestIdFor(request, response);
     const resolved = resolveError(exception);
+
+    if (resolved.status === Number(HttpStatus.FORBIDDEN)) {
+      await this.recordAuthorizationDenial(request, requestId, resolved.code);
+    }
 
     if (resolved.status >= 500) {
       this.logger.write("error", "API request failed", {
@@ -123,5 +132,31 @@ export class CanonicalErrorFilter implements ExceptionFilter {
       ...(resolved.fields === undefined ? {} : { fields: resolved.fields }),
     });
     response.status(resolved.status).json(envelope);
+  }
+
+  private async recordAuthorizationDenial(
+    request: RequestWithId,
+    requestId: RequestId,
+    reason: string,
+  ): Promise<void> {
+    const actor = (request as AuthenticatedRequest).staffActor;
+    if (this.audit === undefined || actor === undefined) return;
+
+    try {
+      await this.audit.record({
+        actorType: "STAFF",
+        actorId: actor.staffUserId,
+        action: "AUTHZ_DENIED",
+        resourceType: "API_REQUEST",
+        metadata: { reason, request_id: requestId },
+      });
+    } catch (error) {
+      this.logger.write("error", "Authorization denial audit failed", {
+        event: "authorization_denial_audit_failed",
+        error_name: error instanceof Error ? error.name : "UnknownError",
+        method: request.method,
+        path: requestPath(request),
+      });
+    }
   }
 }

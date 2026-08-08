@@ -24,6 +24,10 @@ No secrets in repository/docs. Validate required variables at startup. Separate 
 | `API_BASE_URL` | Yes | API origin |
 | `SESSION_SECRET` | Yes | Server session signing/encryption secret |
 | `MOTHER_SESSION_SECRET` | Yes | Restricted mother session secret |
+| `STAFF_ACCESS_TOKEN_TTL_MINUTES` | API env | Staff access-token lifetime; default `15` |
+| `STAFF_REFRESH_TOKEN_TTL_DAYS` | API env | Staff refresh-token lifetime; default `7` |
+| `STAFF_LOGIN_MAX_FAILURES` | API env | Consecutive failures before lock; default `5` |
+| `STAFF_LOGIN_LOCK_MINUTES` | API env | Persistent lock duration; default `15` |
 | `FCM_PROJECT_ID` | Push env | FCM project |
 | `FCM_SERVICE_ACCOUNT_JSON` or secret reference | Push env | FCM credential; never commit |
 | `REMINDER_INTERVAL_DAYS` | Yes | Default `3` |
@@ -50,6 +54,10 @@ APP_BASE_URL=http://localhost:3000
 API_BASE_URL=http://localhost:3001/api/v1
 SESSION_SECRET=replace-with-at-least-32-random-characters
 MOTHER_SESSION_SECRET=replace-with-a-different-32-character-secret
+STAFF_ACCESS_TOKEN_TTL_MINUTES=15
+STAFF_REFRESH_TOKEN_TTL_DAYS=7
+STAFF_LOGIN_MAX_FAILURES=5
+STAFF_LOGIN_LOCK_MINUTES=15
 FCM_PROJECT_ID=
 FCM_SERVICE_ACCOUNT_JSON=
 REMINDER_INTERVAL_DAYS=3
@@ -77,3 +85,11 @@ DevOps owns infrastructure/FCM/session secret rotation with Backend support. Rot
 ## 7. Seed Policy
 
 No real Bumil data. Seed rule weeks are clearly marked test-only until clinical approval.
+
+## 8. Initial Puskesmas Provisioning
+
+`PROVISION_CONFIRM`, `PROVISION_HEALTH_CENTER_CODE`, `PROVISION_HEALTH_CENTER_NAME`,
+`PROVISION_LOGIN_IDENTIFIER`, `PROVISION_DISPLAY_NAME`, and `PROVISION_PASSWORD` are transient
+operator inputs for `npm run staff:provision:puskesmas`; they are deliberately absent from
+`.env.example`. Use a secret manager or ephemeral process environment, clear the password after use,
+and never place production values in repository files.

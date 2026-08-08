@@ -42,6 +42,14 @@ jobs:
       PUSH_BACKOFF_SECONDS: 60,300,900
       WA_FALLBACK_ESCALATION_HOURS: 24
       CAPACITOR_SERVER_URL: http://localhost:3000
+      PROVISION_CONFIRM: CREATE_INITIAL_PUSKESMAS
+      PROVISION_HEALTH_CENTER_CODE: CI-PUSKESMAS
+      PROVISION_HEALTH_CENTER_NAME: CI Synthetic Puskesmas
+      PROVISION_LOGIN_IDENTIFIER: ci.puskesmas
+      PROVISION_DISPLAY_NAME: CI Puskesmas Operator
+      PROVISION_PASSWORD: SyntheticCiStaff2026
+      SMOKE_STAFF_LOGIN_IDENTIFIER: ci.puskesmas
+      SMOKE_STAFF_PASSWORD: SyntheticCiStaff2026
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -52,11 +60,14 @@ jobs:
       - run: npm run db:migrate
       - run: npm run db:rollback
       - run: npm run db:migrate
+      - run: npm run db:verify:phase1
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:ci
       - run: npm run build
       - run: npm run test:smoke:api
+      - run: npm run staff:provision:puskesmas
+      - run: npm run test:smoke:auth
       - run: npm run security:secrets
       - run: npm audit --audit-level=high

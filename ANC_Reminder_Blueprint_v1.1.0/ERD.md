@@ -13,6 +13,12 @@
 ```mermaid
 erDiagram
   HEALTH_CENTERS ||--o{ STAFF_USERS : has
+  HEALTH_CENTERS ||--o{ VILLAGES : contains
+  HEALTH_CENTERS ||--o{ FACILITIES : contains
+  VILLAGES ||--o{ FACILITIES : groups
+  VILLAGES ||--o{ MOTHERS : scopes
+  FACILITIES ||--o{ MOTHERS : registers
+  STAFF_USERS ||--o{ STAFF_SESSIONS : authenticates
   STAFF_USERS ||--o{ STAFF_ASSIGNMENTS : assigned
   HEALTH_CENTERS ||--o{ MOTHERS : registers
   MOTHERS ||--o{ PREGNANCIES : has
@@ -39,6 +45,7 @@ erDiagram
 ### `health_centers`
 Puskesmas organization/facility scope.
 - `id uuid PK`
+- `code text unique`
 - `name text`
 - `status enum(ACTIVE,INACTIVE)`
 - `created_at timestamptz`, `updated_at timestamptz`
@@ -48,8 +55,21 @@ Puskesmas organization/facility scope.
 - `health_center_id uuid FK`
 - `role enum(BIDAN,PUSKESMAS,SUPER_ADMIN)`
 - `login_identifier text unique`
+- `display_name text`
 - `password_hash text`
+- `failed_login_attempts int`, `locked_until timestamptz nullable`
+- `last_login_at timestamptz nullable`
 - `status enum(ACTIVE,DISABLED,LOCKED)`
+- `created_at`, `updated_at`
+
+### `staff_sessions`
+Revocable server-side staff session. Raw access/refresh tokens are never persisted.
+- `id uuid PK`
+- `staff_user_id uuid FK`
+- `access_token_hash text unique`, `refresh_token_hash text unique`
+- `access_expires_at`, `refresh_expires_at`
+- `rotated_at`, `last_used_at` nullable
+- `revoked_at`, `revoked_by_staff_id`, `revocation_reason` nullable as one lifecycle pair
 - `created_at`, `updated_at`
 
 ### `staff_assignments`
@@ -58,11 +78,30 @@ Bidan area/mother assignment.
 - `staff_user_id uuid FK`
 - `scope_type enum(AREA,MOTHER)`
 - `scope_id uuid`
+- `assigned_by uuid FK nullable`
+- `revoked_at`, `revoked_by`, `revocation_reason` nullable as one lifecycle group
 - unique active assignment key as applicable
+
+### `villages`
+- `id uuid PK`
+- `health_center_id uuid FK`
+- `code text`, `name text`, `status enum(ACTIVE,INACTIVE)`
+- unique `(health_center_id, code)` and `(id, health_center_id)`
+
+### `facilities`
+- `id uuid PK`
+- `health_center_id uuid FK`
+- `village_id uuid nullable`
+- `code text`, `name text`
+- `facility_type enum(PUSKESMAS,POSYANDU,PONED,HOSPITAL,MIDWIFE_PRACTICE,OTHER)`
+- `status enum(ACTIVE,INACTIVE)`
+- composite FK `(village_id, health_center_id)` prevents a cross-center village link
 
 ### `mothers`
 - `id uuid PK`
 - `health_center_id uuid FK`
+- `village_id uuid nullable`
+- `registration_facility_id uuid nullable`
 - `full_name text NOT NULL`
 - `nik_ciphertext text NOT NULL` — Restricted; encrypted/protected at rest according to deployment controls
 - `address text NOT NULL`
@@ -260,6 +299,8 @@ Append-only.
 - `push_attempts (reminder_cycle_id, status)`.
 - `wa_fallback_actions (status, escalated_at)` for Puskesmas queue.
 - `staff_assignments (staff_user_id, scope_type, scope_id)`.
+- `staff_sessions (access_token_hash, access_expires_at)` and `(refresh_token_hash, refresh_expires_at)` for active-session lookup.
+- `villages (health_center_id, status, name)` and `facilities (health_center_id, status, name)`.
 - `program_assessments (pregnancy_id, evaluated_at desc)`.
 
 ## 4. Sensitivity

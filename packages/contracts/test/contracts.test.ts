@@ -6,7 +6,11 @@ import {
   createCanonicalError,
   milestoneCodeSchema,
   requestIdSchema,
+  staffCreateRequestSchema,
+  staffLoginRequestSchema,
+  staffRefreshRequestSchema,
   staffRoleSchema,
+  villageCreateRequestSchema,
   waDeliveryStatusSchema,
   waFallbackActionStatusSchema,
 } from "../src/index.js";
@@ -26,6 +30,34 @@ describe("shared domain contracts", () => {
     expect(waFallbackActionStatusSchema.safeParse("SENT").success).toBe(false);
     expect(waDeliveryStatusSchema.safeParse("UNKNOWN").success).toBe(true);
     expect(waDeliveryStatusSchema.safeParse("DELIVERED").success).toBe(false);
+  });
+
+  it("validates staff auth and organization mutations without accepting extra fields", () => {
+    expect(
+      staffLoginRequestSchema.safeParse({
+        login_identifier: "bidan.kuncir",
+        password: "candidate-password",
+      }).success,
+    ).toBe(true);
+    expect(
+      staffLoginRequestSchema.safeParse({
+        login_identifier: "bidan.kuncir",
+        password: "candidate-password",
+        role: "PUSKESMAS",
+      }).success,
+    ).toBe(false);
+    expect(
+      staffCreateRequestSchema.safeParse({
+        login_identifier: "bidan.baru",
+        display_name: "Bidan Baru",
+        role: "BIDAN",
+        password: "BidanBaru2026",
+      }).success,
+    ).toBe(true);
+    expect(
+      villageCreateRequestSchema.safeParse({ code: "KNC-01", name: "Desa Kuncir" }).success,
+    ).toBe(true);
+    expect(staffRefreshRequestSchema.safeParse({ refresh_token: "raw-token" }).success).toBe(false);
   });
 });
 

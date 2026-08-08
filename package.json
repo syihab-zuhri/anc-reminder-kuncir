@@ -28,10 +28,13 @@
     "test": "npm run build:packages && npm run test --workspaces --if-present",
     "test:ci": "npm run build:packages && npm run test:ci --workspaces --if-present",
     "test:smoke:api": "node scripts/smoke-api.mjs",
+    "test:smoke:auth": "node scripts/smoke-auth.mjs",
     "db:migrate": "npm run migrate:up --workspace=@anc/database",
     "db:rollback": "npm run migrate:down --workspace=@anc/database",
+    "db:verify:phase1": "node packages/database/scripts/verify-phase1.mjs",
     "security:secrets": "node scripts/check-secrets.mjs",
     "security:dependencies": "npm audit --audit-level=high",
+    "staff:provision:puskesmas": "npm run provision:puskesmas --workspace=@anc/api",
     "verify": "npm run build:packages && npm run format:check && npm run lint && npm run typecheck && npm run test:ci && npm run build && npm run security:secrets"
   },
   "devDependencies": {

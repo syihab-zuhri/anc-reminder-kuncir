@@ -13,6 +13,9 @@ interface BaselineMigration {
 
 const loadModule = createRequire(import.meta.url);
 const migration = loadModule("../migrations/000001_baseline.cjs") as BaselineMigration;
+const phaseOneMigration = loadModule(
+  "../migrations/000002_phase_1_auth_security.cjs",
+) as BaselineMigration;
 
 describe("baseline database migration", () => {
   it("defines the ERD baseline and privacy-sensitive NIK column", () => {
@@ -46,5 +49,34 @@ describe("baseline database migration", () => {
     expect(statement).toContain("DROP TABLE IF EXISTS audit_events");
     expect(statement).toContain("DROP TABLE IF EXISTS health_centers");
     expect(statement).toContain("DROP TYPE IF EXISTS staff_role");
+  });
+});
+
+describe("phase 1 auth and organization migration", () => {
+  it("adds revocable staff sessions and scoped organization entities", () => {
+    const sql = vi.fn();
+    phaseOneMigration.up({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("CREATE TABLE staff_sessions");
+    expect(statement).toContain("access_token_hash text NOT NULL UNIQUE");
+    expect(statement).toContain("refresh_token_hash text NOT NULL UNIQUE");
+    expect(statement).not.toContain("access_token text");
+    expect(statement).not.toContain("refresh_token text");
+    expect(statement).toContain("CREATE TABLE villages");
+    expect(statement).toContain("CREATE TABLE facilities");
+    expect(statement).toContain("staff_assignments_active_scope_unique_idx");
+    expect(statement).toContain("mothers_village_same_center_fk");
+  });
+
+  it("provides a reverse migration for every Phase 1 entity", () => {
+    const sql = vi.fn();
+    phaseOneMigration.down({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("DROP TABLE IF EXISTS staff_sessions");
+    expect(statement).toContain("DROP TABLE IF EXISTS facilities");
+    expect(statement).toContain("DROP TABLE IF EXISTS villages");
+    expect(statement).toContain("DROP TYPE IF EXISTS facility_type");
   });
 });

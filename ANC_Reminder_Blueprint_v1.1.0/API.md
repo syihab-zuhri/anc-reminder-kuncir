@@ -54,6 +54,20 @@ List endpoints use `cursor`, `limit` (server max), `sort`, and allowlisted filte
 | API-AUTH-004 | GET | `/staff/me` | Staff |
 | API-AUTH-005 | POST | `/staff/sessions/revoke` | Puskesmas/self policy |
 
+### Organization / Staff Scope
+
+| Operation ID | Method | Path | Actor |
+|---|---|---|---|
+| API-ORG-001 | GET | `/staff/organization/villages` | Puskesmas |
+| API-ORG-002 | POST | `/staff/organization/villages` | Puskesmas |
+| API-ORG-003 | GET | `/staff/organization/facilities` | Puskesmas |
+| API-ORG-004 | POST | `/staff/organization/facilities` | Puskesmas |
+| API-STAFF-001 | GET | `/staff/users` | Puskesmas |
+| API-STAFF-002 | POST | `/staff/users` | Puskesmas; creates Bidan only |
+| API-STAFF-003 | PATCH | `/staff/users/{id}/status` | Puskesmas, same center |
+| API-STAFF-004 | POST | `/staff/assignments` | Puskesmas, same center |
+| API-STAFF-005 | DELETE | `/staff/assignments/{id}` | Puskesmas, same center |
+
 ### Bumil Private Access
 
 | Operation ID | Method | Path | Actor |

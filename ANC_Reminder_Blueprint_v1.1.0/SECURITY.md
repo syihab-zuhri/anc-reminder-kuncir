@@ -58,7 +58,10 @@ Rate limiting, worker leases, DB protection, health/readiness, alerting.
 ## 4. Authentication Controls
 
 ### Staff
-Strong password hashing, revocable sessions, lockout/throttling. MFA `PROPOSED` for privileged Puskesmas/Super Admin.
+Salted scrypt (`N=2^17, r=8, p=1`), opaque random access/refresh credentials, HMAC-only token persistence,
+single-use refresh rotation, revocable server sessions, generic credential errors, and persistent per-account
+lockout are implemented. Network/edge throttling remains in `TASK-P1-006`. MFA remains `PROPOSED` for
+privileged Puskesmas/Super Admin.
 
 ### Bumil
 Name + unique code; code is authenticator. Store only hash. Reissue revokes old credential. Response failure is generic.
@@ -82,6 +85,10 @@ Push lock-screen text generic. `wa.me` template must pass allowlist. Server choo
 ## 9. Audit Logging
 
 Append-only application access. Record actor, resource, action, timestamp, safe metadata. Do not log access code, session token, raw K1–K6 result payload, full sensitive message.
+
+Phase 1 implements an allowlisted/redacted metadata service and a PostgreSQL trigger that rejects update or
+delete with SQLSTATE `55000`. Authentication, session, staff, organization, and assignment security actions use
+this service; later domain tasks must wire confirmation/validation events through the same boundary.
 
 ## 10. Secure Development
 
