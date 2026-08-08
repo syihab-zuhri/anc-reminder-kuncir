@@ -36,9 +36,9 @@ try {
        FROM pg_tables
       WHERE schemaname = 'public'
         AND tablename = ANY($1::text[])`,
-    [["facilities", "staff_sessions", "villages"]],
+    [["api_idempotency_records", "facilities", "staff_sessions", "villages"]],
   );
-  if (tables.rowCount !== 3) throw new Error("Required Phase 1 tables are missing");
+  if (tables.rowCount !== 4) throw new Error("Required Phase 1 tables are missing");
 
   const columns = await client.query(
     `SELECT column_name
@@ -90,10 +90,27 @@ try {
   await expectPostgresError(client, "append_only_check", "55000", async () => {
     await client.query("UPDATE audit_events SET action = 'MUTATED' WHERE id = $1", [auditEventId]);
   });
+
+  const idempotencyKey = randomUUID();
+  const actorKey = `SYSTEM:VERIFY_${randomUUID()}`;
+  await client.query(
+    `INSERT INTO api_idempotency_records (
+       id, actor_key, operation, idempotency_key, request_hash
+     ) VALUES ($1, $2, 'DATABASE_VERIFY', $3, $4)`,
+    [randomUUID(), actorKey, idempotencyKey, "a".repeat(64)],
+  );
+  await expectPostgresError(client, "idempotency_unique_check", "23505", async () => {
+    await client.query(
+      `INSERT INTO api_idempotency_records (
+         id, actor_key, operation, idempotency_key, request_hash
+       ) VALUES ($1, $2, 'DATABASE_VERIFY', $3, $4)`,
+      [randomUUID(), actorKey, idempotencyKey, "a".repeat(64)],
+    );
+  });
   await client.query("ROLLBACK");
 
   process.stdout.write(
-    "Phase 1 database verification passed: schema, hashed credentials, scope FK, append-only audit.\n",
+    "Phase 1 database verification passed: schema, credentials, scope FK, audit, idempotency.\n",
   );
 } catch (error) {
   await client.query("ROLLBACK").catch(() => undefined);

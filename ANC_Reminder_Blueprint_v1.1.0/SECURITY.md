@@ -60,7 +60,8 @@ Rate limiting, worker leases, DB protection, health/readiness, alerting.
 ### Staff
 Salted scrypt (`N=2^17, r=8, p=1`), opaque random access/refresh credentials, HMAC-only token persistence,
 single-use refresh rotation, revocable server sessions, generic credential errors, and persistent per-account
-lockout are implemented. Network/edge throttling remains in `TASK-P1-006`. MFA remains `PROPOSED` for
+lockout are implemented. Exact network/edge throttling policy remains `PROPOSED` pending the pilot security
+profile. MFA remains `PROPOSED` for
 privileged Puskesmas/Super Admin.
 
 ### Bumil
@@ -89,6 +90,12 @@ Append-only application access. Record actor, resource, action, timestamp, safe 
 Phase 1 implements an allowlisted/redacted metadata service and a PostgreSQL trigger that rejects update or
 delete with SQLSTATE `55000`. Authentication, session, staff, organization, and assignment security actions use
 this service; later domain tasks must wire confirmation/validation events through the same boundary.
+
+## 9.1 Idempotency Metadata
+
+The shared coordinator never persists request/response payloads. It stores a keyed HMAC fingerprint and a
+domain resource reference so duplicate requests can be detected without adding NIK, clinical fields, or
+credentials to coordination storage. Same-key/different-request reuse is rejected rather than replayed.
 
 ## 10. Secure Development
 

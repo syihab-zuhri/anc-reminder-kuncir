@@ -16,6 +16,9 @@ const migration = loadModule("../migrations/000001_baseline.cjs") as BaselineMig
 const phaseOneMigration = loadModule(
   "../migrations/000002_phase_1_auth_security.cjs",
 ) as BaselineMigration;
+const idempotencyMigration = loadModule(
+  "../migrations/000003_api_idempotency.cjs",
+) as BaselineMigration;
 
 describe("baseline database migration", () => {
   it("defines the ERD baseline and privacy-sensitive NIK column", () => {
@@ -78,5 +81,26 @@ describe("phase 1 auth and organization migration", () => {
     expect(statement).toContain("DROP TABLE IF EXISTS facilities");
     expect(statement).toContain("DROP TABLE IF EXISTS villages");
     expect(statement).toContain("DROP TYPE IF EXISTS facility_type");
+  });
+});
+
+describe("phase 1 API idempotency migration", () => {
+  it("stores only keyed coordination metadata and a resource reference", () => {
+    const sql = vi.fn();
+    idempotencyMigration.up({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("CREATE TABLE api_idempotency_records");
+    expect(statement).toContain("request_hash text NOT NULL");
+    expect(statement).toContain("result_resource_id uuid");
+    expect(statement).not.toMatch(/request_body|response_body|payload jsonb/i);
+  });
+
+  it("provides an explicit reverse migration", () => {
+    const sql = vi.fn();
+    idempotencyMigration.down({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("DROP TABLE IF EXISTS api_idempotency_records");
   });
 });

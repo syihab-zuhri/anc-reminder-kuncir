@@ -4,6 +4,7 @@ import {
   actorRoleSchema,
   canonicalErrorEnvelopeSchema,
   createCanonicalError,
+  idempotencyKeySchema,
   milestoneCodeSchema,
   requestIdSchema,
   staffCreateRequestSchema,
@@ -58,6 +59,10 @@ describe("shared domain contracts", () => {
       villageCreateRequestSchema.safeParse({ code: "KNC-01", name: "Desa Kuncir" }).success,
     ).toBe(true);
     expect(staffRefreshRequestSchema.safeParse({ refresh_token: "raw-token" }).success).toBe(false);
+    expect(idempotencyKeySchema.safeParse("8b26fdbd-6306-4bbf-9765-3fd620888e7c").success).toBe(
+      true,
+    );
+    expect(idempotencyKeySchema.safeParse("duplicate-click").success).toBe(false);
   });
 });
 

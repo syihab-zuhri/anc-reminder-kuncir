@@ -226,6 +226,16 @@ Response:
 
 Confirmation, pregnancy close, reminder cycle creation, WA fallback creation, and program assessment use idempotency/unique constraints and transactional checks. Confirmation and reminder scheduling must serialize sufficiently to guarantee no new active reminder after committed confirmation.
 
+Shared server behavior:
+
+- mutation contracts use a client-generated UUID `idempotency_key` where duplicate action is harmful;
+- uniqueness scope is actor + operation + idempotency key;
+- PostgreSQL stores only a keyed HMAC request fingerprint and the resulting resource type/UUID—never request or response payloads;
+- an identical replay reconstructs the response from the domain resource;
+- reuse for a different request returns canonical HTTP `409` with code `IDEMPOTENCY_KEY_REUSED`;
+- same-key requests serialize through a transaction-scoped advisory lock; serializable/deadlock failures (`40001`/`40P01`) retry at most three times;
+- domain tables retain their own logical unique constraints; the shared coordinator does not replace domain invariants.
+
 ## 8. Retry Semantics
 
 Push retry occurs internally only for classified retryable provider/transport errors. `PROPOSED` default max 3 attempts; config-controlled. `wa.me` has **no provider retry** because server never sends the chat.

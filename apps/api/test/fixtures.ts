@@ -10,6 +10,7 @@ export function apiConfigFixture(): ApiConfig {
     apiPort: 3001,
     sessionSecret: "s".repeat(32),
     motherSessionSecret: "m".repeat(32),
+    idempotencySecret: "i".repeat(32),
     staffAccessTokenTtlMinutes: 15,
     staffRefreshTokenTtlDays: 7,
     staffLoginMaxFailures: 5,

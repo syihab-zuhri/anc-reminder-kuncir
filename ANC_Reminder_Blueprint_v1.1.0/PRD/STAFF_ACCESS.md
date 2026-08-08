@@ -76,5 +76,6 @@ MFA mechanism remains `PROPOSED`; not a core-domain blocker.
 ## 20. Implementation Status — 2026-08-08
 
 Backend acceptance for login, generic failure, lockout, refresh replay protection, logout/revocation,
-Puskesmas-superset scope, Bidan/cross-center denial, and Super Admin default denial is verified. Web staff
-states, generic edge throttling/idempotency helpers, break-glass, and MFA decision remain pending.
+Puskesmas-superset scope, Bidan/cross-center denial, Super Admin default denial, and shared
+idempotency/concurrency helpers are verified. Web staff states, exact edge-throttling policy, break-glass,
+and MFA decision remain pending.
