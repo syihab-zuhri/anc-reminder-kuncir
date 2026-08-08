@@ -1,0 +1,4 @@
+export const API_CONFIG = Symbol("API_CONFIG");
+export const DATABASE_POOL = Symbol("DATABASE_POOL");
+export const DATABASE_READINESS_CHECK = Symbol("DATABASE_READINESS_CHECK");
+export const DATABASE_POOL_CLOSE = Symbol("DATABASE_POOL_CLOSE");

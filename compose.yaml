@@ -1,0 +1,21 @@
+name: anc-reminder
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: anc_reminder
+      POSTGRES_PASSWORD: anc_dev
+      POSTGRES_USER: anc_dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U anc_dev -d anc_reminder"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - anc_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  anc_postgres_data:

@@ -1,0 +1,46 @@
+{
+  "name": "anc-reminder",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sistem Pengingat ANC Ibu Hamil — server-driven Web dan Android WebView.",
+  "license": "UNLICENSED",
+  "packageManager": "npm@11.14.0",
+  "engines": {
+    "node": ">=24.0.0 <25",
+    "npm": ">=11.0.0 <12"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "build:packages": "npm run build --workspace=@anc/contracts --workspace=@anc/config --workspace=@anc/database",
+    "clean": "npm run clean --workspaces --if-present",
+    "dev": "npm run dev --workspace=@anc/web",
+    "dev:web": "npm run dev --workspace=@anc/web",
+    "dev:api": "npm run dev --workspace=@anc/api",
+    "dev:worker": "npm run dev --workspace=@anc/worker",
+    "lint": "npm run lint --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run build:packages && npm run typecheck --workspaces --if-present",
+    "test": "npm run build:packages && npm run test --workspaces --if-present",
+    "test:ci": "npm run build:packages && npm run test:ci --workspaces --if-present",
+    "test:smoke:api": "node scripts/smoke-api.mjs",
+    "db:migrate": "npm run migrate:up --workspace=@anc/database",
+    "db:rollback": "npm run migrate:down --workspace=@anc/database",
+    "security:secrets": "node scripts/check-secrets.mjs",
+    "security:dependencies": "npm audit --audit-level=high",
+    "verify": "npm run build:packages && npm run format:check && npm run lint && npm run typecheck && npm run test:ci && npm run build && npm run security:secrets"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.10.13",
+    "eslint": "10.8.1",
+    "prettier": "3.9.6",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.66.0",
+    "vitest": "4.1.10"
+  }
+}

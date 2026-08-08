@@ -1,0 +1,229 @@
+# REST API Contract
+
+> **Project:** Sistem Pengingat ANC Ibu Hamil  
+> **Document ID:** DOC-API  
+> **Version:** 1.1.0  
+> **Status:** Review  
+> **Owner:** Backend Lead  
+> **Last Updated:** 2026-08-08  
+> **Depends On:** DOC-SRS, DOC-ERD, DOC-PERMISSION
+
+## 1. Principles
+
+Base path `/api/v1`. Server owns business rules. Client-provided derived fields (trimester, authoritative milestone status, allowed facility, program predicate) are ignored/rejected. UUID resource IDs. Canonical error envelope. Mutations use idempotency where duplicate action is harmful.
+
+## 2. Authentication
+
+### Staff
+Revocable staff session/token; role+scope checked per operation.
+
+### Bumil
+Name + unique code validation creates restricted mother session. Code hash only at rest.
+
+### Worker
+Service identity with minimum scheduled-job permissions.
+
+## 3. Canonical Error Envelope
+
+```json
+{
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Anda tidak memiliki akses untuk tindakan ini.",
+    "request_id": "req_uuid",
+    "details": null
+  }
+}
+```
+
+Do not reveal whether an out-of-scope mother exists.
+
+## 4. Pagination
+
+List endpoints use `cursor`, `limit` (server max), `sort`, and allowlisted filters.
+
+## 5. Endpoint Inventory
+
+### Authentication / Staff
+
+| Operation ID | Method | Path | Actor |
+|---|---|---|---|
+| API-AUTH-001 | POST | `/staff/auth/login` | Staff |
+| API-AUTH-002 | POST | `/staff/auth/refresh` | Staff |
+| API-AUTH-003 | POST | `/staff/auth/logout` | Staff |
+| API-AUTH-004 | GET | `/staff/me` | Staff |
+| API-AUTH-005 | POST | `/staff/sessions/revoke` | Puskesmas/self policy |
+
+### Bumil Private Access
+
+| Operation ID | Method | Path | Actor |
+|---|---|---|---|
+| API-MACCESS-001 | POST | `/mother-access/validate` | Public throttled |
+| API-MACCESS-002 | POST | `/mother-access/logout` | Bumil |
+| API-MACCESS-003 | POST | `/mothers/{id}/access-code/reissue` | Puskesmas |
+| API-MACCESS-004 | GET | `/mother/me` | Bumil |
+| API-MACCESS-005 | GET | `/mother/me/dashboard` | Bumil |
+| API-DEVICE-001 | PUT | `/mother/me/devices/android` | Bumil WebView |
+
+### Registry
+
+| Operation ID | Method | Path | Actor |
+|---|---|---|---|
+| API-MOTHER-001 | POST | `/mothers` | Puskesmas |
+| API-MOTHER-002 | GET | `/mothers` | Bidan scoped/Puskesmas |
+| API-MOTHER-003 | GET | `/mothers/{id}` | Bidan scoped/Puskesmas |
+| API-MOTHER-004 | PATCH | `/mothers/{id}` | Puskesmas |
+| API-PREG-001 | POST | `/mothers/{id}/pregnancies` | Puskesmas |
+| API-PREG-002 | PATCH | `/pregnancies/{id}` | Puskesmas |
+| API-PREG-003 | POST | `/pregnancies/{id}/close` | Puskesmas |
+| API-ASSIGN-001 | PUT | `/pregnancies/{id}/bidan-assignment` | Puskesmas |
+
+#### `API-MOTHER-001` — Register Bumil
+
+Registration request wajib mengandung lima data inti. Endpoint ini membuat `mother` dan initial active `pregnancy` dalam satu transaction.
+
+```json
+{
+  "full_name": "Siti Aminah",
+  "nik": "INPUT_NIK",
+  "address": "Alamat lengkap Bumil",
+  "phone_number": "08xxxxxxxxxx",
+  "pregnancy_start_date": "2026-05-01",
+  "consent": {
+    "notification_allowed": true
+  }
+}
+```
+
+Server behavior:
+- validasi semua lima field wajib;
+- normalize `phone_number` menjadi `phone_normalized`;
+- protect/encrypt NIK sebelum persistence;
+- map `pregnancy_start_date` ke current `dating_date` dengan `dating_basis = PREGNANCY_START_DATE`;
+- create mother + pregnancy + consent secara atomik;
+- response tidak mengembalikan NIK lengkap kecuali endpoint/role memang memerlukan dan policy mengizinkan.
+
+Contoh validation error:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Data pendaftaran belum lengkap.",
+    "fields": {
+      "nik": "required",
+      "pregnancy_start_date": "required"
+    }
+  }
+}
+```
+
+### ANC Plan / Milestones
+
+| Operation ID | Method | Path | Actor |
+|---|---|---|---|
+| API-ANC-001 | GET | `/anc-plan/active` | Staff |
+| API-ANC-002 | POST | `/anc-plan/versions` | Puskesmas program permission |
+| API-ANC-003 | POST | `/anc-plan/versions/{id}/approve` | Program owner |
+| API-ANC-004 | POST | `/anc-plan/versions/{id}/activate` | Program owner |
+| API-MILESTONE-001 | GET | `/pregnancies/{id}/milestones` | Scoped staff/Bumil own |
+| API-MILESTONE-002 | GET | `/pregnancies/{id}/milestones/next` | Scoped staff/Bumil own |
+| API-MILESTONE-003 | PATCH | `/pregnancies/{id}/milestones/{code}/due-date` | Puskesmas |
+| API-MILESTONE-004 | GET | `/pregnancies/{id}/progress` | Scoped |
+
+### Visit Confirmation / Detail
+
+| Operation ID | Method | Path | Actor |
+|---|---|---|---|
+| API-VISIT-001 | POST | `/milestones/{id}/confirm` | Bidan selected K / Puskesmas |
+| API-VISIT-002 | POST | `/milestones/{id}/confirmation-correction` | Puskesmas |
+| API-VISIT-003 | GET | `/milestones/{id}/record` | Puskesmas; limited summary staff |
+| API-VISIT-004 | PUT | `/milestones/{id}/record` | Puskesmas; K1–K6 |
+| API-VISIT-005 | POST | `/milestones/{id}/record/validate` | Puskesmas |
+| API-VISIT-006 | POST | `/milestones/{id}/record/reopen` | Puskesmas with reason |
+
+`POST /milestones/{id}/confirm` request:
+```json
+{
+  "occurred_on": "2026-08-08",
+  "facility_id": "uuid",
+  "idempotency_key": "client-generated-uuid"
+}
+```
+No lab/USG/clinical detail in Bidan confirmation.
+
+### Reminder / `wa.me`
+
+| Operation ID | Method | Path | Actor |
+|---|---|---|---|
+| API-REM-001 | GET | `/reminders/fallback-actions` | Bidan scoped/Puskesmas aggregate |
+| API-REM-002 | GET | `/reminders/fallback-actions/{id}` | Scoped staff |
+| API-REM-003 | POST | `/reminders/fallback-actions/{id}/wa-link` | Scoped staff |
+| API-REM-004 | POST | `/reminders/fallback-actions/{id}/mark-opened` | Web/WebView optional telemetry |
+| API-REM-005 | POST | `/reminders/fallback-actions/{id}/resolve` | Scoped staff |
+| API-REM-006 | POST | `/reminders/fallback-actions/{id}/unreachable` | Scoped staff |
+| API-REM-007 | GET | `/reminders/summary` | Puskesmas |
+| API-REM-008 | GET | `/reminders/{milestoneId}/history` | Scoped staff |
+
+`POST /reminders/fallback-actions/{id}/wa-link` takes **no arbitrary target/message**. Server selects mother phone and approved minimal template.
+
+Response:
+```json
+{
+  "action_id": "uuid",
+  "status": "LINK_GENERATED",
+  "wa_url": "https://wa.me/62812...?text=...",
+  "delivery_status": "UNKNOWN"
+}
+```
+
+`delivery_status` remains `UNKNOWN` for `wa.me`.
+
+### Dashboard
+
+| Operation ID | Method | Path | Actor |
+|---|---|---|---|
+| API-DASH-001 | GET | `/dashboard/puskesmas` | Puskesmas |
+| API-DASH-002 | GET | `/dashboard/bidan` | Bidan |
+| API-DASH-003 | GET | `/dashboard/bumil` | Bumil |
+
+### Program Assessment
+
+| Operation ID | Method | Path | Actor |
+|---|---|---|---|
+| API-PROGRAM-001 | GET | `/pregnancies/{id}/program-status` | Puskesmas / approved Bumil subset |
+| API-PROGRAM-002 | POST | `/pregnancies/{id}/program-status/recalculate` | Puskesmas/system |
+| API-PROGRAM-003 | GET | `/pregnancies/{id}/program-status/history` | Puskesmas |
+
+## 6. Validation Rules
+
+- `API-MOTHER-001` requires `full_name`, `nik`, `address`, `phone_number`, and `pregnancy_start_date`.
+- Empty/whitespace-only values are invalid; exact NIK format policy may be configured/validated separately without exposing NIK in error logs.
+- `pregnancy_start_date` must be a valid date accepted by server dating policy; client must not calculate authoritative gestational state.
+- Phone normalized server-side; `wa.me` number contains digits only and no `+`.
+- `wa.me` template placeholders use allowlist.
+- K confirm authorization depends on actor role + code + resource scope.
+- Facility validated against milestone rule snapshot.
+- K1–K6 record endpoints reject K7/K8.
+- Client cannot set program status directly.
+- Bumil cannot call any confirm/record endpoint.
+
+## 7. Idempotency and Concurrency
+
+Confirmation, pregnancy close, reminder cycle creation, WA fallback creation, and program assessment use idempotency/unique constraints and transactional checks. Confirmation and reminder scheduling must serialize sufficiently to guarantee no new active reminder after committed confirmation.
+
+## 8. Retry Semantics
+
+Push retry occurs internally only for classified retryable provider/transport errors. `PROPOSED` default max 3 attempts; config-controlled. `wa.me` has **no provider retry** because server never sends the chat.
+
+## 9. Rate Limits (`PROPOSED`)
+
+Strict on `/mother-access/validate`, staff login, code reissue, and WA-link generation. Exact values set after pilot/security load test.
+
+## 10. Deprecation
+
+Old provider/webhook WhatsApp endpoints and generic mother self-completion endpoints are removed from v1 contract. If already implemented externally, publish a migration note before deployment.
+
+## 11. OpenAPI
+
+`openapi.yaml` remains Deferred until payload review is approved. `API.md` is authoritative contract meanwhile.

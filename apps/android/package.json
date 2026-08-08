@@ -1,0 +1,27 @@
+{
+  "name": "@anc/android",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "clean": "node -e \"console.log('Android native output is managed by Capacitor')\"",
+    "lint": "eslint src capacitor.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:ci": "vitest run --reporter=default",
+    "cap:add:android": "cap add android",
+    "cap:sync": "cap sync android",
+    "cap:open": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.4.2",
+    "@capacitor/core": "8.4.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.4.2",
+    "@types/node": "24.10.13",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  }
+}

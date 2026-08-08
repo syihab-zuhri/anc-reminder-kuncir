@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: anc_reminder_test
+          POSTGRES_PASSWORD: anc_test
+          POSTGRES_USER: anc_test
+        options: >-
+          --health-cmd "pg_isready -U anc_test -d anc_reminder_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+        ports:
+          - 5432:5432
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://anc_test:anc_test@localhost:5432/anc_reminder_test
+      APP_BASE_URL: http://localhost:3000
+      API_BASE_URL: http://localhost:3001/api/v1
+      API_HOST: 127.0.0.1
+      API_PORT: 3001
+      SESSION_SECRET: ci-only-session-secret-at-least-32-characters
+      MOTHER_SESSION_SECRET: ci-only-mother-secret-at-least-32-characters
+      PRIMARY_TIMEZONE: Asia/Jakarta
+      LOG_LEVEL: error
+      REMINDER_INTERVAL_DAYS: 3
+      PUSH_MAX_ATTEMPTS: 3
+      PUSH_BACKOFF_SECONDS: 60,300,900
+      WA_FALLBACK_ESCALATION_HOURS: 24
+      CAPACITOR_SERVER_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm run db:migrate
+      - run: npm run db:rollback
+      - run: npm run db:migrate
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:ci
+      - run: npm run build
+      - run: npm run test:smoke:api
+      - run: npm run security:secrets
+      - run: npm audit --audit-level=high

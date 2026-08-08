@@ -1,0 +1,41 @@
+{
+  "name": "@anc/database",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "migrations"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint src test --max-warnings=0",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:ci": "vitest run",
+    "migrate:create": "node-pg-migrate --migrations-dir migrations --migrations-table anc_migrations --migration-file-language cjs --migration-filename-format index create",
+    "migrate:up": "node-pg-migrate --migrations-dir migrations --migrations-table anc_migrations --single-transaction up",
+    "migrate:down": "node-pg-migrate --migrations-dir migrations --migrations-table anc_migrations --single-transaction down",
+    "migrate:redo": "node-pg-migrate --migrations-dir migrations --migrations-table anc_migrations --single-transaction redo"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "pg": "8.22.0"
+  },
+  "devDependencies": {
+    "@types/pg": "8.21.0",
+    "node-pg-migrate": "9.0.0",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  }
+}

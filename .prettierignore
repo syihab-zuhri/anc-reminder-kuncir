@@ -1,0 +1,7 @@
+.next
+coverage
+dist
+node_modules
+package-lock.json
+apps/android/android
+ANC_Reminder_Blueprint_v1.1.0
