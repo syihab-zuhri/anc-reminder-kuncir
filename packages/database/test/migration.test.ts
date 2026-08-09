@@ -22,6 +22,9 @@ const idempotencyMigration = loadModule(
 const pregnancyLifecycleMigration = loadModule(
   "../migrations/000004_phase_2_pregnancy_lifecycle.cjs",
 ) as BaselineMigration;
+const motherAccessCredentialMigration = loadModule(
+  "../migrations/000005_phase_2_mother_access_credentials.cjs",
+) as BaselineMigration;
 
 describe("baseline database migration", () => {
   it("defines the ERD baseline and privacy-sensitive NIK column", () => {
@@ -130,5 +133,31 @@ describe("phase 2 pregnancy lifecycle migration", () => {
     expect(statement).toContain("DROP TABLE IF EXISTS pregnancy_lifecycle_events");
     expect(statement).toContain("DROP TABLE IF EXISTS pregnancy_dating_revisions");
     expect(statement).toContain("DROP CONSTRAINT IF EXISTS pregnancies_mother_same_center_fk");
+  });
+});
+
+describe("phase 2 mother access credential migration", () => {
+  it("adds staff-attributed revocation and append-only snapshots without plaintext codes", () => {
+    const sql = vi.fn();
+    motherAccessCredentialMigration.up({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("CREATE TABLE mother_access_credential_events");
+    expect(statement).toContain("mother_access_credential_events_append_only");
+    expect(statement).toContain("mother_access_credential_events_credential_same_mother_fk");
+    expect(statement).toContain("mother_access_credential_events_previous_same_mother_fk");
+    expect(statement).toContain("revoked_by_staff_id");
+    expect(statement).toContain("mother_sessions_revocation_actor_pair");
+    expect(statement).not.toMatch(/plaintext_code|one_time_code|raw_code/i);
+  });
+
+  it("provides an explicit reverse migration", () => {
+    const sql = vi.fn();
+    motherAccessCredentialMigration.down({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("DROP TABLE IF EXISTS mother_access_credential_events");
+    expect(statement).toContain("DROP TYPE IF EXISTS mother_access_credential_action");
+    expect(statement).toContain("DROP COLUMN IF EXISTS revoked_by_staff_id");
   });
 });

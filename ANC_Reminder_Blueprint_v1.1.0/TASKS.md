@@ -196,11 +196,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Done when: one-active-pregnancy, revision history, dan close tests lulus.
   - Evidence: migration `000004` menegakkan same-center FK, partial unique active pregnancy, append-only dating revisions/lifecycle snapshots; API Puskesmas-only create/revise/close memakai immutable idempotency replay, audit, scope-safe errors, 29 API tests, 16 database tests, dan synthetic PostgreSQL lifecycle smoke di protected CI. Cancellation milestone/reminder tetap owning task `TASK-P2-008`.
 
-- [ ] `TASK-P2-003` [L] Implement mother access credential issue/hash/revoke/reissue sesuai auth decision
+- [x] `TASK-P2-003` [L] Implement mother access credential issue/hash/revoke/reissue sesuai auth decision
   - Owner: Backend + Security
   - References: FR-006, FR-007, ADR-001
   - Depends on: TASK-P2-001, TASK-P1-004, TASK-P0-007
   - Done when: credential plaintext tidak dipersist dan reissue/revocation tests lulus.
+  - Evidence: migration `000005` menambahkan staff-attributed revocation, session invalidation, dan append-only credential snapshots; Puskesmas-only same-center endpoints memakai UUID idempotency, active-pregnancy gate, one-time 80-bit code, salted scrypt, immutable replay tanpa plaintext, reason-bearing audit, API/security/migration tests, serta synthetic PostgreSQL rotation smoke di protected CI. Public validation/throttling/restricted session creation tetap owning task `TASK-P2-004`.
 
 - [ ] `TASK-P2-004` [L] Implement mother validation, anti-enumeration, throttling, dan restricted session
   - Owner: Backend + Security

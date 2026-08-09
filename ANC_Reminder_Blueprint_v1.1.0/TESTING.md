@@ -31,8 +31,11 @@ Local synthetic data → CI ephemeral DB → staging with synthetic/pilot-approv
 | TEST-REG-003 | Dating correction retains immutable previous/revised values and replays once | Integration/DB |
 | TEST-REG-004 | Active pregnancy rejects a duplicate; close permits exactly one replacement | Integration/Concurrency |
 | TEST-REG-005 | Bidan and cross-center pregnancy mutations fail without resource leakage | Security |
-| TEST-REG-003 | NIK is not exposed in logs, notification payloads, `wa.me`, or generic audit metadata | Security |
-| TEST-REG-004 | Phone normalization and pregnancy-start persistence match server contract | Integration |
+| TEST-REG-006 | NIK is not exposed in logs, notification payloads, `wa.me`, or generic audit metadata | Security |
+| TEST-REG-007 | Phone normalization and pregnancy-start persistence match server contract | Integration |
+| TEST-REG-008 | Access code is displayed once, stored only as salted scrypt, and absent on idempotency replay | Integration/DB |
+| TEST-REG-009 | Reissue/revoke preserves one active credential, invalidates sessions, and retains append-only history | Integration/Concurrency |
+| TEST-REG-010 | Bidan, cross-center, and inactive-pregnancy issuance fail closed | Security |
 | TEST-ANC-001 | K1/K4/K5 require Puskesmas | Unit/integration |
 | TEST-ANC-002 | K2/K3/K6/K7 allowed by configured facility list | Unit |
 | TEST-ANC-003 | K8 category/facility PONED/RS | Unit |

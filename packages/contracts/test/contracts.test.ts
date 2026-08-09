@@ -6,6 +6,9 @@ import {
   createCanonicalError,
   idempotencyKeySchema,
   milestoneCodeSchema,
+  motherAccessCodeSchema,
+  motherAccessCredentialIssueResponseSchema,
+  motherAccessCredentialMutationRequestSchema,
   motherRegistrationRequestSchema,
   pregnancyCloseRequestSchema,
   pregnancyCreateRequestSchema,
@@ -118,6 +121,25 @@ describe("shared domain contracts", () => {
         dating_date: "2026-05-01",
         status: "CLOSED",
         closed_at: null,
+      }).success,
+    ).toBe(false);
+    expect(motherAccessCodeSchema.safeParse("ANC-2345-6789-ABCD-EFGH").success).toBe(true);
+    expect(motherAccessCodeSchema.safeParse("ANC-0000-0000-0000-0000").success).toBe(false);
+    expect(
+      motherAccessCredentialMutationRequestSchema.safeParse({
+        idempotency_key: "80000000-0000-4000-8000-000000000001",
+        reason: "Kode sebelumnya hilang",
+      }).success,
+    ).toBe(true);
+    expect(
+      motherAccessCredentialIssueResponseSchema.safeParse({
+        id: "70000000-0000-4000-8000-000000000001",
+        mother_id: "50000000-0000-4000-8000-000000000001",
+        issuance_type: "ISSUED",
+        status: "ACTIVE",
+        issued_at: "2026-08-10T09:00:00.000Z",
+        one_time_code: null,
+        code_delivery: "DISPLAY_ONCE",
       }).success,
     ).toBe(false);
   });

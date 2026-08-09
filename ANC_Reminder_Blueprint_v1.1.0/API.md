@@ -81,10 +81,38 @@ only the validated staff identity or a safe canonical error. Login/logout reject
 |---|---|---|---|
 | API-MACCESS-001 | POST | `/mother-access/validate` | Public throttled |
 | API-MACCESS-002 | POST | `/mother-access/logout` | Bumil |
-| API-MACCESS-003 | POST | `/mothers/{id}/access-code/reissue` | Puskesmas |
+| API-MACCESS-003 | POST | `/mothers/{id}/access-code/reissue` | Puskesmas, same center |
 | API-MACCESS-004 | GET | `/mother/me` | Bumil |
 | API-MACCESS-005 | GET | `/mother/me/dashboard` | Bumil |
+| API-MACCESS-006 | POST | `/mothers/{id}/access-code/revoke` | Puskesmas, same center |
 | API-DEVICE-001 | PUT | `/mother/me/devices/android` | Bumil WebView |
+
+#### `API-MACCESS-003/006` — Issue, Reissue, and Revoke Access Code
+
+Both staff mutations require a UUID idempotency key and a 3–200 character operational reason:
+
+```json
+{
+  "idempotency_key": "client-generated-uuid",
+  "reason": "Kode sebelumnya hilang"
+}
+```
+
+`API-MACCESS-003` creates the first credential or atomically revokes the latest active credential and all active mother sessions before creating its replacement. The code uses the display format `ANC-XXXX-XXXX-XXXX-XXXX`, with 16 random symbols from an unambiguous Base32 alphabet (80 bits entropy). Only its salted scrypt verifier is persisted.
+
+```json
+{
+  "id": "credential-uuid",
+  "mother_id": "mother-uuid",
+  "issuance_type": "ISSUED",
+  "status": "ACTIVE",
+  "issued_at": "2026-08-10T09:00:00.000Z",
+  "one_time_code": "ANC-XXXX-XXXX-XXXX-XXXX",
+  "code_delivery": "DISPLAY_ONCE"
+}
+```
+
+The plaintext is returned only by the first successful execution. An idempotency replay returns the same immutable credential snapshot with `one_time_code: null` and `code_delivery: "NOT_AVAILABLE_ON_REPLAY"`; a lost response requires a new reissue request and key. `API-MACCESS-006` revokes the active credential and active mother sessions atomically and returns the immutable revoked snapshot. Bidan, Super Admin routine access, cross-center targets, and issue/reissue without an active pregnancy fail closed. Public validation, throttling, and restricted mother sessions remain owned by `TASK-P2-004`.
 
 ### Registry
 
@@ -289,7 +317,7 @@ Push retry occurs internally only for classified retryable provider/transport er
 
 ## 9. Rate Limits (`PROPOSED`)
 
-Strict on `/mother-access/validate`, staff login, code reissue, and WA-link generation. Exact values set after pilot/security load test.
+Strict on `/mother-access/validate`, staff login, code reissue/revoke, and WA-link generation. Exact values set after pilot/security load test. Staff code mutations already use UUID idempotency and transactional row locking; edge rate-limit values remain part of the pilot security profile.
 
 ## 10. Deprecation
 

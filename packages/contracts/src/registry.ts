@@ -119,6 +119,63 @@ export const pregnancyLifecycleResponseSchema = z
   });
 export type PregnancyLifecycleResponse = z.infer<typeof pregnancyLifecycleResponseSchema>;
 
+export const motherAccessCodeSchema = z
+  .string()
+  .regex(
+    /^ANC-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}(?:-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}){3}$/u,
+    "Expected an ANC access code",
+  );
+
+export const motherAccessCredentialMutationRequestSchema = z
+  .object({
+    idempotency_key: idempotencyKeySchema,
+    reason: mutationReasonSchema,
+  })
+  .strict();
+export type MotherAccessCredentialMutationRequest = z.infer<
+  typeof motherAccessCredentialMutationRequestSchema
+>;
+
+export const motherAccessCredentialIssueResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    mother_id: z.string().uuid(),
+    issuance_type: z.enum(["ISSUED", "REISSUED"]),
+    status: z.literal("ACTIVE"),
+    issued_at: z.string().datetime({ offset: true }),
+    one_time_code: motherAccessCodeSchema.nullable(),
+    code_delivery: z.enum(["DISPLAY_ONCE", "NOT_AVAILABLE_ON_REPLAY"]),
+  })
+  .strict()
+  .superRefine((credential, context) => {
+    const validDelivery =
+      (credential.code_delivery === "DISPLAY_ONCE" && credential.one_time_code !== null) ||
+      (credential.code_delivery === "NOT_AVAILABLE_ON_REPLAY" && credential.one_time_code === null);
+    if (!validDelivery) {
+      context.addIssue({
+        code: "custom",
+        path: ["one_time_code"],
+        message: "one_time_code must match code_delivery",
+      });
+    }
+  });
+export type MotherAccessCredentialIssueResponse = z.infer<
+  typeof motherAccessCredentialIssueResponseSchema
+>;
+
+export const motherAccessCredentialRevokeResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    mother_id: z.string().uuid(),
+    status: z.literal("REVOKED"),
+    issued_at: z.string().datetime({ offset: true }),
+    revoked_at: z.string().datetime({ offset: true }),
+  })
+  .strict();
+export type MotherAccessCredentialRevokeResponse = z.infer<
+  typeof motherAccessCredentialRevokeResponseSchema
+>;
+
 function isCalendarDate(value: string): boolean {
   const parsed = new Date(`${value}T00:00:00.000Z`);
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
