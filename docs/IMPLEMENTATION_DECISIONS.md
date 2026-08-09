@@ -32,6 +32,11 @@ Catatan ini melengkapi—dan tidak menggantikan—ADR pada blueprint.
 - Retention dan deletion matrix.
 - SLA final fallback WhatsApp.
 
+## 2026-08-10 â€” Privileged-access owner decisions
+
+- Owner menempatkan break-glass (`TASK-P1-005`) sebagai `Deferred` untuk roadmap saat ini. Super Admin tetap tidak memiliki routine health-data access; tidak ada jalur bypass yang diaktifkan.
+- MFA Puskesmas/Super Admin (`TASK-P1-008`) tetap `PROPOSED`. Security + Product harus menetapkan mekanisme, recovery, dan go/no-go sebelum pilot atau production privileged access; tidak diimplementasikan dalam Phase 1/2 saat ini.
+
 ## Android foundation boundary
 
 Phase 0 menyediakan workspace Capacitor, validasi trusted origin, dan halaman fallback lokal. Native Gradle project sengaja dibuat pada `TASK-P4-004`, saat secure-storage bridge, FCM, navigation handling, dan pengujian perangkat diimplementasikan sebagai satu unit.

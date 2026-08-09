@@ -11,6 +11,7 @@ export function apiConfigFixture(): ApiConfig {
     sessionSecret: "s".repeat(32),
     motherSessionSecret: "m".repeat(32),
     idempotencySecret: "i".repeat(32),
+    nikEncryptionKey: Buffer.from("n".repeat(32)).toString("base64"),
     staffAccessTokenTtlMinutes: 15,
     staffRefreshTokenTtlDays: 7,
     staffLoginMaxFailures: 5,

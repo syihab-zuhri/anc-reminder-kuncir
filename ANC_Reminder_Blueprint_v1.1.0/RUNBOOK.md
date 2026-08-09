@@ -38,6 +38,8 @@ The implemented Phase 1 subset is automated by `npm run test:smoke:auth`: login,
 single-use refresh rotation, old-token rejection, Puskesmas-scoped village/facility/Bidan/assignment
 management, Bidan management denial, disable-triggered session revocation, and logout.
 `npm run test:smoke:idempotency` verifies one execution/one replay under concurrent same-key requests
+
+`npm run test:smoke:registry` verifies a synthetic Puskesmas registration through the built API: active-plan precondition, AES-GCM NIK ciphertext, contact normalization, mother/pregnancy/consent state, and idempotency replay. It requires the same API environment and synthetic Puskesmas credentials as the staff smoke.
 and rejects same-key/different-request reuse.
 
 ## 6. Rollback

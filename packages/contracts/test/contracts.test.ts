@@ -6,6 +6,7 @@ import {
   createCanonicalError,
   idempotencyKeySchema,
   milestoneCodeSchema,
+  motherRegistrationRequestSchema,
   requestIdSchema,
   staffCreateRequestSchema,
   staffLoginRequestSchema,
@@ -63,6 +64,28 @@ describe("shared domain contracts", () => {
       true,
     );
     expect(idempotencyKeySchema.safeParse("duplicate-click").success).toBe(false);
+    expect(
+      motherRegistrationRequestSchema.safeParse({
+        idempotency_key: "8b26fdbd-6306-4bbf-9765-3fd620888e7c",
+        full_name: "Siti Aminah",
+        nik: "3273014901010001",
+        address: "Jl. Mawar Nomor 1",
+        phone_number: "0812-3456-789",
+        pregnancy_start_date: "2026-05-01",
+        consent: { notification_allowed: true },
+      }).success,
+    ).toBe(true);
+    expect(
+      motherRegistrationRequestSchema.safeParse({
+        idempotency_key: "8b26fdbd-6306-4bbf-9765-3fd620888e7c",
+        full_name: "Siti Aminah",
+        nik: "not-a-nik",
+        address: "Jl. Mawar Nomor 1",
+        phone_number: "0812-3456-789",
+        pregnancy_start_date: "2026-02-30",
+        consent: { notification_allowed: true },
+      }).success,
+    ).toBe(false);
   });
 });
 

@@ -36,6 +36,7 @@ jobs:
       SESSION_SECRET: ci-only-session-secret-at-least-32-characters
       MOTHER_SESSION_SECRET: ci-only-mother-secret-at-least-32-characters
       IDEMPOTENCY_SECRET: ci-only-idempotency-secret-at-least-32-characters
+      NIK_ENCRYPTION_KEY: bm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm4=
       PRIMARY_TIMEZONE: Asia/Jakarta
       LOG_LEVEL: error
       REMINDER_INTERVAL_DAYS: 3
@@ -72,6 +73,7 @@ jobs:
       - run: npm run test:smoke:idempotency
       - run: npm run staff:provision:puskesmas
       - run: npm run test:smoke:auth
+      - run: npm run test:smoke:registry
       - run: npm run test:smoke:web-session
       - run: npm run security:secrets
       - run: npm audit --audit-level=high

@@ -152,11 +152,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Done when: konfirmasi/validasi dan critical actions memiliki immutable audit event.
   - Evidence: audit service diterapkan pada auth, session, staff, organization, dan assignment security actions; metadata allowlist/redaction test serta PostgreSQL append-only mutation rejection lulus. Domain confirmation/validation akan memakai service ini pada owning task Phase 2.
 
-- [ ] `TASK-P1-005` [L] Implement break-glass grant/expiry/audit jika tetap P0 setelah review
+- [x] `TASK-P1-005` [L] Implement break-glass grant/expiry/audit jika tetap P0 setelah review
   - Owner: Backend + Security
   - References: FR-023, ADR-004
   - Depends on: TASK-P1-003, TASK-P1-004
   - Done when: Super Admin ditolak default dan expiry/audit test lulus, atau feature dipindah Deferred.
+  - Evidence: owner decision 2026-08-10 menempatkan break-glass sebagai `Deferred`; Super Admin tetap deny-by-default untuk health data routine.
 
 - [x] `TASK-P1-006` [M] Implement API validation, canonical errors, idempotency, dan concurrency helpers
   - Owner: Backend
@@ -172,19 +173,21 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Done when: login/logout/session-expiry/403 E2E lulus.
   - Evidence: same-origin BFF menyimpan access/refresh token hanya di cookie `HttpOnly` + `SameSite=Strict`, mutation origin check aktif, kontrak upstream divalidasi, login failure tetap generik, refresh/logout smoke terhadap API + PostgreSQL nyata lulus, dan login/workspace/forbidden/mobile states lolos QA aksesibilitas.
 
-- [ ] `TASK-P1-008` [M] Putuskan dan implement Admin/Super Admin MFA bila requirement tetap dipertahankan
+- [x] `TASK-P1-008` [M] Putuskan dan implement Admin/Super Admin MFA bila requirement tetap dipertahankan
   - Owner: Security + Backend + Frontend
   - References: PRD-STAFF open question
   - Depends on: TASK-P1-001, TASK-P0-007
   - Done when: mekanisme/recovery diterima atau requirement ditandai Deferred dengan owner.
+  - Evidence: owner decision 2026-08-10 mempertahankan MFA privileged sebagai `PROPOSED` dan menunda keputusan/implementasi hingga gate pra-produksi; Security + Product menjadi owner keputusan tersebut.
 
 ## Phase 2 — P0 Backend / Core Domain
 
-- [ ] `TASK-P2-001` [L] Implement mother/contact/consent registry service
+- [x] `TASK-P2-001` [L] Implement mother/contact/consent registry service
   - Owner: Backend
   - References: FR-004, FR-005, FR-018, PRD-REGISTRY
   - Depends on: TASK-P1-003, TASK-P1-004
   - Done when: registrasi mewajibkan nama, NIK, alamat, nomor telepon, dan awal kehamilan; mother+pregnancy dibuat atomik; phone normalization, NIK protection, dan consent tests lulus.
+  - Evidence: `API-MOTHER-001` Puskesmas-only memakai strict contract + UUID idempotency, PostgreSQL serializable transaction untuk mother/pregnancy/reminder consent, Indonesian phone normalization, NIK AES-256-GCM ciphertext, response masking/no leakage, audit resource-only, API/cipher regression tests, serta smoke PostgreSQL sintetis di protected CI.
 
 - [ ] `TASK-P2-002` [L] Implement pregnancy dan dating revision lifecycle
   - Owner: Backend

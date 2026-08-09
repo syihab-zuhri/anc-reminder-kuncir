@@ -4,6 +4,11 @@ export type EnvironmentSource = Readonly<Record<string, string | undefined>>;
 
 const requiredText = z.string().trim().min(1);
 
+const encryptionKey = requiredText.refine((value) => {
+  const decoded = Buffer.from(value, "base64");
+  return decoded.length === 32 && decoded.toString("base64") === value;
+}, "NIK_ENCRYPTION_KEY must be a base64-encoded 32-byte key");
+
 const postgresUrl = z
   .string()
   .trim()
@@ -112,6 +117,7 @@ export const apiEnvironmentSchema = z
     SESSION_SECRET: requiredText.min(32),
     MOTHER_SESSION_SECRET: requiredText.min(32),
     IDEMPOTENCY_SECRET: requiredText.min(32),
+    NIK_ENCRYPTION_KEY: encryptionKey,
     STAFF_ACCESS_TOKEN_TTL_MINUTES: positiveInteger("15"),
     STAFF_REFRESH_TOKEN_TTL_DAYS: positiveInteger("7"),
     STAFF_LOGIN_MAX_FAILURES: positiveInteger("5"),
@@ -139,6 +145,18 @@ export const apiEnvironmentSchema = z
       });
     }
 
+    if (
+      environment.NIK_ENCRYPTION_KEY === environment.SESSION_SECRET ||
+      environment.NIK_ENCRYPTION_KEY === environment.MOTHER_SESSION_SECRET ||
+      environment.NIK_ENCRYPTION_KEY === environment.IDEMPOTENCY_SECRET
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "NIK_ENCRYPTION_KEY must be distinct from session and idempotency secrets",
+        path: ["NIK_ENCRYPTION_KEY"],
+      });
+    }
+
     for (const key of ["APP_BASE_URL", "API_BASE_URL"] as const) {
       const url = new URL(environment[key]);
       const isLoopback = isLoopbackHost(url.hostname);
@@ -161,6 +179,7 @@ export const apiEnvironmentSchema = z
     sessionSecret: environment.SESSION_SECRET,
     motherSessionSecret: environment.MOTHER_SESSION_SECRET,
     idempotencySecret: environment.IDEMPOTENCY_SECRET,
+    nikEncryptionKey: environment.NIK_ENCRYPTION_KEY,
     staffAccessTokenTtlMinutes: environment.STAFF_ACCESS_TOKEN_TTL_MINUTES,
     staffRefreshTokenTtlDays: environment.STAFF_REFRESH_TOKEN_TTL_DAYS,
     staffLoginMaxFailures: environment.STAFF_LOGIN_MAX_FAILURES,

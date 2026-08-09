@@ -5,8 +5,21 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** Product/Project Lead  
-> **Last Updated:** 2026-08-08  
+> **Last Updated:** 2026-08-10  
 > **Depends On:** All project documents
+
+## [2026-08-10] Phase 2 Mother Registry Slice
+
+### Added
+
+- `API-MOTHER-001` implementation: strict five-field registration plus explicit UUID idempotency key, Puskesmas-only authorization, and atomic mother/active-pregnancy/reminder-consent creation.
+- Indonesian contact normalization, masked response contact, and versioned AES-256-GCM NIK ciphertext using a dedicated runtime key.
+- Synthetic PostgreSQL/API smoke for encrypted persistence, active-plan precondition, and idempotency replay; protected CI runs it after synthetic Puskesmas provisioning.
+
+### Decisions Recorded
+
+- Owner deferred break-glass for the current roadmap; Super Admin stays deny-by-default for routine health data.
+- Privileged-account MFA remains `PROPOSED` pending Security + Product pre-production decision, mechanism, and recovery design.
 
 ## [2026-08-08] — Phase 1 Staff Web Access
 
@@ -21,9 +34,9 @@
 
 - Production Web build, 12 Web tests, login/refresh/logout smoke, desktop/mobile visual QA, and WCAG A/AA automated audit pass.
 
-### Still Pending
+### Decision Status
 
-- Break-glass and privileged-account MFA remain explicit owner decisions in `TASK-P1-005` and `TASK-P1-008`.
+- Break-glass is `Deferred` by owner decision dated 2026-08-10; privileged-account MFA remains `PROPOSED` for the pre-production Security + Product gate.
 
 ## [2026-08-08] — Phase 1 Backend Security Baseline
 
@@ -42,9 +55,9 @@
 - PostgreSQL 17 Phase 1 migration passes `up → down → up`; raw-token absence, composite scope FK, and immutable audit controls pass.
 - Protected CI now provisions a synthetic Puskesmas and repeats the complete auth, organization, assignment, disable, and logout smoke path.
 
-### Still Pending
+### Decision Status
 
-- Break-glass and MFA decision remain in `TASK-P1-005` and `TASK-P1-008`; Web staff access moved to the completed entry above.
+- The 2026-08-10 owner decision defers break-glass and keeps privileged-account MFA `PROPOSED` until its pre-production mechanism/recovery decision.
 
 ## [2026-08-08] — Implementation Foundation 0.1.0
 

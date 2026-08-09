@@ -5,7 +5,7 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** Backend Lead  
-> **Last Updated:** 2026-08-08  
+> **Last Updated:** 2026-08-10  
 > **Depends On:** DOC-SRS, DOC-ERD, DOC-PERMISSION
 
 ## 1. Principles
@@ -105,6 +105,7 @@ Registration request wajib mengandung lima data inti. Endpoint ini membuat `moth
 
 ```json
 {
+  "idempotency_key": "client-generated-uuid",
   "full_name": "Siti Aminah",
   "nik": "INPUT_NIK",
   "address": "Alamat lengkap Bumil",
@@ -122,6 +123,7 @@ Server behavior:
 - protect/encrypt NIK sebelum persistence;
 - map `pregnancy_start_date` ke current `dating_date` dengan `dating_basis = PREGNANCY_START_DATE`;
 - create mother + pregnancy + consent secara atomik;
+- gunakan `idempotency_key` UUID per attempt; request body tidak dipersist, hanya fingerprint HMAC dan referensi resource;
 - response tidak mengembalikan NIK lengkap kecuali endpoint/role memang memerlukan dan policy mengizinkan.
 
 Contoh validation error:
