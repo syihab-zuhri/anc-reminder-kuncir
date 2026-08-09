@@ -7,6 +7,7 @@ const commonEnvironment = {
   PUSH_BACKOFF_SECONDS: "30, 120,600",
   WA_FALLBACK_ESCALATION_HOURS: "24",
   IDEMPOTENCY_SECRET: "synthetic-idempotency-test-secret-001",
+  NIK_ENCRYPTION_KEY: Buffer.from("n".repeat(32)).toString("base64"),
 };
 
 describe("loadApiConfig", () => {
@@ -29,6 +30,7 @@ describe("loadApiConfig", () => {
       sessionSecret: "synthetic-api-test-secret-00000001",
       motherSessionSecret: "synthetic-mother-test-secret-000001",
       idempotencySecret: "synthetic-idempotency-test-secret-001",
+      nikEncryptionKey: Buffer.from("n".repeat(32)).toString("base64"),
       staffAccessTokenTtlMinutes: 15,
       staffRefreshTokenTtlDays: 7,
       staffLoginMaxFailures: 5,

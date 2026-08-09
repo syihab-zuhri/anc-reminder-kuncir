@@ -5,7 +5,7 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** Project Planning Lead  
-> **Last Updated:** 2026-08-08  
+> **Last Updated:** 2026-08-10  
 > **Depends On:** All blueprint documents
 
 ## Checks Performed
@@ -55,10 +55,19 @@ The public repository now protects `main` with mandatory pull requests and the s
 - shared idempotency/concurrency helpers and real race smoke: **pass**;
 - Web BFF login/refresh/logout smoke against the real API/database: **pass**;
 - staff login/workspace/logout desktop/mobile QA and automated WCAG A/AA audit: **pass**;
-- break-glass and MFA decision: **pending**.
+- break-glass: **Deferred by owner on 2026-08-10**; Super Admin remains deny-by-default for routine health data.
+- privileged-account MFA: **PROPOSED**; Security + Product decision is required before pilot/production privileged access.
 
 The protected pull-request workflow repeats this evidence before merge. This does not claim that later
-mother registry, clinical record, reminder, Web, or mobile requirements are implemented.
+clinical record, reminder, additional Web, or mobile requirements are implemented.
+
+## Phase 2 Mother Registry Implementation Evidence - 2026-08-10
+
+- `TASK-P2-001`: strict registration contract, Puskesmas-only authorization, Indonesian phone normalization, versioned AES-256-GCM NIK ciphertext, atomic repository operations, consent recording, and resource-only idempotency replay are implemented;
+- API unit/integration coverage verifies no NIK/raw phone/address response leakage, encryption integrity, invalid input rejection, denied Bidan access, active-plan fail-closed behavior, and replay without duplicate audit events;
+- protected CI includes a synthetic PostgreSQL/API smoke that verifies encrypted persistence and atomic mother/pregnancy/consent state.
+
+This evidence does not approve clinical ANC milestone values, NIK retention/deletion, or production key rotation; those remain governed by their owners and explicit production gates.
 
 ## Remaining Production Approvals
 

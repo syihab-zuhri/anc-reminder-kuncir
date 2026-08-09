@@ -5,7 +5,7 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** DevOps Lead  
-> **Last Updated:** 2026-08-08  
+> **Last Updated:** 2026-08-10  
 > **Depends On:** DOC-ARCH
 
 ## 1. Principles
@@ -25,6 +25,7 @@ No secrets in repository/docs. Validate required variables at startup. Separate 
 | `SESSION_SECRET` | Yes | Server session signing/encryption secret |
 | `MOTHER_SESSION_SECRET` | Yes | Restricted mother session secret |
 | `IDEMPOTENCY_SECRET` | Yes | Dedicated HMAC secret for request fingerprints; distinct from session secrets |
+| `NIK_ENCRYPTION_KEY` | API env | Dedicated base64-encoded 32-byte AES-256-GCM key for restricted NIK ciphertext; distinct from session/idempotency secrets |
 | `STAFF_ACCESS_TOKEN_TTL_MINUTES` | API env | Staff access-token lifetime; default `15` |
 | `STAFF_REFRESH_TOKEN_TTL_DAYS` | API env | Staff refresh-token lifetime; default `7` |
 | `STAFF_LOGIN_MAX_FAILURES` | API env | Consecutive failures before lock; default `5` |
@@ -56,6 +57,7 @@ API_BASE_URL=http://localhost:3001/api/v1
 SESSION_SECRET=replace-with-at-least-32-random-characters
 MOTHER_SESSION_SECRET=replace-with-a-different-32-character-secret
 IDEMPOTENCY_SECRET=replace-with-a-third-distinct-32-character-secret
+NIK_ENCRYPTION_KEY=replace-with-a-base64-encoded-32-byte-key
 STAFF_ACCESS_TOKEN_TTL_MINUTES=15
 STAFF_REFRESH_TOKEN_TTL_DAYS=7
 STAFF_LOGIN_MAX_FAILURES=5
@@ -82,7 +84,7 @@ Database available → migrations → seed synthetic care-plan version → serve
 
 ## 6. Secret Rotation Ownership
 
-DevOps owns infrastructure/FCM/session/idempotency secret rotation with Backend support. Rotation procedure must avoid invalidating active sessions unexpectedly unless incident response requires it. After `IDEMPOTENCY_SECRET` rotation, reuse of a pre-rotation key fails closed as HTTP `409`; reconcile the original resource before issuing a new key.
+DevOps owns infrastructure/FCM/session/idempotency/NIK-encryption-key rotation with Backend support. Rotation procedure must avoid invalidating active sessions unexpectedly unless incident response requires it. After `IDEMPOTENCY_SECRET` rotation, reuse of a pre-rotation key fails closed as HTTP `409`; reconcile the original resource before issuing a new key. NIK-key rotation requires a reviewed decrypt-and-re-encrypt migration before the retiring key is removed.
 
 ## 7. Seed Policy
 

@@ -37,7 +37,7 @@ Scope: `TASK-P1-001` through `TASK-P1-004`, plus `TASK-P1-006` and `TASK-P1-007`
 
 ## Still pending in Phase 1
 
-- `TASK-P1-005`: break-glass remains `PROPOSED`; Super Admin is denied by default.
-- `TASK-P1-008`: owner decision and possible MFA implementation for Puskesmas/Super Admin.
+- `TASK-P1-005`: owner menempatkan break-glass sebagai `Deferred` pada 2026-08-10; Super Admin tetap denied by default.
+- `TASK-P1-008`: MFA Puskesmas/Super Admin tetap `PROPOSED` dan ditunda sampai keputusan Security + Product pra-produksi.
 
 Hosted CI evidence is added by the protected pull-request workflow before merge.

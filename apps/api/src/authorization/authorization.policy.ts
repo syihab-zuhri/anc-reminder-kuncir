@@ -7,6 +7,7 @@ import { ApiException } from "../errors/api.exception.js";
 export type StaffCapability =
   | "STAFF_SELF_READ"
   | "MOTHER_BASIC_READ"
+  | "MOTHER_REGISTRY_MANAGE"
   | "VISIT_CONFIRM_FLEXIBLE"
   | "WA_FALLBACK_ASSIGNED"
   | "ORGANIZATION_MANAGE"
@@ -23,6 +24,7 @@ const bidanCapabilities = new Set<StaffCapability>([
 ]);
 const puskesmasCapabilities = new Set<StaffCapability>([
   ...bidanCapabilities,
+  "MOTHER_REGISTRY_MANAGE",
   "ORGANIZATION_MANAGE",
   "STAFF_MANAGE",
   "SESSION_REVOKE_SCOPED",

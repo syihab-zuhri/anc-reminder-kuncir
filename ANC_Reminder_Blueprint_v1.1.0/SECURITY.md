@@ -80,7 +80,7 @@ TLS in transit. Secrets/environment variables never committed. DB/storage encryp
 
 ## 7. Privacy Requirements
 
-Data minimization, purpose/consent, privacy notice, retention/deletion policy before production, vendor register, audit access. NIK is now an explicitly required registration field by product decision; collection purpose, authorized viewers, masking rules, retention, correction, and deletion/restriction handling must be documented before production.
+Data minimization, purpose/consent, privacy notice, retention/deletion policy before production, vendor register, audit access. NIK is now an explicitly required registration field by product decision; collection purpose, authorized viewers, masking rules, retention, correction, and deletion/restriction handling must be documented before production. The registry persists NIK only as versioned AES-256-GCM ciphertext under `NIK_ENCRYPTION_KEY`; it is never a primary key, audit metadata value, log value, or standard registration response field. Key rotation requires a reviewed decrypt-and-re-encrypt migration before an old key can be retired.
 
 ## 8. Notification Safety
 

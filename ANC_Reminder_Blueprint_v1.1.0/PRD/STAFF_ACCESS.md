@@ -79,4 +79,6 @@ Backend acceptance for login, generic failure, lockout, refresh replay protectio
 Puskesmas-superset scope, Bidan/cross-center denial, Super Admin default denial, and shared
 idempotency/concurrency helpers are verified. Web login, session refresh/expiry, forbidden, unavailable, and
 logout states are implemented through a same-origin BFF; browser JavaScript receives identity only and cannot
-read access/refresh credentials. Exact edge-throttling policy, break-glass, and MFA decision remain pending.
+read access/refresh credentials. Owner deferred break-glass on 2026-08-10, so Super Admin remains
+deny-by-default for routine health data. MFA remains `PROPOSED` until Security + Product make the
+pre-production mechanism/recovery decision. Exact edge-throttling policy remains pending.
