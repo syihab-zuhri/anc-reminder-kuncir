@@ -19,6 +19,9 @@ const phaseOneMigration = loadModule(
 const idempotencyMigration = loadModule(
   "../migrations/000003_api_idempotency.cjs",
 ) as BaselineMigration;
+const pregnancyLifecycleMigration = loadModule(
+  "../migrations/000004_phase_2_pregnancy_lifecycle.cjs",
+) as BaselineMigration;
 
 describe("baseline database migration", () => {
   it("defines the ERD baseline and privacy-sensitive NIK column", () => {
@@ -102,5 +105,30 @@ describe("phase 1 API idempotency migration", () => {
     const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
 
     expect(statement).toContain("DROP TABLE IF EXISTS api_idempotency_records");
+  });
+});
+
+describe("phase 2 pregnancy lifecycle migration", () => {
+  it("adds same-center integrity and append-only lifecycle history without clinical derivation", () => {
+    const sql = vi.fn();
+    pregnancyLifecycleMigration.up({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("pregnancies_mother_same_center_fk");
+    expect(statement).toContain("CREATE TABLE pregnancy_dating_revisions");
+    expect(statement).toContain("CREATE TABLE pregnancy_lifecycle_events");
+    expect(statement).toContain("pregnancy_dating_revisions_append_only");
+    expect(statement).toContain("pregnancy_lifecycle_events_append_only");
+    expect(statement).not.toMatch(/target_week|gestational_age|trimester/i);
+  });
+
+  it("provides an explicit reverse migration", () => {
+    const sql = vi.fn();
+    pregnancyLifecycleMigration.down({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("DROP TABLE IF EXISTS pregnancy_lifecycle_events");
+    expect(statement).toContain("DROP TABLE IF EXISTS pregnancy_dating_revisions");
+    expect(statement).toContain("DROP CONSTRAINT IF EXISTS pregnancies_mother_same_center_fk");
   });
 });

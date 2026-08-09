@@ -7,6 +7,10 @@ import {
   idempotencyKeySchema,
   milestoneCodeSchema,
   motherRegistrationRequestSchema,
+  pregnancyCloseRequestSchema,
+  pregnancyCreateRequestSchema,
+  pregnancyDatingRevisionRequestSchema,
+  pregnancyLifecycleResponseSchema,
   requestIdSchema,
   staffCreateRequestSchema,
   staffLoginRequestSchema,
@@ -84,6 +88,36 @@ describe("shared domain contracts", () => {
         phone_number: "0812-3456-789",
         pregnancy_start_date: "2026-02-30",
         consent: { notification_allowed: true },
+      }).success,
+    ).toBe(false);
+    expect(
+      pregnancyCreateRequestSchema.safeParse({
+        idempotency_key: "8b26fdbd-6306-4bbf-9765-3fd620888e7c",
+        pregnancy_start_date: "2026-05-01",
+      }).success,
+    ).toBe(true);
+    expect(
+      pregnancyDatingRevisionRequestSchema.safeParse({
+        idempotency_key: "420b7443-b87c-4728-bbf5-cbe6eff22c59",
+        pregnancy_start_date: "2026-04-28",
+        reason: "Koreksi input awal",
+      }).success,
+    ).toBe(true);
+    expect(
+      pregnancyCloseRequestSchema.safeParse({
+        idempotency_key: "0d5e8c8f-0f39-4b4e-87f5-30ac3c0c80bc",
+        reason: "x",
+      }).success,
+    ).toBe(false);
+    expect(
+      pregnancyLifecycleResponseSchema.safeParse({
+        id: "60000000-0000-4000-8000-000000000001",
+        mother_id: "50000000-0000-4000-8000-000000000001",
+        health_center_id: "30000000-0000-4000-8000-000000000001",
+        dating_basis: "PREGNANCY_START_DATE",
+        dating_date: "2026-05-01",
+        status: "CLOSED",
+        closed_at: null,
       }).success,
     ).toBe(false);
   });

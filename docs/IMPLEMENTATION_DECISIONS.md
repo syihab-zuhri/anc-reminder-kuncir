@@ -40,3 +40,9 @@ Catatan ini melengkapi—dan tidak menggantikan—ADR pada blueprint.
 ## Android foundation boundary
 
 Phase 0 menyediakan workspace Capacitor, validasi trusted origin, dan halaman fallback lokal. Native Gradle project sengaja dibuat pada `TASK-P4-004`, saat secure-storage bridge, FCM, navigation handling, dan pengujian perangkat diimplementasikan sebagai satu unit.
+
+## 2026-08-10 - Phase 2 pregnancy lifecycle
+
+- Dating revision menyimpan previous/revised approved input dalam tabel append-only; tidak menghitung HPL, usia kehamilan, trimester, atau window K1-K8 sebelum owning tasks dan approval klinis.
+- Pregnancy create/revise/close memakai immutable mutation snapshot sebagai referensi idempotensi agar replay tetap identik walaupun row pregnancy kemudian berubah.
+- `PREGNANCY_CLOSED` pada `TASK-P2-002` menutup lifecycle dan melepas partial unique active slot. Pembatalan milestone/reminder atomik tetap di `TASK-P2-008` agar tidak mengklaim side effect yang belum diimplementasikan.

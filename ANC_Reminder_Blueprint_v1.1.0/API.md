@@ -141,6 +141,44 @@ Contoh validation error:
 }
 ```
 
+#### `API-PREG-001` to `API-PREG-003` - Pregnancy Lifecycle
+
+Create a new active pregnancy for an existing mother after the previous pregnancy is closed:
+
+```json
+{
+  "idempotency_key": "client-generated-uuid",
+  "pregnancy_start_date": "2026-06-01"
+}
+```
+
+Revise the approved dating input. The previous and revised values are retained in append-only history:
+
+```json
+{
+  "idempotency_key": "client-generated-uuid",
+  "pregnancy_start_date": "2026-05-28",
+  "reason": "Koreksi input awal"
+}
+```
+
+Close an active pregnancy:
+
+```json
+{
+  "idempotency_key": "client-generated-uuid",
+  "reason": "Penutupan administratif"
+}
+```
+
+All three mutations are Puskesmas-only, same-health-center scoped, and idempotent. The server enforces at most
+one active pregnancy per mother. Dating revision and lifecycle event snapshots are append-only. This slice
+does not accept client-derived HPL, gestational age, trimester, milestone status, or K1-K8 dates. Full
+milestone/reminder cancellation on close remains the owning responsibility of `TASK-P2-008`.
+
+Errors include `ACTIVE_PREGNANCY_EXISTS` (`409`), `PREGNANCY_NOT_ACTIVE` (`409`),
+`PREGNANCY_DATING_UNCHANGED` (`409`), future dating input (`422`), and safe scoped denial (`403`).
+
 ### ANC Plan / Milestones
 
 | Operation ID | Method | Path | Actor |

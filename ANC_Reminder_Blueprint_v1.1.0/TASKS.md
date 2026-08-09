@@ -189,11 +189,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Done when: registrasi mewajibkan nama, NIK, alamat, nomor telepon, dan awal kehamilan; mother+pregnancy dibuat atomik; phone normalization, NIK protection, dan consent tests lulus.
   - Evidence: `API-MOTHER-001` Puskesmas-only memakai strict contract + UUID idempotency, PostgreSQL serializable transaction untuk mother/pregnancy/reminder consent, Indonesian phone normalization, NIK AES-256-GCM ciphertext, response masking/no leakage, audit resource-only, API/cipher regression tests, serta smoke PostgreSQL sintetis di protected CI.
 
-- [ ] `TASK-P2-002` [L] Implement pregnancy dan dating revision lifecycle
+- [x] `TASK-P2-002` [L] Implement pregnancy dan dating revision lifecycle
   - Owner: Backend
   - References: FR-005, FR-024, DOC-ERD
   - Depends on: TASK-P2-001
   - Done when: one-active-pregnancy, revision history, dan close tests lulus.
+  - Evidence: migration `000004` menegakkan same-center FK, partial unique active pregnancy, append-only dating revisions/lifecycle snapshots; API Puskesmas-only create/revise/close memakai immutable idempotency replay, audit, scope-safe errors, 29 API tests, 16 database tests, dan synthetic PostgreSQL lifecycle smoke di protected CI. Cancellation milestone/reminder tetap owning task `TASK-P2-008`.
 
 - [ ] `TASK-P2-003` [L] Implement mother access credential issue/hash/revoke/reissue sesuai auth decision
   - Owner: Backend + Security

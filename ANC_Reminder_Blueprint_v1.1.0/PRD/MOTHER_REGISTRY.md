@@ -6,7 +6,7 @@
 > **Priority:** P0  
 > **Owner:** Product Owner  
 > **Dependencies:** FEAT-STAFF  
-> **Last Updated:** 2026-08-08
+> **Last Updated:** 2026-08-10
 
 ## 1. Overview
 Puskesmas mendaftarkan Bumil dengan data wajib nama, NIK, alamat, nomor telepon, dan awal kehamilan; sistem kemudian membuat pregnancy, assignment Bidan bila dipilih, access code, dan consent record.
@@ -74,3 +74,10 @@ Requires active milestone rule version.
 
 ## 19. Open Questions
 Retention/legal policy remains external approval.
+
+## 20. Implementation Status - 2026-08-10
+
+`TASK-P2-001` registration and `TASK-P2-002` pregnancy lifecycle are implemented. Dating changes retain
+append-only previous/revised values and an operational reason. Create/revise/close are Puskesmas-only,
+same-center scoped, idempotent, and audited. Closing changes the pregnancy state and releases the
+one-active-pregnancy constraint; atomic cancellation of future milestone/reminder work remains `TASK-P2-008`.
