@@ -280,8 +280,199 @@ try {
     if (error?.code !== "55000") throw error;
   }
 
+  const firstCredentialRequest = {
+    idempotency_key: randomUUID(),
+    reason: "Synthetic first access handoff",
+  };
+  const firstCredential = await readJson(
+    await request(`/mothers/${first.mother.id}/access-code/reissue`, {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify(firstCredentialRequest),
+    }),
+    "Mother access credential issue",
+  );
+  if (
+    firstCredential.issuance_type !== "ISSUED" ||
+    firstCredential.code_delivery !== "DISPLAY_ONCE" ||
+    typeof firstCredential.one_time_code !== "string" ||
+    !/^ANC-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}(?:-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}){3}$/u.test(
+      firstCredential.one_time_code,
+    )
+  ) {
+    throw new Error("Initial mother access code was not delivered exactly once in the safe format");
+  }
+  const firstCredentialReplay = await readJson(
+    await request(`/mothers/${first.mother.id}/access-code/reissue`, {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify(firstCredentialRequest),
+    }),
+    "Mother access credential issue replay",
+  );
+  if (
+    firstCredentialReplay.id !== firstCredential.id ||
+    firstCredentialReplay.one_time_code !== null ||
+    firstCredentialReplay.code_delivery !== "NOT_AVAILABLE_ON_REPLAY"
+  ) {
+    throw new Error("Credential replay exposed or regenerated a one-time access code");
+  }
+
+  const secondCredential = await readJson(
+    await request(`/mothers/${first.mother.id}/access-code/reissue`, {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify({
+        idempotency_key: randomUUID(),
+        reason: "Synthetic lost-code replacement",
+      }),
+    }),
+    "Mother access credential reissue",
+  );
+  if (
+    secondCredential.issuance_type !== "REISSUED" ||
+    secondCredential.id === firstCredential.id ||
+    secondCredential.one_time_code === firstCredential.one_time_code
+  ) {
+    throw new Error("Credential reissue did not rotate the active authenticator");
+  }
+  const immutableFirstReplay = await readJson(
+    await request(`/mothers/${first.mother.id}/access-code/reissue`, {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify(firstCredentialRequest),
+    }),
+    "Original credential replay after rotation",
+  );
+  if (
+    immutableFirstReplay.id !== firstCredential.id ||
+    immutableFirstReplay.status !== "ACTIVE" ||
+    immutableFirstReplay.one_time_code !== null
+  ) {
+    throw new Error("Credential issuance replay changed after a later rotation");
+  }
+
+  const revokeCredentialRequest = {
+    idempotency_key: randomUUID(),
+    reason: "Synthetic device-loss revocation",
+  };
+  const revokedCredential = await readJson(
+    await request(`/mothers/${first.mother.id}/access-code/revoke`, {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify(revokeCredentialRequest),
+    }),
+    "Mother access credential revoke",
+  );
+  const revokeCredentialReplay = await readJson(
+    await request(`/mothers/${first.mother.id}/access-code/revoke`, {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify(revokeCredentialRequest),
+    }),
+    "Mother access credential revoke replay",
+  );
+  if (
+    revokedCredential.status !== "REVOKED" ||
+    revokedCredential.id !== secondCredential.id ||
+    revokeCredentialReplay.revoked_at !== revokedCredential.revoked_at
+  ) {
+    throw new Error("Credential revocation or replay returned an invalid snapshot");
+  }
+
+  const replacementCredential = await readJson(
+    await request(`/mothers/${first.mother.id}/access-code/reissue`, {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify({
+        idempotency_key: randomUUID(),
+        reason: "Synthetic replacement after explicit revoke",
+      }),
+    }),
+    "Mother access credential replacement after revoke",
+  );
+  if (
+    replacementCredential.issuance_type !== "REISSUED" ||
+    replacementCredential.status !== "ACTIVE"
+  ) {
+    throw new Error("Credential could not be safely reissued after explicit revocation");
+  }
+
+  const credentialState = await pool.query(
+    `SELECT
+       COUNT(*) FILTER (WHERE status = 'ACTIVE')::int AS active_count,
+       COUNT(*) FILTER (WHERE status = 'REVOKED')::int AS revoked_count,
+       BOOL_AND(code_hash LIKE 'scrypt$131072$8$1$%') AS hashes_are_scrypt,
+       BOOL_OR(code_hash LIKE '%' || $2 || '%') AS leaked_first_code,
+       BOOL_OR(code_hash LIKE '%' || $3 || '%') AS leaked_second_code
+     FROM mother_access_credentials
+    WHERE mother_id = $1`,
+    [first.mother.id, firstCredential.one_time_code, secondCredential.one_time_code],
+  );
+  const credentialRow = credentialState.rows[0];
+  if (
+    credentialRow?.active_count !== 1 ||
+    credentialRow.revoked_count !== 2 ||
+    credentialRow.hashes_are_scrypt !== true ||
+    credentialRow.leaked_first_code !== false ||
+    credentialRow.leaked_second_code !== false
+  ) {
+    throw new Error("Credential persistence violated hash/rotation/one-active invariants");
+  }
+
+  const credentialHistory = await pool.query(
+    `SELECT action, COUNT(*)::int AS event_count
+       FROM mother_access_credential_events
+      WHERE mother_id = $1
+      GROUP BY action`,
+    [first.mother.id],
+  );
+  const eventCounts = Object.fromEntries(
+    credentialHistory.rows.map((event) => [event.action, event.event_count]),
+  );
+  if (eventCounts.ISSUED !== 1 || eventCounts.REISSUED !== 2 || eventCounts.REVOKED !== 2) {
+    throw new Error("Credential lifecycle history did not retain issue/reissue/revoke events");
+  }
+
+  const credentialAudit = await pool.query(
+    `SELECT action, COUNT(*)::int AS event_count
+       FROM audit_events
+      WHERE resource_id = ANY($1::uuid[])
+        AND action IN (
+          'MOTHER_ACCESS_CODE_ISSUED',
+          'MOTHER_ACCESS_CODE_REISSUED',
+          'MOTHER_ACCESS_CODE_REVOKED'
+        )
+      GROUP BY action`,
+    [[firstCredential.id, secondCredential.id, replacementCredential.id]],
+  );
+  const auditCounts = Object.fromEntries(
+    credentialAudit.rows.map((event) => [event.action, event.event_count]),
+  );
+  if (
+    auditCounts.MOTHER_ACCESS_CODE_ISSUED !== 1 ||
+    auditCounts.MOTHER_ACCESS_CODE_REISSUED !== 2 ||
+    auditCounts.MOTHER_ACCESS_CODE_REVOKED !== 1
+  ) {
+    throw new Error("Credential audit events were missing or duplicated by idempotency replay");
+  }
+
+  const credentialEventId = await pool.query(
+    `SELECT id FROM mother_access_credential_events WHERE mother_id = $1 LIMIT 1`,
+    [first.mother.id],
+  );
+  try {
+    await pool.query(
+      "UPDATE mother_access_credential_events SET reason = 'MUTATED' WHERE id = $1",
+      [credentialEventId.rows[0]?.id],
+    );
+    throw new Error("Append-only credential history accepted an update");
+  } catch (error) {
+    if (error?.code !== "55000") throw error;
+  }
+
   process.stdout.write(
-    "Registry smoke passed: protected registration, dating history, close/recreate lifecycle, and idempotency replay.\n",
+    "Registry smoke passed: protected registration, pregnancy lifecycle, and one-time hashed access credential rotation.\n",
   );
 } finally {
   process.env.SMOKE_STAFF_PASSWORD = "";

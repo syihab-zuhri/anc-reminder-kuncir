@@ -2,10 +2,10 @@ const REDACTED = "[REDACTED]";
 const MAX_DEPTH = 12;
 
 const sensitiveKeyPattern =
-  /(?:^|_)(?:nik|full_?name|address|phone(?:_?number|_?normalized)?|access_?code|authorization|cookie|set_?cookie|password|passcode|token|secret|session|fcm_?service_?account(?:_?json)?|diagnosis|lab_?result|risk_?category|record_?payload|raw_?message|wa_?message)(?:$|_)/i;
+  /(?:^|_)(?:nik|full_?name|address|phone(?:_?number|_?normalized)?|access_?code|one_?time_?code|authorization|cookie|set_?cookie|password|passcode|token|secret|session|fcm_?service_?account(?:_?json)?|diagnosis|lab_?result|risk_?category|record_?payload|raw_?message|wa_?message)(?:$|_)/i;
 
 const compactSensitiveKeyPattern =
-  /^(?:accesstoken|refreshtoken|sessiontoken|sessionsecret|mothersessionsecret|fcmserviceaccountjson|recordpayload|rawmessage|wamessage|phonenumber|phonenormalized|fullname)$/i;
+  /^(?:accesstoken|refreshtoken|sessiontoken|sessionsecret|mothersessionsecret|fcmserviceaccountjson|recordpayload|rawmessage|wamessage|phonenumber|phonenormalized|fullname|onetimecode)$/i;
 
 function normalizedKey(key: string): string {
   return key.replaceAll("-", "_");

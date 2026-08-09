@@ -68,7 +68,7 @@ and refresh responses are schema-validated before rendering. MFA remains `PROPOS
 Puskesmas/Super Admin.
 
 ### Bumil
-Name + unique code; code is authenticator. Store only hash. Reissue revokes old credential. Response failure is generic.
+Name + unique code; code is authenticator. The implemented staff issuance format is `ANC-XXXX-XXXX-XXXX-XXXX`: 16 random unambiguous Base32 symbols (80 bits entropy) protected at rest by salted scrypt `N=2^17, r=8, p=1`. Plaintext is returned once, never persisted or logged, and is unavailable on idempotency replay. Reissue/revoke atomically revoke the old credential and active mother sessions. Public validation remains generic and throttled under `TASK-P2-004`.
 
 ## 5. Authorization Controls
 

@@ -46,3 +46,10 @@ Phase 0 menyediakan workspace Capacitor, validasi trusted origin, dan halaman fa
 - Dating revision menyimpan previous/revised approved input dalam tabel append-only; tidak menghitung HPL, usia kehamilan, trimester, atau window K1-K8 sebelum owning tasks dan approval klinis.
 - Pregnancy create/revise/close memakai immutable mutation snapshot sebagai referensi idempotensi agar replay tetap identik walaupun row pregnancy kemudian berubah.
 - `PREGNANCY_CLOSED` pada `TASK-P2-002` menutup lifecycle dan melepas partial unique active slot. Pembatalan milestone/reminder atomik tetap di `TASK-P2-008` agar tidak mengklaim side effect yang belum diimplementasikan.
+
+## 2026-08-10 - Phase 2 mother access credential
+
+- Kode handoff memakai prefix `ANC` dan 16 simbol random dari alfabet Base32 tanpa karakter ambigu, dikelompokkan 4-4-4-4. Entropy efektif 80 bit; hanya salted scrypt `N=2^17, r=8, p=1` yang disimpan.
+- Plaintext hanya ada pada response eksekusi pertama. Replay idempotensi memakai immutable event snapshot dan mengembalikan `one_time_code: null`; response yang hilang dipulihkan melalui explicit reissue dengan idempotency key baru.
+- Reissue/revoke mengunci row mother, menonaktifkan credential lama, dan mencabut seluruh mother session aktif dalam transaksi yang sama. Issue/reissue membutuhkan active pregnancy dan scope Puskesmas yang sama; revoke tetap diizinkan untuk same-center mother agar akses dapat segera dihentikan walaupun pregnancy sudah closed.
+- Public name/code verification, anti-enumeration, throttling, serta restricted mother session tetap dipisahkan ke `TASK-P2-004`.

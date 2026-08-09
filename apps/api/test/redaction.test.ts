@@ -13,6 +13,7 @@ describe("sensitive log redaction", () => {
       mother: {
         fullName: "Nama Rahasia",
         phone_number: "081234567890",
+        one_time_code: "ANC-2345-6789-ABCD-EFGH",
         safe_status: "invalid",
       },
     };
@@ -26,6 +27,7 @@ describe("sensitive log redaction", () => {
       mother: {
         fullName: REDACTED,
         phone_number: REDACTED,
+        one_time_code: REDACTED,
         safe_status: "invalid",
       },
     });

@@ -65,8 +65,9 @@ clinical record, reminder, additional Web, or mobile requirements are implemente
 
 - `TASK-P2-001`: strict registration contract, Puskesmas-only authorization, Indonesian phone normalization, versioned AES-256-GCM NIK ciphertext, atomic repository operations, consent recording, and resource-only idempotency replay are implemented;
 - `TASK-P2-002`: same-center pregnancy lifecycle, one-active-pregnancy enforcement, append-only dating revision/lifecycle snapshots, immutable mutation replay, and audited Puskesmas-only create/revise/close are implemented;
-- API unit/integration coverage verifies no NIK/raw phone/address response leakage, encryption integrity, invalid input rejection, denied Bidan access, active-plan fail-closed behavior, and replay without duplicate audit events;
-- protected CI includes a synthetic PostgreSQL/API smoke that verifies encrypted persistence and atomic mother/pregnancy/consent state.
+- `TASK-P2-003`: one-time 80-bit Bumil access codes, salted scrypt-only persistence, same-center active-pregnancy gating, atomic credential/session revocation, immutable replay snapshots, and audited issue/reissue/revoke are implemented;
+- API unit/integration coverage verifies no NIK/raw phone/address/code response leakage beyond the single handoff, encryption/hash integrity, invalid input rejection, denied Bidan/cross-center access, active-plan/pregnancy fail-closed behavior, and replay without duplicate audit events;
+- protected CI includes a synthetic PostgreSQL/API smoke that verifies encrypted registration persistence, pregnancy lifecycle, credential rotation/revocation, one-active invariants, append-only history, and audit counts.
 
 This evidence does not approve clinical ANC milestone values, NIK retention/deletion, production key rotation, or claim milestone/reminder cancellation on pregnancy close; those remain governed by their owners and explicit production gates/owning tasks.
 

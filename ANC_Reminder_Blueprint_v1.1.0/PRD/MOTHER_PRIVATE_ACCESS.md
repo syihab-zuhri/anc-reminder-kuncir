@@ -6,7 +6,7 @@
 > **Priority:** P0  
 > **Owner:** Product Owner + Security  
 > **Dependencies:** FEAT-REGISTRY, ADR-001  
-> **Last Updated:** 2026-08-08
+> **Last Updated:** 2026-08-10
 
 ## 1. Overview
 Bumil mengakses ringkasan privat dengan **nama + kode unik**.
@@ -31,6 +31,7 @@ Name + code → normalized name comparison strategy → hash verification → an
 
 ## 8. Business Rules
 - Code random and high entropy; store hash only.
+- Staff handoff code is `ANC-XXXX-XXXX-XXXX-XXXX` with 16 random unambiguous Base32 symbols (80 bits entropy); plaintext is displayed once.
 - Failure response must not say whether name exists.
 - Reissue revokes previous credential/session according to policy.
 - WebView stores sensitive session in platform secure storage, not plain localStorage.
@@ -58,7 +59,7 @@ Successful WebView access may register push token.
 Generic 401; 429 rate-limited; revoked code requires staff reissue.
 
 ## 15. Security & Privacy
-Code never logged or included in QR analytics; secure storage required.
+Code never logged, persisted as plaintext, or included in QR analytics; secure storage required. Staff idempotency replay never returns the code again.
 
 ## 16. Analytics & Audit Events
 `MOTHER_ACCESS_SUCCESS/FAILURE`, `ACCESS_CODE_REISSUED`, `DEVICE_REGISTERED`.
@@ -70,4 +71,8 @@ Enumeration, brute force throttling, session fixation, WebView storage, cross-mo
 ADR-001 Accepted.
 
 ## 19. Open Questions
-Exact code length/format set by Security implementation review.
+No open question for credential format. Security implementation review fixed the 80-bit display format and salted scrypt verifier on 2026-08-10. Exact public validation throttling values remain part of `TASK-P2-004` and the pilot security profile.
+
+## 20. Implementation Status — 2026-08-10
+
+`TASK-P2-003` implements Puskesmas-only same-center issue/reissue/revoke, one-active-credential enforcement, active-pregnancy gating for issuance, session revocation, immutable credential lifecycle snapshots, resource-only idempotency, and audited reason-bearing mutations. `TASK-P2-004` still owns public name/code verification, anti-enumeration, throttling, and restricted mother session issuance.

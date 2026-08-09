@@ -39,7 +39,7 @@ single-use refresh rotation, old-token rejection, Puskesmas-scoped village/facil
 management, Bidan management denial, disable-triggered session revocation, and logout.
 `npm run test:smoke:idempotency` verifies one execution/one replay under concurrent same-key requests
 
-`npm run test:smoke:registry` verifies a synthetic Puskesmas registration through the built API: active-plan precondition, AES-GCM NIK ciphertext, contact normalization, mother/pregnancy/consent state, dating revision history, one-active-pregnancy enforcement, close/recreate lifecycle, append-only history, and idempotency replay. It requires the same API environment and synthetic Puskesmas credentials as the staff smoke.
+`npm run test:smoke:registry` verifies a synthetic Puskesmas registration through the built API: active-plan precondition, AES-GCM NIK ciphertext, contact normalization, mother/pregnancy/consent state, dating revision history, one-active-pregnancy enforcement, close/recreate lifecycle, and idempotency replay. It also issues/replays/reissues/revokes a Bumil access code, proves plaintext is response-only, checks salted scrypt persistence, enforces one active credential, verifies audit counts, and rejects credential-history mutation. It requires the same API environment and synthetic Puskesmas credentials as the staff smoke.
 and rejects same-key/different-request reuse.
 
 ## 6. Rollback

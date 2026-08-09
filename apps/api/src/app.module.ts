@@ -18,6 +18,7 @@ import {
   ORGANIZATION_SCOPE_REPOSITORY,
   MOTHER_REGISTRY_REPOSITORY,
   PREGNANCY_LIFECYCLE_REPOSITORY,
+  MOTHER_ACCESS_CREDENTIAL_REPOSITORY,
   SCOPED_ACCESS_REPOSITORY,
   SESSION_TOKEN_SERVICE,
   STAFF_AUTH_REPOSITORY,
@@ -60,6 +61,13 @@ import {
   type PregnancyLifecycleRepository,
 } from "./registry/pregnancy-lifecycle.repository.js";
 import { PregnancyLifecycleService } from "./registry/pregnancy-lifecycle.service.js";
+import { MotherAccessCredentialController } from "./mother-access/mother-access-credential.controller.js";
+import {
+  PostgresMotherAccessCredentialRepository,
+  type MotherAccessCredentialRepository,
+} from "./mother-access/mother-access-credential.repository.js";
+import { MotherAccessCredentialService } from "./mother-access/mother-access-credential.service.js";
+import { MotherAccessCodeService } from "./mother-access/mother-access-code.service.js";
 
 export interface AppModuleOptions {
   readonly config: ApiConfig;
@@ -71,6 +79,8 @@ export interface AppModuleOptions {
   readonly scopedAccessRepository?: ScopedAccessRepository;
   readonly motherRegistryRepository?: MotherRegistryRepository;
   readonly pregnancyLifecycleRepository?: PregnancyLifecycleRepository;
+  readonly motherAccessCredentialRepository?: MotherAccessCredentialRepository;
+  readonly motherAccessCodeService?: MotherAccessCodeService;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -87,6 +97,7 @@ export class AppModule {
         OrganizationScopeController,
         MotherRegistryController,
         PregnancyLifecycleController,
+        MotherAccessCredentialController,
       ],
       providers: [
         { provide: API_CONFIG, useValue: options.config },
@@ -126,6 +137,12 @@ export class AppModule {
             options.pregnancyLifecycleRepository ?? new PostgresPregnancyLifecycleRepository(),
         },
         {
+          provide: MOTHER_ACCESS_CREDENTIAL_REPOSITORY,
+          useValue:
+            options.motherAccessCredentialRepository ??
+            new PostgresMotherAccessCredentialRepository(),
+        },
+        {
           provide: AUDIT_REPOSITORY,
           useValue: options.auditRepository ?? new PostgresAuditRepository(options.databasePool),
         },
@@ -152,6 +169,12 @@ export class AppModule {
         HealthService,
         DatabaseLifecycleService,
         PasswordHasher,
+        {
+          provide: MotherAccessCodeService,
+          useFactory: (hasher: PasswordHasher) =>
+            options.motherAccessCodeService ?? new MotherAccessCodeService(hasher),
+          inject: [PasswordHasher],
+        },
         AuthorizationPolicy,
         AuditService,
         { provide: AUDIT_SERVICE, useExisting: AuditService },
@@ -161,6 +184,7 @@ export class AppModule {
         ScopedAccessService,
         MotherRegistryService,
         PregnancyLifecycleService,
+        MotherAccessCredentialService,
       ],
     };
   }

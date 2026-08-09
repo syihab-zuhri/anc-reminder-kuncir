@@ -15,6 +15,8 @@ import type { ScopedAccessRepository } from "./authorization/scoped-access.repos
 import type { MotherRegistryRepository } from "./registry/mother-registry.repository.js";
 import type { IdempotencyService } from "./idempotency/idempotency.service.js";
 import type { PregnancyLifecycleRepository } from "./registry/pregnancy-lifecycle.repository.js";
+import type { MotherAccessCredentialRepository } from "./mother-access/mother-access-credential.repository.js";
+import type { MotherAccessCodeService } from "./mother-access/mother-access-code.service.js";
 import { CanonicalErrorFilter } from "./errors/canonical-error.filter.js";
 import { HttpLoggingInterceptor } from "./observability/http-logging.interceptor.js";
 import { JsonLogger } from "./observability/json-logger.js";
@@ -34,6 +36,8 @@ export interface CreateApiApplicationOptions {
   readonly scopedAccessRepository?: ScopedAccessRepository;
   readonly motherRegistryRepository?: MotherRegistryRepository;
   readonly pregnancyLifecycleRepository?: PregnancyLifecycleRepository;
+  readonly motherAccessCredentialRepository?: MotherAccessCredentialRepository;
+  readonly motherAccessCodeService?: MotherAccessCodeService;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -69,6 +73,12 @@ export async function createApiApplication(
       ...(options.pregnancyLifecycleRepository === undefined
         ? {}
         : { pregnancyLifecycleRepository: options.pregnancyLifecycleRepository }),
+      ...(options.motherAccessCredentialRepository === undefined
+        ? {}
+        : { motherAccessCredentialRepository: options.motherAccessCredentialRepository }),
+      ...(options.motherAccessCodeService === undefined
+        ? {}
+        : { motherAccessCodeService: options.motherAccessCodeService }),
       ...(options.auditRepository === undefined
         ? {}
         : { auditRepository: options.auditRepository }),

@@ -26,5 +26,13 @@ Guessing/disclosure mitigated by entropy, hash, throttling, audit.
 ## Revisit Triggers
 Organization requires verified mobile identity/SSO.
 
+## Security Implementation Record — 2026-08-10
+
+- Code format: `ANC-XXXX-XXXX-XXXX-XXXX`, 16 random symbols from an unambiguous Base32 alphabet (80 bits entropy).
+- Persistence: salted scrypt `N=2^17, r=8, p=1`; plaintext exists only in the first successful staff response.
+- Idempotency replay returns the immutable credential snapshot without the plaintext code. If the first response is lost, staff performs an explicit reissue with a new idempotency key.
+- Issue/reissue requires an active pregnancy. Reissue and revoke invalidate the prior active credential and all active mother sessions in the same transaction.
+- Public name/code validation, generic failure, throttling, and restricted sessions remain the follow-on implementation in `TASK-P2-004`.
+
 ## References
 PRD-MOTHER-ACCESS, DOC-SECURITY.

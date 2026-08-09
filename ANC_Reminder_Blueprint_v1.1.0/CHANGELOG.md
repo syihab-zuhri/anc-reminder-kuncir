@@ -17,6 +17,8 @@
 - Synthetic PostgreSQL/API smoke for encrypted persistence, active-plan precondition, and idempotency replay; protected CI runs it after synthetic Puskesmas provisioning.
 - Puskesmas-only pregnancy create, dating revision, and close endpoints with same-center enforcement, immutable replay snapshots, and append-only history.
 - Phase 2 lifecycle migration adds the mother/pregnancy composite scope constraint while deliberately omitting HPL, trimester, and K1-K8 calculations.
+- Puskesmas-only Bumil access-code issue/reissue/revoke with active-pregnancy gating, one-active credential, atomic mother-session invalidation, immutable lifecycle snapshots, and audit.
+- Response-only `ANC-XXXX-XXXX-XXXX-XXXX` codes carry 80 bits of entropy; database persistence contains salted scrypt verifiers only and idempotency replay never returns plaintext.
 
 ### Decisions Recorded
 
