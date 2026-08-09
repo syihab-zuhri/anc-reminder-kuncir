@@ -28,6 +28,9 @@ Local synthetic data → CI ephemeral DB → staging with synthetic/pilot-approv
 | TEST-AUTH-002 | Bumil name+code anti-enumeration | Security |
 | TEST-REG-001 | Registration rejects missing name/NIK/address/phone/pregnancy start | E2E |
 | TEST-REG-002 | Valid five-field registration creates mother + active pregnancy atomically | Integration |
+| TEST-REG-003 | Dating correction retains immutable previous/revised values and replays once | Integration/DB |
+| TEST-REG-004 | Active pregnancy rejects a duplicate; close permits exactly one replacement | Integration/Concurrency |
+| TEST-REG-005 | Bidan and cross-center pregnancy mutations fail without resource leakage | Security |
 | TEST-REG-003 | NIK is not exposed in logs, notification payloads, `wa.me`, or generic audit metadata | Security |
 | TEST-REG-004 | Phone normalization and pregnancy-start persistence match server contract | Integration |
 | TEST-ANC-001 | K1/K4/K5 require Puskesmas | Unit/integration |

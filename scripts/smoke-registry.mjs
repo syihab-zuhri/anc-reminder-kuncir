@@ -39,6 +39,12 @@ async function readJson(response, operation) {
   return response.json();
 }
 
+async function expectStatus(response, expectedStatus, operation) {
+  if (response.status === expectedStatus) return;
+  const body = await response.text();
+  throw new Error(`${operation} returned ${response.status}; expected ${expectedStatus}: ${body}`);
+}
+
 async function ensureSyntheticActivePlan() {
   const existing = await pool.query(
     "SELECT id FROM anc_plan_versions WHERE status = 'ACTIVE' LIMIT 1",
@@ -138,8 +144,144 @@ try {
     );
   }
 
+  const duplicateWhileActive = await request(`/mothers/${first.mother.id}/pregnancies`, {
+    method: "POST",
+    headers: { authorization },
+    body: JSON.stringify({
+      idempotency_key: randomUUID(),
+      pregnancy_start_date: "2026-06-01",
+    }),
+  });
+  await expectStatus(duplicateWhileActive, 409, "One-active-pregnancy guard");
+
+  const revisionRequest = {
+    idempotency_key: randomUUID(),
+    pregnancy_start_date: "2026-04-28",
+    reason: "Synthetic dating correction",
+  };
+  const revised = await readJson(
+    await request(`/pregnancies/${first.pregnancy.id}`, {
+      method: "PATCH",
+      headers: { authorization },
+      body: JSON.stringify(revisionRequest),
+    }),
+    "Pregnancy dating revision",
+  );
+  const revisionReplay = await readJson(
+    await request(`/pregnancies/${first.pregnancy.id}`, {
+      method: "PATCH",
+      headers: { authorization },
+      body: JSON.stringify(revisionRequest),
+    }),
+    "Pregnancy dating idempotency replay",
+  );
+  if (revised.dating_date !== "2026-04-28" || revisionReplay.dating_date !== revised.dating_date) {
+    throw new Error("Pregnancy dating revision or replay returned an invalid snapshot");
+  }
+
+  const closeRequest = {
+    idempotency_key: randomUUID(),
+    reason: "Synthetic administrative close",
+  };
+  const closed = await readJson(
+    await request(`/pregnancies/${first.pregnancy.id}/close`, {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify(closeRequest),
+    }),
+    "Pregnancy close",
+  );
+  const closeReplay = await readJson(
+    await request(`/pregnancies/${first.pregnancy.id}/close`, {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify(closeRequest),
+    }),
+    "Pregnancy close idempotency replay",
+  );
+  if (
+    closed.status !== "CLOSED" ||
+    closed.closed_at === null ||
+    closeReplay.closed_at !== closed.closed_at
+  ) {
+    throw new Error("Pregnancy close or replay returned an invalid immutable snapshot");
+  }
+  const revisionReplayAfterClose = await readJson(
+    await request(`/pregnancies/${first.pregnancy.id}`, {
+      method: "PATCH",
+      headers: { authorization },
+      body: JSON.stringify(revisionRequest),
+    }),
+    "Pregnancy dating replay after close",
+  );
+  if (
+    revisionReplayAfterClose.status !== "ACTIVE" ||
+    revisionReplayAfterClose.dating_date !== revised.dating_date
+  ) {
+    throw new Error("Dating idempotency replay changed after pregnancy close");
+  }
+
+  const replacement = await readJson(
+    await request(`/mothers/${first.mother.id}/pregnancies`, {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify({
+        idempotency_key: randomUUID(),
+        pregnancy_start_date: "2026-06-01",
+      }),
+    }),
+    "Replacement active pregnancy creation",
+  );
+  if (replacement.status !== "ACTIVE" || replacement.id === first.pregnancy.id) {
+    throw new Error("Replacement pregnancy was not created as the sole active pregnancy");
+  }
+
+  const lifecycleState = await pool.query(
+    `SELECT
+       COUNT(*) FILTER (WHERE pregnancy.status = 'ACTIVE')::int AS active_count,
+       COUNT(DISTINCT revision.id)::int AS revision_count,
+       COUNT(DISTINCT event.id) FILTER (WHERE event.action = 'CLOSED')::int AS close_count
+     FROM pregnancies AS pregnancy
+     LEFT JOIN pregnancy_dating_revisions AS revision
+       ON revision.pregnancy_id = pregnancy.id
+     LEFT JOIN pregnancy_lifecycle_events AS event
+       ON event.pregnancy_id = pregnancy.id
+    WHERE pregnancy.mother_id = $1`,
+    [first.mother.id],
+  );
+  const lifecycleRow = lifecycleState.rows[0];
+  if (
+    lifecycleRow?.active_count !== 1 ||
+    lifecycleRow.revision_count !== 1 ||
+    lifecycleRow.close_count !== 1
+  ) {
+    throw new Error("Pregnancy lifecycle persistence violated active/history invariants");
+  }
+
+  const revision = await pool.query(
+    `SELECT id, previous_dating_date::text, revised_dating_date::text
+       FROM pregnancy_dating_revisions
+      WHERE pregnancy_id = $1`,
+    [first.pregnancy.id],
+  );
+  const revisionRow = revision.rows[0];
+  if (
+    revisionRow?.previous_dating_date !== "2026-05-01" ||
+    revisionRow.revised_dating_date !== "2026-04-28"
+  ) {
+    throw new Error("Pregnancy dating history did not retain both approved inputs");
+  }
+  try {
+    await pool.query("UPDATE pregnancy_dating_revisions SET reason = 'MUTATED' WHERE id = $1", [
+      revisionRow.id,
+    ]);
+    throw new Error("Append-only pregnancy dating history accepted an update");
+  } catch (error) {
+    if (error?.code !== "55000") throw error;
+  }
+
   process.stdout.write(
-    "Registry smoke passed: encrypted NIK, normalized contact, atomic state, and idempotency replay.\n",
+    "Registry smoke passed: protected registration, dating history, close/recreate lifecycle, and idempotency replay.\n",
   );
 } finally {
   process.env.SMOKE_STAFF_PASSWORD = "";

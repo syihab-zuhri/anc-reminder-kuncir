@@ -21,6 +21,7 @@ import {
   type MotherRegistryRepository,
 } from "./mother-registry.repository.js";
 import { NikCipher } from "./nik-cipher.js";
+import { assertPregnancyStartDateNotFuture } from "./registry-validation.js";
 
 @Injectable()
 export class MotherRegistryService {
@@ -43,14 +44,7 @@ export class MotherRegistryService {
     if (healthCenterId === null) throw forbidden();
 
     const now = this.clock();
-    if (input.pregnancy_start_date > dateOnlyInTimezone(now, this.config.primaryTimezone)) {
-      throw new ApiException({
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        code: "INVALID_PREGNANCY_START_DATE",
-        message: "Tanggal awal kehamilan tidak boleh berada di masa depan.",
-        fields: { pregnancy_start_date: "must not be in the future" },
-      });
-    }
+    assertPregnancyStartDateNotFuture(input.pregnancy_start_date, now, this.config.primaryTimezone);
 
     const phoneNormalized = normalizeIndonesianPhone(input.phone_number);
     const nikCiphertext = this.nikCipher.encrypt(input.nik);
@@ -161,17 +155,6 @@ export function normalizeIndonesianPhone(value: string): string {
     });
   }
   return normalized;
-}
-
-function dateOnlyInTimezone(date: Date, timezone: string): string {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const values = new Map(parts.map((part) => [part.type, part.value]));
-  return `${values.get("year")}-${values.get("month")}-${values.get("day")}`;
 }
 
 function isDatabaseError(error: unknown, code: string): boolean {

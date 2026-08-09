@@ -15,6 +15,8 @@
 - `API-MOTHER-001` implementation: strict five-field registration plus explicit UUID idempotency key, Puskesmas-only authorization, and atomic mother/active-pregnancy/reminder-consent creation.
 - Indonesian contact normalization, masked response contact, and versioned AES-256-GCM NIK ciphertext using a dedicated runtime key.
 - Synthetic PostgreSQL/API smoke for encrypted persistence, active-plan precondition, and idempotency replay; protected CI runs it after synthetic Puskesmas provisioning.
+- Puskesmas-only pregnancy create, dating revision, and close endpoints with same-center enforcement, immutable replay snapshots, and append-only history.
+- Phase 2 lifecycle migration adds the mother/pregnancy composite scope constraint while deliberately omitting HPL, trimester, and K1-K8 calculations.
 
 ### Decisions Recorded
 

@@ -17,6 +17,7 @@ import {
   DATABASE_READINESS_CHECK,
   ORGANIZATION_SCOPE_REPOSITORY,
   MOTHER_REGISTRY_REPOSITORY,
+  PREGNANCY_LIFECYCLE_REPOSITORY,
   SCOPED_ACCESS_REPOSITORY,
   SESSION_TOKEN_SERVICE,
   STAFF_AUTH_REPOSITORY,
@@ -53,6 +54,12 @@ import {
   type MotherRegistryRepository,
 } from "./registry/mother-registry.repository.js";
 import { NikCipher } from "./registry/nik-cipher.js";
+import { PregnancyLifecycleController } from "./registry/pregnancy-lifecycle.controller.js";
+import {
+  PostgresPregnancyLifecycleRepository,
+  type PregnancyLifecycleRepository,
+} from "./registry/pregnancy-lifecycle.repository.js";
+import { PregnancyLifecycleService } from "./registry/pregnancy-lifecycle.service.js";
 
 export interface AppModuleOptions {
   readonly config: ApiConfig;
@@ -63,6 +70,7 @@ export interface AppModuleOptions {
   readonly organizationScopeRepository?: OrganizationScopeRepository;
   readonly scopedAccessRepository?: ScopedAccessRepository;
   readonly motherRegistryRepository?: MotherRegistryRepository;
+  readonly pregnancyLifecycleRepository?: PregnancyLifecycleRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -78,6 +86,7 @@ export class AppModule {
         StaffAuthController,
         OrganizationScopeController,
         MotherRegistryController,
+        PregnancyLifecycleController,
       ],
       providers: [
         { provide: API_CONFIG, useValue: options.config },
@@ -110,6 +119,11 @@ export class AppModule {
         {
           provide: MOTHER_REGISTRY_REPOSITORY,
           useValue: options.motherRegistryRepository ?? new PostgresMotherRegistryRepository(),
+        },
+        {
+          provide: PREGNANCY_LIFECYCLE_REPOSITORY,
+          useValue:
+            options.pregnancyLifecycleRepository ?? new PostgresPregnancyLifecycleRepository(),
         },
         {
           provide: AUDIT_REPOSITORY,
@@ -146,6 +160,7 @@ export class AppModule {
         OrganizationScopeService,
         ScopedAccessService,
         MotherRegistryService,
+        PregnancyLifecycleService,
       ],
     };
   }

@@ -5,7 +5,7 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** Data Architect  
-> **Last Updated:** 2026-08-08  
+> **Last Updated:** 2026-08-10  
 > **Depends On:** DOC-SRS, DOC-PERMISSION
 
 ## 1. ERD
@@ -22,6 +22,8 @@ erDiagram
   STAFF_USERS ||--o{ STAFF_ASSIGNMENTS : assigned
   HEALTH_CENTERS ||--o{ MOTHERS : registers
   MOTHERS ||--o{ PREGNANCIES : has
+  PREGNANCIES ||--o{ PREGNANCY_DATING_REVISIONS : revises
+  PREGNANCIES ||--o{ PREGNANCY_LIFECYCLE_EVENTS : transitions
   PREGNANCIES ||--o{ PREGNANCY_MILESTONES : contains
   ANC_PLAN_VERSIONS ||--o{ ANC_MILESTONE_RULES : defines
   ANC_PLAN_VERSIONS ||--o{ PREGNANCY_MILESTONES : snapshots
@@ -121,9 +123,32 @@ Bidan area/mother assignment.
 
 Constraint: at most one active pregnancy per mother (`ASSUMED`, partial unique index).
 
+Composite foreign key `(mother_id, health_center_id)` guarantees that a pregnancy cannot cross the mother's
+Puskesmas boundary.
+
 Registration constraints:
 - `mothers.full_name`, `mothers.nik_ciphertext`, `mothers.address`, `mothers.phone_normalized`, and `pregnancies.dating_date` are required for new registration.
 - NIK is never used as internal PK. If duplicate detection by NIK is later required, use a protected deterministic lookup fingerprint separate from ciphertext and document privacy review before enabling it.
+
+### `pregnancy_dating_revisions`
+Append-only approved dating-input history.
+- `id uuid PK`
+- `pregnancy_id uuid FK`
+- `actor_staff_id uuid FK`
+- `previous_dating_basis`, `previous_dating_date`
+- `revised_dating_basis`, `revised_dating_date`
+- `reason text`, `revised_at timestamptz`
+- check that basis or date actually changed
+
+### `pregnancy_lifecycle_events`
+Append-only lifecycle snapshots used for audit and exact idempotency replay.
+- `id uuid PK`
+- `pregnancy_id uuid FK`
+- `actor_staff_id uuid FK`
+- `action text(CREATED,CLOSED)`
+- `dating_basis`, `dating_date`, `status`
+- `reason nullable`, `occurred_at timestamptz`
+- state check requires `CREATED/ACTIVE` without reason or `CLOSED/CLOSED` with reason
 
 ### `anc_plan_versions`
 - `id uuid PK`
@@ -312,6 +337,8 @@ Shared mutation coordination metadata; no request/response body.
 - `villages (health_center_id, status, name)` and `facilities (health_center_id, status, name)`.
 - `program_assessments (pregnancy_id, evaluated_at desc)`.
 - `api_idempotency_records (actor_key, operation, idempotency_key)` unique.
+- `pregnancy_dating_revisions (pregnancy_id, revised_at desc, id desc)`.
+- `pregnancy_lifecycle_events (pregnancy_id, occurred_at desc, id desc)`.
 
 ## 4. Sensitivity
 
