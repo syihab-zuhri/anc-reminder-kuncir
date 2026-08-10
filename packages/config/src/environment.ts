@@ -122,6 +122,11 @@ export const apiEnvironmentSchema = z
     STAFF_REFRESH_TOKEN_TTL_DAYS: positiveInteger("7"),
     STAFF_LOGIN_MAX_FAILURES: positiveInteger("5"),
     STAFF_LOGIN_LOCK_MINUTES: positiveInteger("15"),
+    MOTHER_SESSION_TTL_DAYS: positiveInteger("30"),
+    MOTHER_ACCESS_IP_MAX_FAILURES: positiveInteger("10"),
+    MOTHER_ACCESS_CODE_MAX_FAILURES: positiveInteger("5"),
+    MOTHER_ACCESS_RATE_WINDOW_MINUTES: positiveInteger("15"),
+    MOTHER_ACCESS_BLOCK_MINUTES: positiveInteger("15"),
   })
   .superRefine((environment, context) => {
     requireProductionDatabaseTls(environment, context);
@@ -184,6 +189,11 @@ export const apiEnvironmentSchema = z
     staffRefreshTokenTtlDays: environment.STAFF_REFRESH_TOKEN_TTL_DAYS,
     staffLoginMaxFailures: environment.STAFF_LOGIN_MAX_FAILURES,
     staffLoginLockMinutes: environment.STAFF_LOGIN_LOCK_MINUTES,
+    motherSessionTtlDays: environment.MOTHER_SESSION_TTL_DAYS,
+    motherAccessIpMaxFailures: environment.MOTHER_ACCESS_IP_MAX_FAILURES,
+    motherAccessCodeMaxFailures: environment.MOTHER_ACCESS_CODE_MAX_FAILURES,
+    motherAccessRateWindowMinutes: environment.MOTHER_ACCESS_RATE_WINDOW_MINUTES,
+    motherAccessBlockMinutes: environment.MOTHER_ACCESS_BLOCK_MINUTES,
     reminderIntervalDays: environment.REMINDER_INTERVAL_DAYS,
     pushMaxAttempts: environment.PUSH_MAX_ATTEMPTS,
     pushBackoffSeconds: environment.PUSH_BACKOFF_SECONDS,

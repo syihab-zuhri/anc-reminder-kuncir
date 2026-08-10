@@ -15,6 +15,7 @@ export interface ReissueMotherAccessCredentialInput {
   readonly healthCenterId: string;
   readonly actorStaffId: string;
   readonly codeHash: string;
+  readonly codeLookupHash: string;
   readonly reason: string;
   readonly occurredAt: Date;
 }
@@ -126,10 +127,17 @@ export class PostgresMotherAccessCredentialRepository implements MotherAccessCre
     await this.revokeSessions(client, input);
     const inserted = await client.query<CredentialRow>(
       `INSERT INTO mother_access_credentials (
-         id, mother_id, code_hash, status, issued_at, issued_by_staff_id
-       ) VALUES ($1, $2, $3, 'ACTIVE', $4, $5)
+         id, mother_id, code_hash, code_lookup_hash, status, issued_at, issued_by_staff_id
+       ) VALUES ($1, $2, $3, $4, 'ACTIVE', $5, $6)
        RETURNING id, mother_id, status, issued_at, revoked_at`,
-      [input.credentialId, input.motherId, input.codeHash, input.occurredAt, input.actorStaffId],
+      [
+        input.credentialId,
+        input.motherId,
+        input.codeHash,
+        input.codeLookupHash,
+        input.occurredAt,
+        input.actorStaffId,
+      ],
     );
     const credential = requireRow(inserted.rows[0]);
     await this.insertEvent(client, {

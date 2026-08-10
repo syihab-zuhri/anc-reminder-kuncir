@@ -33,6 +33,8 @@ Name + code → normalized name comparison strategy → hash verification → an
 - Code random and high entropy; store hash only.
 - Staff handoff code is `ANC-XXXX-XXXX-XXXX-XXXX` with 16 random unambiguous Base32 symbols (80 bits entropy); plaintext is displayed once.
 - Failure response must not say whether name exists.
+- Durable defaults: 10 failures/IP and 5 failures/code in 15 minutes, then a 15-minute block; raw IP/code values are never persisted in rate buckets.
+- Restricted sessions are opaque, revocable, own-only, and default to 30 days without an MVP refresh route.
 - Reissue revokes previous credential/session according to policy.
 - WebView stores sensitive session in platform secure storage, not plain localStorage.
 
@@ -62,7 +64,7 @@ Generic 401; 429 rate-limited; revoked code requires staff reissue.
 Code never logged, persisted as plaintext, or included in QR analytics; secure storage required. Staff idempotency replay never returns the code again.
 
 ## 16. Analytics & Audit Events
-`MOTHER_ACCESS_SUCCESS/FAILURE`, `ACCESS_CODE_REISSUED`, `DEVICE_REGISTERED`.
+`MOTHER_ACCESS_SUCCESS/FAILURE/THROTTLED`, `MOTHER_LOGOUT`, `ACCESS_CODE_REISSUED`, `DEVICE_REGISTERED`.
 
 ## 17. Testing Scenarios
 Enumeration, brute force throttling, session fixation, WebView storage, cross-mother access.
@@ -71,8 +73,8 @@ Enumeration, brute force throttling, session fixation, WebView storage, cross-mo
 ADR-001 Accepted.
 
 ## 19. Open Questions
-No open question for credential format. Security implementation review fixed the 80-bit display format and salted scrypt verifier on 2026-08-10. Exact public validation throttling values remain part of `TASK-P2-004` and the pilot security profile.
+No open question for credential format or application throttle defaults. Security implementation review fixed the 80-bit display format, salted scrypt verifier, HMAC-only lookup/rate/session hashes, 30-day restricted session, and 10/IP plus 5/code throttle defaults on 2026-08-10. Pilot review may tune the environment values and add edge controls without weakening the application boundary.
 
 ## 20. Implementation Status — 2026-08-10
 
-`TASK-P2-003` implements Puskesmas-only same-center issue/reissue/revoke, one-active-credential enforcement, active-pregnancy gating for issuance, session revocation, immutable credential lifecycle snapshots, resource-only idempotency, and audited reason-bearing mutations. `TASK-P2-004` still owns public name/code verification, anti-enumeration, throttling, and restricted mother session issuance.
+`TASK-P2-003` implements Puskesmas-only same-center issue/reissue/revoke, one-active-credential enforcement, active-pregnancy gating for issuance, session revocation, immutable credential lifecycle snapshots, resource-only idempotency, and audited reason-bearing mutations. `TASK-P2-004` implements public name/code verification, uniform anti-enumeration failures, durable HMAC-only IP/code throttling, opaque restricted session issuance/logout, per-request active-state revalidation, staff/mother role separation, and a minimum-data `/mother/me` DTO.

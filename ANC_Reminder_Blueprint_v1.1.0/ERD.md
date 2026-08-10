@@ -35,6 +35,7 @@ erDiagram
   REMINDER_CYCLES ||--o| WA_FALLBACK_ACTIONS : fallback
   MOTHERS ||--o{ MOTHER_ACCESS_CREDENTIALS : authenticates
   MOTHERS ||--o{ MOTHER_SESSIONS : sessions
+  MOTHER_ACCESS_CREDENTIALS ||--o{ MOTHER_SESSIONS : binds
   MOTHERS ||--o{ DEVICES : devices
   MOTHERS ||--o{ CONSENT_RECORDS : consents
   PROGRAM_RULE_VERSIONS ||--o{ PROGRAM_RULE_REQUIREMENTS : defines
@@ -222,6 +223,7 @@ Puskesmas-managed program details only.
 - `id uuid PK`
 - `mother_id uuid FK`
 - `code_hash text` (salted scrypt verifier)
+- `code_lookup_hash text unique nullable` (domain-separated keyed HMAC; nullable only for pre-validation migration compatibility)
 - `status enum(ACTIVE,REVOKED)`
 - `issued_by_staff_id uuid FK nullable` for pre-migration compatibility
 - `issued_at`, `revoked_at nullable`
@@ -241,9 +243,18 @@ Composite foreign keys guarantee both current and previous credential snapshots 
 ### `mother_sessions`
 - `id uuid PK`
 - `mother_id uuid FK`
-- `session_hash text`
+- `credential_id uuid FK nullable` with same-mother composite constraint
+- `session_hash text` (keyed HMAC only; raw bearer is never persisted)
 - `expires_at`, `revoked_at nullable`
+- `created_at timestamptz`, `last_used_at timestamptz nullable`
 - `revoked_by_staff_id uuid FK nullable`, `revocation_reason text nullable`
+
+### `mother_access_rate_limits`
+Durable application-level anti-brute-force state. No raw IP, name, access code, or session token.
+- `bucket_hash text PK` (domain-separated keyed HMAC)
+- `scope enum(IP,CODE)`
+- `failure_count int`
+- `window_started_at`, `blocked_until nullable`, `updated_at`
 
 ### `devices`
 - `id uuid PK`
@@ -353,11 +364,13 @@ Shared mutation coordination metadata; no request/response body.
 - `pregnancy_dating_revisions (pregnancy_id, revised_at desc, id desc)`.
 - `pregnancy_lifecycle_events (pregnancy_id, occurred_at desc, id desc)`.
 - `mother_access_credentials (mother_id, issued_at desc, id desc)` plus partial unique active credential.
+- `mother_access_credentials (code_lookup_hash)` partial unique for exact HMAC lookup.
 - `mother_access_credential_events (mother_id, occurred_at desc, id desc)`.
+- `mother_access_rate_limits (blocked_until)` partial index for active blocks.
 
 ## 4. Sensitivity
 
-`k1_k6_records`, pregnancy dating, program evidence, contact, and access data are Restricted. Mother access plaintext codes are response-only and never part of the data model. `wa_fallback_actions` should store minimal message metadata, not full sensitive content.
+`k1_k6_records`, pregnancy dating, program evidence, contact, and access data are Restricted. Mother access plaintext codes and raw bearer tokens are response-only and never part of the data model. Credential lookup, session lookup, and throttle buckets contain domain-separated keyed HMACs only. `wa_fallback_actions` should store minimal message metadata, not full sensitive content.
 
 ## 5. Retention and Deletion
 

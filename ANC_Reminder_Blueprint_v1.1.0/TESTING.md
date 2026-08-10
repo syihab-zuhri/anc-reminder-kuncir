@@ -5,7 +5,7 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** QA Lead  
-> **Last Updated:** 2026-08-08  
+> **Last Updated:** 2026-08-10  
 > **Depends On:** DOC-SRS, PRD documents, DOC-API
 
 ## 1. Strategy
@@ -33,9 +33,13 @@ Local synthetic data → CI ephemeral DB → staging with synthetic/pilot-approv
 | TEST-REG-005 | Bidan and cross-center pregnancy mutations fail without resource leakage | Security |
 | TEST-REG-006 | NIK is not exposed in logs, notification payloads, `wa.me`, or generic audit metadata | Security |
 | TEST-REG-007 | Phone normalization and pregnancy-start persistence match server contract | Integration |
-| TEST-REG-008 | Access code is displayed once, stored only as salted scrypt, and absent on idempotency replay | Integration/DB |
+| TEST-REG-008 | Access code is displayed once, stored only as salted scrypt verifier plus keyed-HMAC lookup, and absent on idempotency replay | Integration/DB |
 | TEST-REG-009 | Reissue/revoke preserves one active credential, invalidates sessions, and retains append-only history | Integration/Concurrency |
 | TEST-REG-010 | Bidan, cross-center, and inactive-pregnancy issuance fail closed | Security |
+| TEST-MACCESS-001 | Wrong name/code, malformed/revoked credential, inactive center, and inactive pregnancy return the same generic 401 | Security integration |
+| TEST-MACCESS-002 | Valid name/code creates an HMAC-only opaque session and `/mother/me` exposes minimum own-only identity data | Integration/DB |
+| TEST-MACCESS-003 | Mother bearer is denied at staff mutation boundaries; logout/reissue/revoke invalidates it immediately | Security E2E |
+| TEST-MACCESS-004 | Durable HMAC-only IP/code buckets enforce configurable thresholds, return safe 429 retry data, and recover after block expiry | Security/clock/DB |
 | TEST-ANC-001 | K1/K4/K5 require Puskesmas | Unit/integration |
 | TEST-ANC-002 | K2/K3/K6/K7 allowed by configured facility list | Unit |
 | TEST-ANC-003 | K8 category/facility PONED/RS | Unit |

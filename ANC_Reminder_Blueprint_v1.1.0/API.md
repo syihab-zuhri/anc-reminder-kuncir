@@ -18,7 +18,9 @@ Base path `/api/v1`. Server owns business rules. Client-provided derived fields 
 Revocable staff session/token; role+scope checked per operation.
 
 ### Bumil
-Name + unique code validation creates restricted mother session. Code hash only at rest.
+Name + unique code validation creates an opaque, revocable, own-only mother session. The database stores
+only salted scrypt code verifiers plus keyed HMAC lookup/session hashes; raw codes and bearer tokens are never
+persisted. There is no mother refresh endpoint in MVP.
 
 ### Worker
 Service identity with minimum scheduled-job permissions.
@@ -87,6 +89,50 @@ only the validated staff identity or a safe canonical error. Login/logout reject
 | API-MACCESS-006 | POST | `/mothers/{id}/access-code/revoke` | Puskesmas, same center |
 | API-DEVICE-001 | PUT | `/mother/me/devices/android` | Bumil WebView |
 
+#### `API-MACCESS-001/002/004` — Validate, Read Own Identity, and Logout
+
+`API-MACCESS-001` accepts a name and the response-only code handed off by Puskesmas. Name comparison is
+normalized and constant-time; code lookup uses a keyed HMAC before the salted scrypt verifier is checked.
+
+```json
+{
+  "full_name": "Siti Aminah",
+  "access_code": "ANC-XXXX-XXXX-XXXX-XXXX"
+}
+```
+
+Successful validation returns a 30-day opaque bearer session. The TTL is configurable through
+`MOTHER_SESSION_TTL_DAYS`; every protected request revalidates the session, active credential, active health
+center, and active pregnancy in PostgreSQL.
+
+```json
+{
+  "token_type": "Bearer",
+  "access_token": "anc_mt_<opaque-random-token>",
+  "expires_at": "2026-09-09T09:00:00.000Z"
+}
+```
+
+Wrong name, unknown/malformed code, revoked credential, inactive health center, and missing active pregnancy
+all return the same HTTP `401` shape without identifying which condition failed:
+
+```json
+{
+  "error": {
+    "code": "INVALID_CREDENTIALS",
+    "message": "Kredensial tidak valid.",
+    "request_id": "req_uuid",
+    "details": null
+  }
+}
+```
+
+`API-MACCESS-004` returns only `id`, `display_name`, `active_pregnancy_id`, `session_id`, and
+`session_expires_at`; it does not return NIK, address, phone, health-center data, or another mother's data.
+`API-MACCESS-002` revokes the current session and returns HTTP `204`. Validation and mother-session responses
+use `Cache-Control: private, no-store` and `Pragma: no-cache`. A mother bearer is rejected by staff guards and
+cannot call pregnancy/visit mutation endpoints.
+
 #### `API-MACCESS-003/006` — Issue, Reissue, and Revoke Access Code
 
 Both staff mutations require a UUID idempotency key and a 3–200 character operational reason:
@@ -98,7 +144,7 @@ Both staff mutations require a UUID idempotency key and a 3–200 character oper
 }
 ```
 
-`API-MACCESS-003` creates the first credential or atomically revokes the latest active credential and all active mother sessions before creating its replacement. The code uses the display format `ANC-XXXX-XXXX-XXXX-XXXX`, with 16 random symbols from an unambiguous Base32 alphabet (80 bits entropy). Only its salted scrypt verifier is persisted.
+`API-MACCESS-003` creates the first credential or atomically revokes the latest active credential and all active mother sessions before creating its replacement. The code uses the display format `ANC-XXXX-XXXX-XXXX-XXXX`, with 16 random symbols from an unambiguous Base32 alphabet (80 bits entropy). Persistence contains a salted scrypt verifier and a domain-separated keyed HMAC lookup value, never plaintext.
 
 ```json
 {
@@ -112,7 +158,7 @@ Both staff mutations require a UUID idempotency key and a 3–200 character oper
 }
 ```
 
-The plaintext is returned only by the first successful execution. An idempotency replay returns the same immutable credential snapshot with `one_time_code: null` and `code_delivery: "NOT_AVAILABLE_ON_REPLAY"`; a lost response requires a new reissue request and key. `API-MACCESS-006` revokes the active credential and active mother sessions atomically and returns the immutable revoked snapshot. Bidan, Super Admin routine access, cross-center targets, and issue/reissue without an active pregnancy fail closed. Public validation, throttling, and restricted mother sessions remain owned by `TASK-P2-004`.
+The plaintext is returned only by the first successful execution. An idempotency replay returns the same immutable credential snapshot with `one_time_code: null` and `code_delivery: "NOT_AVAILABLE_ON_REPLAY"`; a lost response requires a new reissue request and key. `API-MACCESS-006` revokes the active credential and active mother sessions atomically and returns the immutable revoked snapshot. Bidan, Super Admin routine access, cross-center targets, and issue/reissue without an active pregnancy fail closed.
 
 ### Registry
 
@@ -315,9 +361,15 @@ Shared server behavior:
 
 Push retry occurs internally only for classified retryable provider/transport errors. `PROPOSED` default max 3 attempts; config-controlled. `wa.me` has **no provider retry** because server never sends the chat.
 
-## 9. Rate Limits (`PROPOSED`)
+## 9. Rate Limits
 
-Strict on `/mother-access/validate`, staff login, code reissue/revoke, and WA-link generation. Exact values set after pilot/security load test. Staff code mutations already use UUID idempotency and transactional row locking; edge rate-limit values remain part of the pilot security profile.
+`/mother-access/validate` has durable application throttling with domain-separated keyed-HMAC buckets, so raw
+source IPs and codes are not stored. Defaults are 10 failures per IP and 5 failures per code within 15 minutes;
+reaching either threshold blocks matching attempts for 15 minutes and returns HTTP `429` with a positive
+`retry_after_seconds`. Values are configurable through the `MOTHER_ACCESS_*` environment variables. Successful
+validation clears the matching code bucket but not accumulated IP failures. Edge/network limiting for mother
+access, staff login, code reissue/revoke, and WA-link generation remains defense-in-depth to calibrate during the
+pilot security/load profile.
 
 ## 10. Deprecation
 

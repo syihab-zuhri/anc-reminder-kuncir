@@ -5,12 +5,13 @@
 > **Version:** 1.0.0  
 > **Status:** Review  
 > **Owner:** DevOps Lead  
-> **Last Updated:** 2026-08-08  
+> **Last Updated:** 2026-08-10  
 > **Depends On:** DOC-ENV, DOC-ARCH
 
 ## 1. Status
-Phase 1 staff authentication, scoped organization management, and audit path are executable. Later
-domain/worker/Web smoke items remain design-ready until their owning phase is implemented.
+Phase 1 staff authentication/scoped organization/audit and the Phase 2 registry, pregnancy lifecycle,
+mother credential, and restricted mother-session paths are executable. Later domain/worker/Web smoke items
+remain design-ready until their owning phase is implemented.
 
 ## 2. Prerequisites
 Approved build, migrations reviewed, secrets provisioned, FCM configured, clinical rule seed approved for environment, backup ready.
@@ -38,9 +39,9 @@ The implemented Phase 1 subset is automated by `npm run test:smoke:auth`: login,
 single-use refresh rotation, old-token rejection, Puskesmas-scoped village/facility/Bidan/assignment
 management, Bidan management denial, disable-triggered session revocation, and logout.
 `npm run test:smoke:idempotency` verifies one execution/one replay under concurrent same-key requests
-
-`npm run test:smoke:registry` verifies a synthetic Puskesmas registration through the built API: active-plan precondition, AES-GCM NIK ciphertext, contact normalization, mother/pregnancy/consent state, dating revision history, one-active-pregnancy enforcement, close/recreate lifecycle, and idempotency replay. It also issues/replays/reissues/revokes a Bumil access code, proves plaintext is response-only, checks salted scrypt persistence, enforces one active credential, verifies audit counts, and rejects credential-history mutation. It requires the same API environment and synthetic Puskesmas credentials as the staff smoke.
 and rejects same-key/different-request reuse.
+
+`npm run test:smoke:registry` verifies a synthetic Puskesmas registration through the built API: active-plan precondition, AES-GCM NIK ciphertext, contact normalization, mother/pregnancy/consent state, dating revision history, one-active-pregnancy enforcement, close/recreate lifecycle, and idempotency replay. It also issues/replays/reissues/revokes a Bumil access code, proves plaintext is response-only, checks salted scrypt plus HMAC lookup persistence, enforces one active credential, verifies audit counts, and rejects credential-history mutation. The same smoke proves uniform wrong-name/revoked-code failures, creates an HMAC-only restricted session, reads the minimum own-only DTO, rejects the bearer at a staff boundary, durably revokes it on logout, blocks the 11th IP failure under defaults, and checks that no raw identity/IP/code/token enters throttle or audit state. It requires the same API environment and synthetic Puskesmas credentials as the staff smoke.
 
 ## 6. Rollback
 Stop new worker claims if needed → roll back application version → apply compatible DB recovery strategy → verify reminder dedupe before resuming worker.
@@ -92,6 +93,11 @@ must reconcile the referenced mutation state before the client issues a new idem
 
 ### Bumil lost code
 Puskesmas reissues; old credential revoked.
+
+### Mother access unexpectedly rate-limited
+Check configured `MOTHER_ACCESS_*` thresholds and safe aggregate failure/audit metrics; never inspect or log raw
+codes, names, bearer tokens, or source IPs from HMAC buckets. Wait for `retry_after_seconds`/block expiry or use a
+reviewed operational response to abuse. Do not delete rate rows merely to bypass an active attack.
 
 ## 11. Incident Severity
 Critical: data exposure/corruption/unauthorized program status. High: wrong reminder/facility or widespread reminder failure. Medium: fallback backlog, partial UI. Low: cosmetic.

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { DatabasePool } from "@anc/database";
 
 export interface AuditEventRecord {
-  readonly actorType: "STAFF" | "SYSTEM" | "PUBLIC";
+  readonly actorType: "STAFF" | "BUMIL" | "SYSTEM" | "PUBLIC";
   readonly actorId: string | null;
   readonly action: string;
   readonly resourceType: string;

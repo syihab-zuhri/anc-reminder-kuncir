@@ -35,6 +35,11 @@ describe("loadApiConfig", () => {
       staffRefreshTokenTtlDays: 7,
       staffLoginMaxFailures: 5,
       staffLoginLockMinutes: 15,
+      motherSessionTtlDays: 30,
+      motherAccessIpMaxFailures: 10,
+      motherAccessCodeMaxFailures: 5,
+      motherAccessRateWindowMinutes: 15,
+      motherAccessBlockMinutes: 15,
       reminderIntervalDays: 3,
       pushMaxAttempts: 3,
       pushBackoffSeconds: [30, 120, 600],
@@ -99,7 +104,7 @@ describe("loadApiConfig", () => {
     ).toThrow();
   });
 
-  it("requires positive staff session and lockout controls", () => {
+  it("requires positive staff and mother session/throttle controls", () => {
     expect(() =>
       loadApiConfig({
         ...commonEnvironment,
@@ -108,6 +113,7 @@ describe("loadApiConfig", () => {
         SESSION_SECRET: "synthetic-api-test-secret-00000001",
         MOTHER_SESSION_SECRET: "synthetic-mother-test-secret-000001",
         STAFF_ACCESS_TOKEN_TTL_MINUTES: "0",
+        MOTHER_ACCESS_IP_MAX_FAILURES: "0",
       }),
     ).toThrow();
   });

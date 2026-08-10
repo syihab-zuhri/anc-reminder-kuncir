@@ -25,6 +25,9 @@ const pregnancyLifecycleMigration = loadModule(
 const motherAccessCredentialMigration = loadModule(
   "../migrations/000005_phase_2_mother_access_credentials.cjs",
 ) as BaselineMigration;
+const motherPrivateAccessMigration = loadModule(
+  "../migrations/000006_phase_2_mother_private_access.cjs",
+) as BaselineMigration;
 
 describe("baseline database migration", () => {
   it("defines the ERD baseline and privacy-sensitive NIK column", () => {
@@ -159,5 +162,29 @@ describe("phase 2 mother access credential migration", () => {
     expect(statement).toContain("DROP TABLE IF EXISTS mother_access_credential_events");
     expect(statement).toContain("DROP TYPE IF EXISTS mother_access_credential_action");
     expect(statement).toContain("DROP COLUMN IF EXISTS revoked_by_staff_id");
+  });
+});
+
+describe("phase 2 mother private access migration", () => {
+  it("adds HMAC-only lookup/session bindings and durable hashed throttling", () => {
+    const sql = vi.fn();
+    motherPrivateAccessMigration.up({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("code_lookup_hash text");
+    expect(statement).toContain("mother_sessions_credential_same_mother_fk");
+    expect(statement).toContain("CREATE TABLE mother_access_rate_limits");
+    expect(statement).toContain("mother_access_rate_limits_blocked_idx");
+    expect(statement).not.toMatch(/raw_ip|raw_code|session_token text|access_code text/i);
+  });
+
+  it("provides an explicit reverse migration", () => {
+    const sql = vi.fn();
+    motherPrivateAccessMigration.down({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("DROP TABLE IF EXISTS mother_access_rate_limits");
+    expect(statement).toContain("DROP COLUMN IF EXISTS code_lookup_hash");
+    expect(statement).toContain("DROP TYPE IF EXISTS mother_access_rate_limit_scope");
   });
 });

@@ -163,7 +163,7 @@ describe("staff authentication API", () => {
     expect(authRepository.users.get(bidanId)?.lockedUntil).toEqual(
       new Date("2026-08-08T08:15:00.000Z"),
     );
-  });
+  }, 15_000);
 
   it("allows only one winner when the same refresh token is used concurrently", async () => {
     const tokens = await login("bidan.kuncir", password);

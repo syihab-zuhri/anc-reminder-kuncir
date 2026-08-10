@@ -5,7 +5,7 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** Security Reviewer  
-> **Last Updated:** 2026-08-08  
+> **Last Updated:** 2026-08-10  
 > **Depends On:** DOC-ARCH, DOC-PERMISSION
 
 ## 1. Security Objectives
@@ -68,7 +68,19 @@ and refresh responses are schema-validated before rendering. MFA remains `PROPOS
 Puskesmas/Super Admin.
 
 ### Bumil
-Name + unique code; code is authenticator. The implemented staff issuance format is `ANC-XXXX-XXXX-XXXX-XXXX`: 16 random unambiguous Base32 symbols (80 bits entropy) protected at rest by salted scrypt `N=2^17, r=8, p=1`. Plaintext is returned once, never persisted or logged, and is unavailable on idempotency replay. Reissue/revoke atomically revoke the old credential and active mother sessions. Public validation remains generic and throttled under `TASK-P2-004`.
+Name + unique code; code is authenticator. The implemented staff issuance format is `ANC-XXXX-XXXX-XXXX-XXXX`: 16 random unambiguous Base32 symbols (80 bits entropy) protected at rest by salted scrypt `N=2^17, r=8, p=1`. Plaintext is returned once, never persisted or logged, and is unavailable on idempotency replay. A domain-separated HMAC provides exact credential lookup without weakening the scrypt verifier. Name comparison uses NFKC/space/case normalization and constant-time digest comparison.
+
+Successful validation issues a 256-bit opaque `anc_mt_` bearer with a configurable 30-day default lifetime;
+PostgreSQL stores only its keyed HMAC. Each own-only request rechecks session expiry/revocation, active
+credential, active health center, and active pregnancy. Logout revokes the current session; staff
+reissue/revoke invalidates all active sessions for the old credential. Mother bearers are not accepted by staff
+guards. Private responses are non-cacheable and the own-identity DTO excludes NIK, address, phone, and
+health-center details.
+
+Wrong name/code, malformed code, revoked credential, inactive organization, and inactive pregnancy return the
+same generic `401`. Durable application throttling stores HMAC buckets only: defaults are 10 failures/IP and 5
+failures/code per 15-minute window, followed by a 15-minute block. Successful authentication clears only its
+code bucket, preserving IP abuse history. Edge throttling remains an additional pilot control.
 
 ## 5. Authorization Controls
 
@@ -91,8 +103,10 @@ Push lock-screen text generic. `wa.me` template must pass allowlist. Server choo
 Append-only application access. Record actor, resource, action, timestamp, safe metadata. Do not log access code, session token, raw K1–K6 result payload, full sensitive message.
 
 Phase 1 implements an allowlisted/redacted metadata service and a PostgreSQL trigger that rejects update or
-delete with SQLSTATE `55000`. Authentication, session, staff, organization, and assignment security actions use
-this service; later domain tasks must wire confirmation/validation events through the same boundary.
+delete with SQLSTATE `55000`. Authentication, session, staff, organization, assignment, mother credential, and
+mother authentication security actions use this service; later domain tasks must wire confirmation/validation
+events through the same boundary. Public mother failures contain only a generic reason and no actor/resource ID;
+successful access/logout use the `BUMIL` actor type without recording the code, name input, source IP, or token.
 
 ## 9.1 Idempotency Metadata
 
