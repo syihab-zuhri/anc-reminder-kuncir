@@ -45,6 +45,16 @@ async function expectStatus(response, expectedStatus, operation) {
   throw new Error(`${operation} returned ${response.status}; expected ${expectedStatus}: ${body}`);
 }
 
+async function readErrorShape(response, expectedStatus, operation) {
+  await expectStatus(response, expectedStatus, operation);
+  const body = await response.json();
+  const error = body?.error;
+  if (typeof error !== "object" || error === null) {
+    throw new Error(`${operation} did not return the canonical error envelope`);
+  }
+  return { code: error.code, message: error.message, details: error.details };
+}
+
 async function ensureSyntheticActivePlan() {
   const existing = await pool.query(
     "SELECT id FROM anc_plan_versions WHERE status = 'ACTIVE' LIMIT 1",
@@ -64,6 +74,8 @@ async function ensureSyntheticActivePlan() {
     [randomUUID(), versionNo],
   );
 }
+
+const smokeStartedAt = new Date();
 
 try {
   await ensureSyntheticActivePlan();
@@ -403,19 +415,28 @@ try {
        COUNT(*) FILTER (WHERE status = 'ACTIVE')::int AS active_count,
        COUNT(*) FILTER (WHERE status = 'REVOKED')::int AS revoked_count,
        BOOL_AND(code_hash LIKE 'scrypt$131072$8$1$%') AS hashes_are_scrypt,
+       BOOL_AND(code_lookup_hash ~ '^[a-f0-9]{64}$') AS lookup_hashes_are_hmac,
        BOOL_OR(code_hash LIKE '%' || $2 || '%') AS leaked_first_code,
-       BOOL_OR(code_hash LIKE '%' || $3 || '%') AS leaked_second_code
+       BOOL_OR(code_hash LIKE '%' || $3 || '%') AS leaked_second_code,
+       BOOL_OR(code_hash LIKE '%' || $4 || '%') AS leaked_replacement_code
      FROM mother_access_credentials
     WHERE mother_id = $1`,
-    [first.mother.id, firstCredential.one_time_code, secondCredential.one_time_code],
+    [
+      first.mother.id,
+      firstCredential.one_time_code,
+      secondCredential.one_time_code,
+      replacementCredential.one_time_code,
+    ],
   );
   const credentialRow = credentialState.rows[0];
   if (
     credentialRow?.active_count !== 1 ||
     credentialRow.revoked_count !== 2 ||
     credentialRow.hashes_are_scrypt !== true ||
+    credentialRow.lookup_hashes_are_hmac !== true ||
     credentialRow.leaked_first_code !== false ||
-    credentialRow.leaked_second_code !== false
+    credentialRow.leaked_second_code !== false ||
+    credentialRow.leaked_replacement_code !== false
   ) {
     throw new Error("Credential persistence violated hash/rotation/one-active invariants");
   }
@@ -457,6 +478,226 @@ try {
     throw new Error("Credential audit events were missing or duplicated by idempotency replay");
   }
 
+  const genericFailureAttempts = [
+    {
+      full_name: "Synthetic Registry Impostor",
+      access_code: replacementCredential.one_time_code,
+      operation: "Mother access wrong-name rejection",
+    },
+    {
+      full_name: first.mother.full_name,
+      access_code: firstCredential.one_time_code,
+      operation: "Mother access revoked first-code rejection",
+    },
+    {
+      full_name: first.mother.full_name,
+      access_code: secondCredential.one_time_code,
+      operation: "Mother access revoked second-code rejection",
+    },
+  ];
+  const genericFailures = [];
+  for (const attempt of genericFailureAttempts) {
+    genericFailures.push(
+      await readErrorShape(
+        await request("/mother-access/validate", {
+          method: "POST",
+          body: JSON.stringify({
+            full_name: attempt.full_name,
+            access_code: attempt.access_code,
+          }),
+        }),
+        401,
+        attempt.operation,
+      ),
+    );
+  }
+  const expectedGenericFailure = {
+    code: "INVALID_CREDENTIALS",
+    message: "Kredensial tidak valid.",
+    details: null,
+  };
+  if (
+    genericFailures.some(
+      (failure) => JSON.stringify(failure) !== JSON.stringify(expectedGenericFailure),
+    )
+  ) {
+    throw new Error("Mother access failures exposed distinguishable credential state");
+  }
+
+  const motherSession = await readJson(
+    await request("/mother-access/validate", {
+      method: "POST",
+      body: JSON.stringify({
+        full_name: `  ${first.mother.full_name.toUpperCase()}  `,
+        access_code: replacementCredential.one_time_code.toLowerCase().replaceAll("-", " "),
+      }),
+    }),
+    "Mother private access validation",
+  );
+  if (
+    motherSession.token_type !== "Bearer" ||
+    !/^anc_mt_[A-Za-z0-9_-]{43}$/u.test(motherSession.access_token) ||
+    Number.isNaN(Date.parse(motherSession.expires_at))
+  ) {
+    throw new Error("Mother access validation did not return an opaque expiring bearer session");
+  }
+  const motherAuthorization = `Bearer ${motherSession.access_token}`;
+  const motherProfileResponse = await request("/mother/me", {
+    headers: { authorization: motherAuthorization },
+  });
+  const motherProfile = await readJson(motherProfileResponse, "Mother own-profile read");
+  if (
+    motherProfileResponse.headers.get("cache-control") !== "private, no-store" ||
+    motherProfile.id !== first.mother.id ||
+    motherProfile.display_name !== first.mother.full_name ||
+    motherProfile.active_pregnancy_id !== replacement.id ||
+    /phone|address|nik|health_center/iu.test(JSON.stringify(motherProfile))
+  ) {
+    throw new Error("Mother own-profile response crossed the minimum-data boundary");
+  }
+
+  await expectStatus(
+    await request(`/pregnancies/${replacement.id}/close`, {
+      method: "POST",
+      headers: { authorization: motherAuthorization },
+      body: JSON.stringify({
+        idempotency_key: randomUUID(),
+        reason: "Mother bearer must not cross the staff authorization boundary",
+      }),
+    }),
+    401,
+    "Mother bearer cross-role rejection",
+  );
+
+  const storedSession = await pool.query(
+    `SELECT session_hash, credential_id, revoked_at
+       FROM mother_sessions
+      WHERE id = $1 AND mother_id = $2`,
+    [motherProfile.session_id, first.mother.id],
+  );
+  const storedSessionRow = storedSession.rows[0];
+  if (
+    !/^[a-f0-9]{64}$/u.test(storedSessionRow?.session_hash ?? "") ||
+    storedSessionRow.session_hash.includes(motherSession.access_token) ||
+    storedSessionRow.credential_id !== replacementCredential.id ||
+    storedSessionRow.revoked_at !== null
+  ) {
+    throw new Error("Mother session persistence exposed a token or lost its credential binding");
+  }
+
+  await expectStatus(
+    await request("/mother-access/logout", {
+      method: "POST",
+      headers: { authorization: motherAuthorization },
+    }),
+    204,
+    "Mother logout",
+  );
+  await expectStatus(
+    await request("/mother/me", { headers: { authorization: motherAuthorization } }),
+    401,
+    "Revoked mother session rejection",
+  );
+  const revokedSession = await pool.query("SELECT revoked_at FROM mother_sessions WHERE id = $1", [
+    motherProfile.session_id,
+  ]);
+  if (
+    revokedSession.rows[0]?.revoked_at === null ||
+    revokedSession.rows[0]?.revoked_at === undefined
+  ) {
+    throw new Error("Mother logout did not durably revoke its session");
+  }
+
+  for (let attempt = 0; attempt < 7; attempt += 1) {
+    await readErrorShape(
+      await request("/mother-access/validate", {
+        method: "POST",
+        body: JSON.stringify({
+          full_name: first.mother.full_name,
+          access_code: `not-a-code-${attempt}`,
+        }),
+      }),
+      401,
+      `Mother access IP throttle failure ${attempt + 1}`,
+    );
+  }
+  const throttled = await readErrorShape(
+    await request("/mother-access/validate", {
+      method: "POST",
+      body: JSON.stringify({
+        full_name: first.mother.full_name,
+        access_code: "not-a-code-final",
+      }),
+    }),
+    429,
+    "Mother access durable throttle",
+  );
+  if (
+    throttled.code !== "RATE_LIMITED" ||
+    typeof throttled.details?.retry_after_seconds !== "number" ||
+    throttled.details.retry_after_seconds <= 0
+  ) {
+    throw new Error("Mother access throttle did not return a safe retry interval");
+  }
+
+  const rateLimitState = await pool.query(
+    `SELECT bucket_hash, scope, failure_count
+       FROM mother_access_rate_limits`,
+  );
+  const serializedRateLimits = JSON.stringify(rateLimitState.rows);
+  if (
+    rateLimitState.rows.length === 0 ||
+    rateLimitState.rows.some((row) => !/^[a-f0-9]{64}$/u.test(row.bucket_hash)) ||
+    serializedRateLimits.includes(first.mother.full_name) ||
+    serializedRateLimits.includes(replacementCredential.one_time_code) ||
+    serializedRateLimits.includes(motherSession.access_token) ||
+    serializedRateLimits.includes("not-a-code") ||
+    serializedRateLimits.includes("127.0.0.1")
+  ) {
+    throw new Error("Mother access throttling persisted raw identity or credential material");
+  }
+
+  const motherAccessAudit = await pool.query(
+    `SELECT actor_type, actor_id, action, resource_id, metadata
+       FROM audit_events
+      WHERE created_at >= $1
+        AND action IN (
+          'MOTHER_ACCESS_FAILURE',
+          'MOTHER_ACCESS_THROTTLED',
+          'MOTHER_ACCESS_SUCCESS',
+          'MOTHER_LOGOUT'
+        )
+      ORDER BY created_at, id`,
+    [smokeStartedAt],
+  );
+  const motherAuditCounts = {};
+  for (const event of motherAccessAudit.rows) {
+    const key = `${event.actor_type}:${event.action}`;
+    motherAuditCounts[key] = (motherAuditCounts[key] ?? 0) + 1;
+  }
+  const serializedMotherAudit = JSON.stringify(motherAccessAudit.rows);
+  if (
+    motherAuditCounts["PUBLIC:MOTHER_ACCESS_FAILURE"] !== 10 ||
+    motherAuditCounts["PUBLIC:MOTHER_ACCESS_THROTTLED"] !== 1 ||
+    motherAuditCounts["BUMIL:MOTHER_ACCESS_SUCCESS"] !== 1 ||
+    motherAuditCounts["BUMIL:MOTHER_LOGOUT"] !== 1 ||
+    motherAccessAudit.rows.some(
+      (event) =>
+        event.actor_type === "PUBLIC" && (event.actor_id !== null || event.resource_id !== null),
+    ) ||
+    serializedMotherAudit.includes(first.mother.full_name) ||
+    serializedMotherAudit.includes(firstCredential.one_time_code) ||
+    serializedMotherAudit.includes(secondCredential.one_time_code) ||
+    serializedMotherAudit.includes(replacementCredential.one_time_code) ||
+    serializedMotherAudit.includes(motherSession.access_token) ||
+    serializedMotherAudit.includes("not-a-code") ||
+    serializedMotherAudit.includes("127.0.0.1")
+  ) {
+    throw new Error(
+      "Mother authentication audit trail was incomplete or used the wrong actor type",
+    );
+  }
+
   const credentialEventId = await pool.query(
     `SELECT id FROM mother_access_credential_events WHERE mother_id = $1 LIMIT 1`,
     [first.mother.id],
@@ -472,7 +713,7 @@ try {
   }
 
   process.stdout.write(
-    "Registry smoke passed: protected registration, pregnancy lifecycle, and one-time hashed access credential rotation.\n",
+    "Registry smoke passed: protected registration, pregnancy lifecycle, hashed credential rotation, private mother sessions, and durable throttling.\n",
   );
 } finally {
   process.env.SMOKE_STAFF_PASSWORD = "";

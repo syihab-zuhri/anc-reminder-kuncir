@@ -32,7 +32,12 @@ Organization requires verified mobile identity/SSO.
 - Persistence: salted scrypt `N=2^17, r=8, p=1`; plaintext exists only in the first successful staff response.
 - Idempotency replay returns the immutable credential snapshot without the plaintext code. If the first response is lost, staff performs an explicit reissue with a new idempotency key.
 - Issue/reissue requires an active pregnancy. Reissue and revoke invalidate the prior active credential and all active mother sessions in the same transaction.
-- Public name/code validation, generic failure, throttling, and restricted sessions remain the follow-on implementation in `TASK-P2-004`.
+- Public lookup uses a domain-separated HMAC, followed by the salted scrypt verifier; normalized names are compared through constant-time keyed digests.
+- Wrong name/code, malformed/revoked credentials, inactive health center, and missing active pregnancy share one generic `401` response.
+- Durable HMAC-only rate buckets default to 10 failures/IP and 5 failures/code per 15-minute window, then block for 15 minutes. Edge limiting remains defense-in-depth.
+- Successful validation issues an opaque 256-bit restricted bearer with a configurable 30-day default TTL and no refresh route. PostgreSQL stores only its keyed HMAC.
+- Every protected request revalidates session, credential, organization, and active pregnancy; logout or staff credential rotation/revocation makes sessions unusable immediately.
+- The initial restricted DTO is own-only identity/session context. Mother bearers remain separate from staff authorization and cannot invoke pregnancy/visit mutations.
 
 ## References
 PRD-MOTHER-ACCESS, DOC-SECURITY.

@@ -63,6 +63,7 @@ export class MotherAccessCredentialService {
             healthCenterId,
             actorStaffId: actor.staffUserId,
             codeHash: issued.hash,
+            codeLookupHash: issued.lookupHash,
             reason: input.reason,
             occurredAt: now,
           });

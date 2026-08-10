@@ -16,6 +16,7 @@ import type { StaffActor } from "../src/auth/staff-auth.types.js";
 import { ApiException } from "../src/errors/api.exception.js";
 import type { IdempotencyService } from "../src/idempotency/idempotency.service.js";
 import { MotherAccessCodeService } from "../src/mother-access/mother-access-code.service.js";
+import { MotherAccessCryptoService } from "../src/mother-access/mother-access-crypto.service.js";
 import {
   MotherAccessCredentialNotActiveError,
   MotherAccessTargetUnavailableError,
@@ -376,15 +377,20 @@ class FakeMotherAccessCodeService extends MotherAccessCodeService {
   private sequence = 0;
 
   public constructor() {
-    super(new PasswordHasher());
+    super(new PasswordHasher(), new MotherAccessCryptoService("m".repeat(32), 30));
   }
 
-  public override async issue(): Promise<{ readonly plaintext: string; readonly hash: string }> {
+  public override async issue(): Promise<{
+    readonly plaintext: string;
+    readonly hash: string;
+    readonly lookupHash: string;
+  }> {
     this.sequence += 1;
     const suffix = ["2222", "2223", "2224", "2225", "2226", "2227"][this.sequence - 1] ?? "ZZZZ";
     return {
       plaintext: `ANC-2345-6789-ABCD-${suffix}`,
       hash: `test-scrypt-hash-${this.sequence}`,
+      lookupHash: String(this.sequence).padStart(64, "a"),
     };
   }
 }

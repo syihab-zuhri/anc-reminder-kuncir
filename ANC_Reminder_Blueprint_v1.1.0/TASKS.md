@@ -5,7 +5,7 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** Engineering Lead  
-> **Last Updated:** 2026-08-08  
+> **Last Updated:** 2026-08-10  
 > **Depends On:** DOC-SRS, PRD documents, DOC-PERMISSION, DOC-ERD, DOC-API, DOC-ARCH, DOC-SECURITY, DOC-DSD, DOC-TESTING
 
 ## 1. Change Request Context
@@ -201,13 +201,14 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - References: FR-006, FR-007, ADR-001
   - Depends on: TASK-P2-001, TASK-P1-004, TASK-P0-007
   - Done when: credential plaintext tidak dipersist dan reissue/revocation tests lulus.
-  - Evidence: migration `000005` menambahkan staff-attributed revocation, session invalidation, dan append-only credential snapshots; Puskesmas-only same-center endpoints memakai UUID idempotency, active-pregnancy gate, one-time 80-bit code, salted scrypt, immutable replay tanpa plaintext, reason-bearing audit, API/security/migration tests, serta synthetic PostgreSQL rotation smoke di protected CI. Public validation/throttling/restricted session creation tetap owning task `TASK-P2-004`.
+  - Evidence: migration `000005` menambahkan staff-attributed revocation, session invalidation, dan append-only credential snapshots; Puskesmas-only same-center endpoints memakai UUID idempotency, active-pregnancy gate, one-time 80-bit code, salted scrypt, immutable replay tanpa plaintext, reason-bearing audit, API/security/migration tests, serta synthetic PostgreSQL rotation smoke di protected CI. Public validation/throttling/restricted session creation kemudian diselesaikan oleh `TASK-P2-004`.
 
-- [ ] `TASK-P2-004` [L] Implement mother validation, anti-enumeration, throttling, dan restricted session
+- [x] `TASK-P2-004` [L] Implement mother validation, anti-enumeration, throttling, dan restricted session
   - Owner: Backend + Security
   - References: FR-006, PRD-MOTHER-ACCESS
   - Depends on: TASK-P2-003
   - Done when: failure tidak membocorkan keberadaan ibu dan security tests lulus.
+  - Evidence: migration `000006` menambahkan HMAC credential lookup, credential-bound mother session, dan durable HMAC-only IP/code rate buckets; public validation melakukan normalized constant-time name comparison + scrypt verification dengan satu generic `401`, default throttle 10/IP dan 5/code per 15 menit dengan block 15 menit, opaque 30-day own-only session tanpa refresh, per-request active-state revalidation, logout/reissue revocation, minimum-data `/mother/me`, role-boundary negatives, API/config/contract/migration tests, serta synthetic PostgreSQL authentication/throttle smoke di protected CI.
 
 - [ ] `TASK-P2-006` [L] Implement visit schedule/reschedule state machine di server
   - Owner: Backend

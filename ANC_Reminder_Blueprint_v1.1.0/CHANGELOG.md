@@ -18,7 +18,10 @@
 - Puskesmas-only pregnancy create, dating revision, and close endpoints with same-center enforcement, immutable replay snapshots, and append-only history.
 - Phase 2 lifecycle migration adds the mother/pregnancy composite scope constraint while deliberately omitting HPL, trimester, and K1-K8 calculations.
 - Puskesmas-only Bumil access-code issue/reissue/revoke with active-pregnancy gating, one-active credential, atomic mother-session invalidation, immutable lifecycle snapshots, and audit.
-- Response-only `ANC-XXXX-XXXX-XXXX-XXXX` codes carry 80 bits of entropy; database persistence contains salted scrypt verifiers only and idempotency replay never returns plaintext.
+- Response-only `ANC-XXXX-XXXX-XXXX-XXXX` codes carry 80 bits of entropy; database persistence contains a salted scrypt verifier plus keyed-HMAC lookup, and idempotency replay never returns plaintext.
+- Public Bumil name/code validation with uniform anti-enumeration `401`, normalized constant-time name comparison, HMAC exact lookup, and mandatory scrypt verification.
+- Opaque credential-bound mother sessions defaulting to 30 days without refresh, per-request active-state revalidation, explicit logout, minimum-data `/mother/me`, no-store responses, and strict separation from staff authorization.
+- Durable HMAC-only throttling defaults to 10 failures/IP and 5 failures/code per 15-minute window followed by a 15-minute block; configuration, contract, security, migration, and PostgreSQL smoke coverage are included.
 
 ### Decisions Recorded
 

@@ -65,9 +65,12 @@ clinical record, reminder, additional Web, or mobile requirements are implemente
 
 - `TASK-P2-001`: strict registration contract, Puskesmas-only authorization, Indonesian phone normalization, versioned AES-256-GCM NIK ciphertext, atomic repository operations, consent recording, and resource-only idempotency replay are implemented;
 - `TASK-P2-002`: same-center pregnancy lifecycle, one-active-pregnancy enforcement, append-only dating revision/lifecycle snapshots, immutable mutation replay, and audited Puskesmas-only create/revise/close are implemented;
-- `TASK-P2-003`: one-time 80-bit Bumil access codes, salted scrypt-only persistence, same-center active-pregnancy gating, atomic credential/session revocation, immutable replay snapshots, and audited issue/reissue/revoke are implemented;
+- `TASK-P2-003`: one-time 80-bit Bumil access codes, plaintext-free salted scrypt verifier persistence, same-center active-pregnancy gating, atomic credential/session revocation, immutable replay snapshots, and audited issue/reissue/revoke are implemented;
+- `TASK-P2-004`: normalized name/code validation, generic anti-enumeration failures, durable HMAC-only IP/code throttling, opaque credential-bound mother sessions, own-only minimum-data identity, logout, role separation, and per-request active-state revalidation are implemented;
 - API unit/integration coverage verifies no NIK/raw phone/address/code response leakage beyond the single handoff, encryption/hash integrity, invalid input rejection, denied Bidan/cross-center access, active-plan/pregnancy fail-closed behavior, and replay without duplicate audit events;
-- protected CI includes a synthetic PostgreSQL/API smoke that verifies encrypted registration persistence, pregnancy lifecycle, credential rotation/revocation, one-active invariants, append-only history, and audit counts.
+- protected CI includes a synthetic PostgreSQL/API smoke that verifies encrypted registration persistence, pregnancy lifecycle, credential rotation/revocation, uniform credential failures, HMAC-only session/throttle persistence, cross-role denial, logout revocation, durable blocking/retry behavior, one-active invariants, append-only history, and audit counts.
+- final local workspace gate: formatting, lint, strict typecheck, **93 tests**, all production builds, and secret scan pass;
+- clean temporary PostgreSQL 17 migration through `000006` plus the full synthetic registry/private-access smoke pass.
 
 This evidence does not approve clinical ANC milestone values, NIK retention/deletion, production key rotation, or claim milestone/reminder cancellation on pregnancy close; those remain governed by their owners and explicit production gates/owning tasks.
 

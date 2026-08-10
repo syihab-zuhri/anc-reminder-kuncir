@@ -9,6 +9,9 @@ import {
   motherAccessCodeSchema,
   motherAccessCredentialIssueResponseSchema,
   motherAccessCredentialMutationRequestSchema,
+  motherAccessValidateRequestSchema,
+  motherMeResponseSchema,
+  motherSessionResponseSchema,
   motherRegistrationRequestSchema,
   pregnancyCloseRequestSchema,
   pregnancyCreateRequestSchema,
@@ -142,6 +145,35 @@ describe("shared domain contracts", () => {
         code_delivery: "DISPLAY_ONCE",
       }).success,
     ).toBe(false);
+    expect(
+      motherAccessValidateRequestSchema.safeParse({
+        full_name: "Siti Aminah",
+        access_code: "anc-2345-6789-abcd-efgh",
+      }).success,
+    ).toBe(true);
+    expect(
+      motherAccessValidateRequestSchema.safeParse({
+        full_name: "Siti Aminah",
+        access_code: "ANC-2345-6789-ABCD-EFGH",
+        mother_id: "50000000-0000-4000-8000-000000000001",
+      }).success,
+    ).toBe(false);
+    expect(
+      motherSessionResponseSchema.safeParse({
+        token_type: "Bearer",
+        access_token: `anc_mt_${"a".repeat(43)}`,
+        expires_at: "2026-09-09T09:00:00.000Z",
+      }).success,
+    ).toBe(true);
+    expect(
+      motherMeResponseSchema.safeParse({
+        id: "50000000-0000-4000-8000-000000000001",
+        display_name: "Siti Aminah",
+        active_pregnancy_id: "60000000-0000-4000-8000-000000000001",
+        session_id: "70000000-0000-4000-8000-000000000001",
+        session_expires_at: "2026-09-09T09:00:00.000Z",
+      }).success,
+    ).toBe(true);
   });
 });
 

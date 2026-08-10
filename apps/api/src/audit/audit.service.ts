@@ -16,7 +16,7 @@ const allowedMetadataKeys = new Set([
 const forbiddenKeyPattern = /(nik|password|secret|token|phone|address|clinical|diagnosis)/i;
 
 export interface RecordAuditEventInput {
-  readonly actorType: "STAFF" | "SYSTEM" | "PUBLIC";
+  readonly actorType: "STAFF" | "BUMIL" | "SYSTEM" | "PUBLIC";
   readonly actorId?: string | null;
   readonly action: string;
   readonly resourceType: string;

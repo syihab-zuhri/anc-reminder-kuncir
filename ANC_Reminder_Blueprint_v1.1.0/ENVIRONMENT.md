@@ -30,6 +30,11 @@ No secrets in repository/docs. Validate required variables at startup. Separate 
 | `STAFF_REFRESH_TOKEN_TTL_DAYS` | API env | Staff refresh-token lifetime; default `7` |
 | `STAFF_LOGIN_MAX_FAILURES` | API env | Consecutive failures before lock; default `5` |
 | `STAFF_LOGIN_LOCK_MINUTES` | API env | Persistent lock duration; default `15` |
+| `MOTHER_SESSION_TTL_DAYS` | API env | Restricted mother-session lifetime; default `30` |
+| `MOTHER_ACCESS_IP_MAX_FAILURES` | API env | Mother validation failures per HMAC IP bucket/window; default `10` |
+| `MOTHER_ACCESS_CODE_MAX_FAILURES` | API env | Mother validation failures per HMAC code bucket/window; default `5` |
+| `MOTHER_ACCESS_RATE_WINDOW_MINUTES` | API env | Durable mother access failure window; default `15` |
+| `MOTHER_ACCESS_BLOCK_MINUTES` | API env | Mother access block duration after threshold; default `15` |
 | `FCM_PROJECT_ID` | Push env | FCM project |
 | `FCM_SERVICE_ACCOUNT_JSON` or secret reference | Push env | FCM credential; never commit |
 | `REMINDER_INTERVAL_DAYS` | Yes | Default `3` |
@@ -62,6 +67,11 @@ STAFF_ACCESS_TOKEN_TTL_MINUTES=15
 STAFF_REFRESH_TOKEN_TTL_DAYS=7
 STAFF_LOGIN_MAX_FAILURES=5
 STAFF_LOGIN_LOCK_MINUTES=15
+MOTHER_SESSION_TTL_DAYS=30
+MOTHER_ACCESS_IP_MAX_FAILURES=10
+MOTHER_ACCESS_CODE_MAX_FAILURES=5
+MOTHER_ACCESS_RATE_WINDOW_MINUTES=15
+MOTHER_ACCESS_BLOCK_MINUTES=15
 FCM_PROJECT_ID=
 FCM_SERVICE_ACCOUNT_JSON=
 REMINDER_INTERVAL_DAYS=3
@@ -84,7 +94,7 @@ Database available → migrations → seed synthetic care-plan version → serve
 
 ## 6. Secret Rotation Ownership
 
-DevOps owns infrastructure/FCM/session/idempotency/NIK-encryption-key rotation with Backend support. Rotation procedure must avoid invalidating active sessions unexpectedly unless incident response requires it. After `IDEMPOTENCY_SECRET` rotation, reuse of a pre-rotation key fails closed as HTTP `409`; reconcile the original resource before issuing a new key. NIK-key rotation requires a reviewed decrypt-and-re-encrypt migration before the retiring key is removed.
+DevOps owns infrastructure/FCM/session/idempotency/NIK-encryption-key rotation with Backend support. Rotation procedure must avoid invalidating active sessions unexpectedly unless incident response requires it. Rotating `MOTHER_SESSION_SECRET` invalidates every mother bearer and also changes credential lookup hashes; all active mother codes must therefore be explicitly reissued under the new secret as part of a reviewed maintenance plan. After `IDEMPOTENCY_SECRET` rotation, reuse of a pre-rotation key fails closed as HTTP `409`; reconcile the original resource before issuing a new key. NIK-key rotation requires a reviewed decrypt-and-re-encrypt migration before the retiring key is removed.
 
 ## 7. Seed Policy
 
