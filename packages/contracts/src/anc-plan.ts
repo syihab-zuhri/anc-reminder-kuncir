@@ -2,8 +2,10 @@ import { z } from "zod";
 
 import {
   ancPlanKindSchema,
+  datingBasisSchema,
   milestoneCategorySchema,
   milestoneCodeSchema,
+  pregnancyStatusSchema,
   recordValidationStatusSchema,
   requiredFacilityPolicySchema,
   ruleVersionStatusSchema,
@@ -18,6 +20,31 @@ const isoDateSchema = z
   .refine(isCalendarDate, "Expected a valid calendar date");
 
 const nullableWeekSchema = z.number().int().min(0).nullable();
+
+export const milestoneScheduleSourceSchema = z.enum([
+  "RULE_WINDOW",
+  "EXPLICIT_DUE_AT",
+  "UNSCHEDULED",
+]);
+export type MilestoneScheduleSource = z.infer<typeof milestoneScheduleSourceSchema>;
+
+export const gestationalAgeSchema = z
+  .object({
+    total_days: z.number().int().nonnegative(),
+    completed_weeks: z.number().int().nonnegative(),
+    additional_days: z.number().int().min(0).max(6),
+  })
+  .strict()
+  .superRefine((age, context) => {
+    if (age.total_days !== age.completed_weeks * 7 + age.additional_days) {
+      context.addIssue({
+        code: "custom",
+        path: ["total_days"],
+        message: "Gestational age components must represent the same total days",
+      });
+    }
+  });
+export type GestationalAge = z.infer<typeof gestationalAgeSchema>;
 
 export const ancPlanRuleInputSchema = z
   .object({
@@ -159,10 +186,42 @@ export const pregnancyMilestoneResponseSchema = z
     reminder_enabled: z.boolean(),
     reminder_interval_days: z.literal(3),
     due_at: z.string().datetime({ offset: true }).nullable(),
+    target_date_start: isoDateSchema.nullable(),
+    target_date_end: isoDateSchema.nullable(),
+    schedule_source: milestoneScheduleSourceSchema,
     visit_status: visitStatusSchema,
     record_validation_status: recordValidationStatusSchema,
+    reminder_eligible: z.boolean(),
   })
-  .strict();
+  .strict()
+  .superRefine((milestone, context) => {
+    const hasBothTargetDates =
+      milestone.target_date_start !== null && milestone.target_date_end !== null;
+    if (
+      (milestone.schedule_source === "UNSCHEDULED" &&
+        (milestone.target_date_start !== null || milestone.target_date_end !== null)) ||
+      (milestone.schedule_source !== "UNSCHEDULED" && !hasBothTargetDates) ||
+      (milestone.schedule_source === "EXPLICIT_DUE_AT" && milestone.due_at === null) ||
+      (milestone.schedule_source === "RULE_WINDOW" && milestone.due_at !== null)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["schedule_source"],
+        message: "Schedule source must match due_at and target-date fields",
+      });
+    }
+    if (
+      milestone.reminder_eligible &&
+      (!milestone.reminder_enabled ||
+        (milestone.visit_status !== "DUE" && milestone.visit_status !== "OVERDUE"))
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["reminder_eligible"],
+        message: "Reminder eligibility requires an enabled due or overdue milestone",
+      });
+    }
+  });
 export type PregnancyMilestoneResponse = z.infer<typeof pregnancyMilestoneResponseSchema>;
 
 export const pregnancyMilestoneListResponseSchema = z
@@ -172,12 +231,53 @@ export const pregnancyMilestoneListResponseSchema = z
     plan_version_no: z.number().int().positive(),
     plan_kind: ancPlanKindSchema,
     production_eligible: z.boolean(),
+    dating_basis: datingBasisSchema,
+    dating_date: isoDateSchema,
+    pregnancy_status: pregnancyStatusSchema,
+    as_of_date: isoDateSchema,
+    gestational_age: gestationalAgeSchema,
+    trimester_label: z.string().min(1).nullable(),
+    next_milestone_code: milestoneCodeSchema.nullable(),
     milestones: z
       .array(pregnancyMilestoneResponseSchema)
       .length(milestoneCodeSchema.options.length),
   })
-  .strict();
+  .strict()
+  .superRefine((timeline, context) => {
+    if (
+      timeline.next_milestone_code !== null &&
+      !timeline.milestones.some((milestone) => milestone.code === timeline.next_milestone_code)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["next_milestone_code"],
+        message: "Next milestone code must identify a timeline milestone",
+      });
+    }
+    if (
+      timeline.pregnancy_status === "CLOSED" &&
+      (timeline.next_milestone_code !== null ||
+        timeline.milestones.some((milestone) => milestone.reminder_eligible))
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["pregnancy_status"],
+        message: "Closed pregnancy cannot have a next or reminder-eligible milestone",
+      });
+    }
+  });
 export type PregnancyMilestoneListResponse = z.infer<typeof pregnancyMilestoneListResponseSchema>;
+
+export const pregnancyNextMilestoneResponseSchema = z
+  .object({
+    pregnancy_id: z.string().uuid(),
+    as_of_date: isoDateSchema,
+    gestational_age: gestationalAgeSchema,
+    trimester_label: z.string().min(1).nullable(),
+    next_milestone: pregnancyMilestoneResponseSchema.nullable(),
+  })
+  .strict();
+export type PregnancyNextMilestoneResponse = z.infer<typeof pregnancyNextMilestoneResponseSchema>;
 
 function validateStructuralRule(rule: AncPlanRuleInput, context: z.RefinementCtx): void {
   const puskesmasRequired = new Set(["K1", "K4", "K5"]);

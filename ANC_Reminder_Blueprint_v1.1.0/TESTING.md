@@ -5,7 +5,7 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** QA Lead  
-> **Last Updated:** 2026-08-10  
+> **Last Updated:** 2026-08-11  
 > **Depends On:** DOC-SRS, PRD documents, DOC-API
 
 ## 1. Strategy
@@ -43,6 +43,11 @@ Local synthetic data → CI ephemeral DB → staging with synthetic/pilot-approv
 | TEST-ANC-001 | K1/K4/K5 require Puskesmas | Unit/integration |
 | TEST-ANC-002 | K2/K3/K6/K7 allowed by configured facility list | Unit |
 | TEST-ANC-003 | K8 category/facility PONED/RS | Unit |
+| TEST-ANC-004 | Gestational completed weeks/days use server timezone calendar boundaries | Unit/clock |
+| TEST-ANC-005 | Rule window or explicit due date derives UPCOMING/DUE/OVERDUE without client calculation | Unit/API |
+| TEST-ANC-006 | Terminal milestone states remain terminal; closed pregnancy caps age at `closed_at` and has no next/reminder eligibility | Unit/API |
+| TEST-ANC-007 | Dating later than server calculation date fails closed | Unit/API |
+| TEST-ANC-008 | Dating basis without approved age-offset semantics fails closed | Unit/API |
 | TEST-VISIT-001 | Bidan confirms K3 without detail form | E2E |
 | TEST-VISIT-002 | Bidan cannot edit K1–K6 detail | Security |
 | TEST-VISIT-003 | Puskesmas can perform Bidan confirmation | Permission |

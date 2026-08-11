@@ -66,3 +66,11 @@ Phase 0 menyediakan workspace Capacitor, validasi trusted origin, dan halaman fa
 - Grant/revoke clinical owner hanya melalui command operasional dengan frasa konfirmasi, target Puskesmas yang eksplisit, alasan wajib, dan audit append-only.
 - Plan `SYNTHETIC` hanya untuk development/test, tidak dapat keluar dari DRAFT, tidak production-eligible, dan tidak dapat dipilih pada runtime production.
 - Tidak ada seed nilai minggu klinis production. `OPEN-CLIN-001` tetap menjadi gate untuk approval/activation plan `CLINICAL`; due date serta status due/overdue tetap milik `TASK-P2-006`/`TASK-P2-011`.
+
+## 2026-08-11 - Server-derived gestational and milestone state
+
+- Kalkulasi usia memakai selisih tanggal kalender `PREGNANCY_START_DATE` terhadap tanggal server pada `PRIMARY_TIMEZONE`, lalu mengirim completed weeks dan additional days. Jam UTC tidak boleh menggeser hari lokal.
+- Week number hanya operator aritmetika terhadap nilai versioned rule: start = `dating_date + week_start×7 hari`, end inklusif = `dating_date + week_end×7 + 6 hari`. Angka week tidak di-hardcode oleh kalkulator.
+- `trimester_label` dipilih dari window rule terkonfigurasi; tidak ada cut-off trimester global. Dating basis lain tidak boleh memakai kalkulator sampai offset semantics-nya disetujui dan dikontrakkan.
+- Existing explicit `due_at` mengalahkan rule window. Terminal visit state tidak ditimpa; closed pregnancy selalu tidak memiliki next/reminder eligibility dan usia historis berhenti pada tanggal lokal `closed_at`.
+- Derived UPCOMING/DUE/OVERDUE dihitung saat read agar tidak menjadi row state yang basi. `TASK-P2-006` tetap pemilik mutasi schedule/reschedule dan worker task tetap pemilik persistence/query scheduler bila diperlukan.

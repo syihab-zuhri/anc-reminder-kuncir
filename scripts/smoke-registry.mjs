@@ -257,9 +257,34 @@ try {
     milestoneTimeline.milestones?.length !== 8 ||
     milestoneTimeline.milestones.map((milestone) => milestone.code).join(",") !==
       "K1,K2,K3,K4,K5,K6,K7,K8" ||
-    milestoneTimeline.milestones.some((milestone) => milestone.due_at !== null)
+    milestoneTimeline.milestones.some((milestone) => milestone.due_at !== null) ||
+    !/^\d{4}-\d{2}-\d{2}$/u.test(milestoneTimeline.as_of_date ?? "") ||
+    !Number.isInteger(milestoneTimeline.gestational_age?.total_days) ||
+    milestoneTimeline.gestational_age.total_days !==
+      milestoneTimeline.gestational_age.completed_weeks * 7 +
+        milestoneTimeline.gestational_age.additional_days ||
+    milestoneTimeline.trimester_label !== "SYNTHETIC_DEV_ONLY" ||
+    milestoneTimeline.next_milestone_code !== "K1" ||
+    milestoneTimeline.milestones[0]?.schedule_source !== "RULE_WINDOW" ||
+    milestoneTimeline.milestones[0]?.visit_status !== "OVERDUE" ||
+    milestoneTimeline.milestones[0]?.reminder_eligible !== true ||
+    milestoneTimeline.milestones[7]?.schedule_source !== "UNSCHEDULED" ||
+    milestoneTimeline.milestones[7]?.reminder_eligible !== false
   ) {
     throw new Error("Synthetic K1-K8 milestones were not initialized safely");
+  }
+  const nextMilestone = await readJson(
+    await request(`/pregnancies/${first.pregnancy.id}/milestones/next`, {
+      headers: { authorization },
+    }),
+    "Synthetic next ANC milestone",
+  );
+  if (
+    nextMilestone.pregnancy_id !== first.pregnancy.id ||
+    nextMilestone.next_milestone?.code !== "K1" ||
+    nextMilestone.next_milestone?.visit_status !== "OVERDUE"
+  ) {
+    throw new Error("Server-derived next ANC milestone was inconsistent with the timeline");
   }
 
   const duplicateWhileActive = await request(`/mothers/${first.mother.id}/pregnancies`, {

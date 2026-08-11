@@ -5,7 +5,7 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** Backend Lead  
-> **Last Updated:** 2026-08-10  
+> **Last Updated:** 2026-08-11  
 > **Depends On:** DOC-SRS, DOC-ERD, DOC-PERMISSION
 
 ## 1. Principles
@@ -305,6 +305,31 @@ tasks populate it.
 Implemented errors include `ANC_PLAN_NOT_AVAILABLE` (`404`), `ANC_PLAN_INVALID_TRANSITION` (`409`),
 `ANC_PLAN_NOT_EFFECTIVE` (`409`), `ANC_PLAN_RULES_INCOMPLETE` (`422`),
 `PREGNANCY_MILESTONES_NOT_READY` (`409`), and scope-safe `FORBIDDEN` (`403`).
+
+#### Server-derived pregnancy state
+
+`API-MILESTONE-001` now returns `as_of_date`, `gestational_age` (`total_days`, `completed_weeks`,
+`additional_days`), configured `trimester_label`, `next_milestone_code`, and eight enriched milestones. Each
+milestone includes `target_date_start`, `target_date_end`, `schedule_source`, authoritative `visit_status`, and
+`reminder_eligible`. `API-MILESTONE-002` returns the same age/phase context plus the complete next-milestone DTO.
+
+Current registration/lifecycle input is strictly `dating_basis=PREGNANCY_START_DATE`. The calculation uses local
+calendar dates in `PRIMARY_TIMEZONE`: configured week N begins N×7 days after `dating_date`, and a configured
+ending week includes its final six calendar days. These are arithmetic semantics only; the N values still come
+exclusively from the versioned, clinically approved plan. If future dating bases are accepted, their age-offset
+semantics require a separate approved contract before they may use this calculator.
+
+An explicit persisted `due_at` from the schedule/reschedule flow takes precedence and represents one local
+calendar due date. Otherwise the configured rule window is used. Before/inside/after the effective window maps
+to `UPCOMING`/`DUE`/`OVERDUE`; `CONFIRMED`, `CANCELLED`, and `NOT_APPLICABLE` are never overwritten by date
+calculation. `trimester_label` is selected from configured rule windows—no trimester cut-off is hardcoded.
+The next milestone is the first non-terminal K in K1→K8 order. A closed pregnancy has no next milestone and no
+reminder-eligible milestone; its gestational calculation is capped at the local `closed_at` date so historical age
+does not keep increasing. Time-dependent status is derived on every read rather than trusted from a client or left
+to become stale in storage.
+
+`PREGNANCY_DATING_INVALID` (`409`) is returned if stored dating is later than the server's calculation date;
+`PREGNANCY_DATING_BASIS_UNSUPPORTED` (`409`) fails closed for a dating basis without approved offset semantics.
 
 ### Visit Confirmation / Detail
 

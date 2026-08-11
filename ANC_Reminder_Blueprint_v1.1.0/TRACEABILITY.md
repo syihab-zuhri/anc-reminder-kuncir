@@ -5,7 +5,7 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** QA Lead  
-> **Last Updated:** 2026-08-08  
+> **Last Updated:** 2026-08-11  
 > **Depends On:** DOC-SRS, PRD documents, DOC-TASKS
 
 ## 1. P0 Matrix
@@ -31,7 +31,7 @@
 | FR-030 | FEAT-CHECKUP | API-VISIT-001 | confirmations | Bidan/Puskesmas | TASK-P2-012/P3-009 | TEST-VISIT-001 | Covered |
 | FR-031 | FEAT-CHECKUP | API-VISIT-003..006 | k1_k6_records | Puskesmas | TASK-P2-013/P3-008 | TEST-VISIT-002/003 | Covered |
 | FR-032 | FEAT-ANC | confirm validation | rules/facilities | server | TASK-P2-010 | structural facility-policy tests | Backend Verified |
-| FR-033 | FEAT-NOTIF | internal scheduler | milestones | server | TASK-P2-011/P4-002 | clock tests | Covered |
+| FR-033 | FEAT-NOTIF | API-MILESTONE-001/002 + internal scheduler | milestones | server | TASK-P2-011/P4-002 | timezone/window/terminal/clock tests + PostgreSQL smoke | Backend Derivation Verified; Worker Pending |
 | FR-034 | FEAT-NOTIF | worker | reminder_cycles | worker | TASK-P4-002 | TEST-NOTIF-001 | Covered |
 | FR-035 | FEAT-NOTIF | FCM adapter | push_attempts | worker | TASK-P4-005 | TEST-NOTIF-002 | Covered |
 | FR-036 | FEAT-NOTIF | API-REM-003 | wa_fallback_actions | Bidan/Puskesmas | TASK-P4-011/013 | TEST-NOTIF-003/004 | Covered |

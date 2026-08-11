@@ -3,12 +3,30 @@ import { describe, expect, it } from "vitest";
 import {
   ancPlanCreateRequestSchema,
   ancPlanResponseSchema,
+  gestationalAgeSchema,
   milestoneCodeSchema,
   type AncPlanRuleInput,
   type MilestoneCode,
 } from "../src/index.js";
 
 describe("ANC plan contracts", () => {
+  it("requires internally consistent server-derived gestational age components", () => {
+    expect(
+      gestationalAgeSchema.safeParse({
+        total_days: 15,
+        completed_weeks: 2,
+        additional_days: 1,
+      }).success,
+    ).toBe(true);
+    expect(
+      gestationalAgeSchema.safeParse({
+        total_days: 16,
+        completed_weeks: 2,
+        additional_days: 1,
+      }).success,
+    ).toBe(false);
+  });
+
   it("accepts exactly one structurally valid rule for K1 through K8", () => {
     const parsed = ancPlanCreateRequestSchema.parse({
       idempotency_key: "10000000-0000-4000-8000-000000000001",
