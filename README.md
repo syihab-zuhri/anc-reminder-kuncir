@@ -54,6 +54,11 @@ Remove-Item Env:PROVISION_PASSWORD
 Provisioner menolak pembuatan akun Puskesmas kedua pada health center yang sama dan hanya mencetak ID hasil,
 bukan credential.
 
+Penanggung jawab program klinis adalah capability terpisah dan default-nya nonaktif. Setelah penunjukan formal,
+operator database dapat memberi atau mencabut capability melalui `npm run staff:set:clinical-owner` dengan
+input sementara `CLINICAL_OWNER_*` yang didokumentasikan di `ANC_Reminder_Blueprint_v1.1.0/ENVIRONMENT.md`.
+Jangan memakai identitas dummy untuk grant produksi.
+
 ## Pemeriksaan
 
 ```powershell

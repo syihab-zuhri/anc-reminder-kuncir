@@ -261,10 +261,50 @@ Errors include `ACTIVE_PREGNANCY_EXISTS` (`409`), `PREGNANCY_NOT_ACTIVE` (`409`)
 | API-ANC-002 | POST | `/anc-plan/versions` | Puskesmas program permission |
 | API-ANC-003 | POST | `/anc-plan/versions/{id}/approve` | Program owner |
 | API-ANC-004 | POST | `/anc-plan/versions/{id}/activate` | Program owner |
-| API-MILESTONE-001 | GET | `/pregnancies/{id}/milestones` | Scoped staff/Bumil own |
+| API-MILESTONE-001 | GET | `/pregnancies/{id}/milestones` | Scoped staff; Bumil-own exposure deferred to TASK-P2-015 |
 | API-MILESTONE-002 | GET | `/pregnancies/{id}/milestones/next` | Scoped staff/Bumil own |
 | API-MILESTONE-003 | PATCH | `/pregnancies/{id}/milestones/{code}/due-date` | Puskesmas |
 | API-MILESTONE-004 | GET | `/pregnancies/{id}/progress` | Scoped |
+
+`POST /anc-plan/versions` creates only a `CLINICAL` `DRAFT`. It requires an idempotency key, a bounded
+`source_reference`, and exactly one unique rule for every code K1–K8. Target weeks remain configuration input;
+the API does not provide or infer production clinical values. Structural policy is always server-enforced:
+K1/K4/K5 are ANC at Puskesmas only, K2/K3/K6/K7 are ANC with a configured flexible allowlist, and K8 is a
+delivery milestone limited to PONED/RS.
+
+```json
+{
+  "idempotency_key": "client-generated-uuid",
+  "source_reference": "controlled-document-reference",
+  "rules": [
+    {
+      "code": "K1",
+      "trimester_label": "approved-label",
+      "target_week_start": null,
+      "target_week_end": null,
+      "milestone_category": "ANC",
+      "required_facility_policy": "PUSKESMAS_REQUIRED",
+      "allowed_facility_types": ["PUSKESMAS"],
+      "reminder_enabled": true
+    }
+  ]
+}
+```
+
+The example shows one incomplete draft rule shape only; a valid request must contain all eight rules, and approval
+requires the clinically approved K1–K7 week windows. `POST .../{id}/approve` accepts `idempotency_key`,
+`approval_reference`, and `effective_from`; `POST .../{id}/activate` accepts `idempotency_key` and rejects an
+approved plan before its effective date. Both operations require `clinical_program_owner=true` and create audit
+events. Signatures or approval files are not accepted by these endpoints.
+
+`SYNTHETIC` plans can only be inserted by controlled development/test setup, remain `DRAFT`, and return
+`production_eligible=false`. Runtime production never assigns them. A pregnancy stores the selected plan version
+and receives exactly eight immutable rule snapshots; `due_at` stays null until the owning schedule/calculation
+tasks populate it.
+
+Implemented errors include `ANC_PLAN_NOT_AVAILABLE` (`404`), `ANC_PLAN_INVALID_TRANSITION` (`409`),
+`ANC_PLAN_NOT_EFFECTIVE` (`409`), `ANC_PLAN_RULES_INCOMPLETE` (`422`),
+`PREGNANCY_MILESTONES_NOT_READY` (`409`), and scope-safe `FORBIDDEN` (`403`).
 
 ### Visit Confirmation / Detail
 

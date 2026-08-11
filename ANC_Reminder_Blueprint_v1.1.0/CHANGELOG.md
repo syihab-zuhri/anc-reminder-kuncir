@@ -5,8 +5,24 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** Product/Project Lead  
-> **Last Updated:** 2026-08-10  
+> **Last Updated:** 2026-08-11  
 > **Depends On:** All project documents
+
+## [2026-08-11] Phase 2 ANC K1–K8 Milestone Engine
+
+### Added
+
+- Versioned ANC plan API for draft creation, clinical-owner approval, effective-date activation, active-plan read, and scoped pregnancy milestone read.
+- Atomic K1–K8 snapshot creation for every new pregnancy, including rule/plan composite integrity and an immutable pregnancy care-plan binding.
+- Server-enforced facility structure: K1/K4/K5 only Puskesmas, K2/K3/K6/K7 configurable within the flexible policy, and K8 only PONED/RS.
+- Database lifecycle guards, audited governance mutations, idempotent plan writes, and explicit `clinical_program_owner` capability for approval/activation.
+- Contract, API, facility-policy, migration, and real PostgreSQL smoke coverage.
+
+### Safety Boundary
+
+- `SYNTHETIC` plans are development/test-only, must remain `DRAFT`, and are never production-eligible. Production runtime cannot assign them.
+- No target-week values were promoted as clinical truth. Activation of a real `CLINICAL` plan remains gated by `OPEN-CLIN-001` and separately controlled approval evidence.
+- Due-date, gestational-age, trimester, and due/overdue derivation remain owned by `TASK-P2-006` and `TASK-P2-011`.
 
 ## [2026-08-10] Phase 2 Mother Registry Slice
 

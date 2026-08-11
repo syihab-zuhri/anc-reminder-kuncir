@@ -18,6 +18,7 @@ import type { PregnancyLifecycleRepository } from "./registry/pregnancy-lifecycl
 import type { MotherAccessCredentialRepository } from "./mother-access/mother-access-credential.repository.js";
 import type { MotherAccessCodeService } from "./mother-access/mother-access-code.service.js";
 import type { MotherAuthRepository } from "./mother-access/mother-auth.repository.js";
+import type { AncPlanRepository } from "./anc-plan/anc-plan.repository.js";
 import { CanonicalErrorFilter } from "./errors/canonical-error.filter.js";
 import { HttpLoggingInterceptor } from "./observability/http-logging.interceptor.js";
 import { JsonLogger } from "./observability/json-logger.js";
@@ -40,6 +41,7 @@ export interface CreateApiApplicationOptions {
   readonly motherAccessCredentialRepository?: MotherAccessCredentialRepository;
   readonly motherAccessCodeService?: MotherAccessCodeService;
   readonly motherAuthRepository?: MotherAuthRepository;
+  readonly ancPlanRepository?: AncPlanRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -84,6 +86,9 @@ export async function createApiApplication(
       ...(options.motherAuthRepository === undefined
         ? {}
         : { motherAuthRepository: options.motherAuthRepository }),
+      ...(options.ancPlanRepository === undefined
+        ? {}
+        : { ancPlanRepository: options.ancPlanRepository }),
       ...(options.auditRepository === undefined
         ? {}
         : { auditRepository: options.auditRepository }),

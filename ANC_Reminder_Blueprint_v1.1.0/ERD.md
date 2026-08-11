@@ -62,6 +62,7 @@ Puskesmas organization/facility scope.
 - `password_hash text`
 - `failed_login_attempts int`, `locked_until timestamptz nullable`
 - `last_login_at timestamptz nullable`
+- `clinical_program_owner boolean default false` — explicit governance grant; not a role
 - `status enum(ACTIVE,DISABLED,LOCKED)`
 - `created_at`, `updated_at`
 
@@ -154,11 +155,18 @@ Append-only lifecycle snapshots used for audit and exact idempotency replay.
 ### `anc_plan_versions`
 - `id uuid PK`
 - `version_no int`
+- `plan_kind enum(CLINICAL,SYNTHETIC)`
 - `status enum(DRAFT,APPROVED,ACTIVE,ARCHIVED)`
-- `effective_from date`
+- `source_reference text`
+- `approval_reference text nullable` — reference only; signatures/evidence stay outside this public repository
+- `created_by uuid FK nullable`
+- `effective_from date nullable`
 - `approved_by uuid nullable`
 - `approved_at timestamptz nullable`
-- immutable after `ACTIVE`
+- `activated_at timestamptz nullable`
+- identity and governance metadata immutable after approval; rules mutable only while `DRAFT`
+- `SYNTHETIC` is development/test-only and constrained to `DRAFT` without approval/effective/activation fields
+- only a complete eight-rule `CLINICAL` plan may enter `APPROVED` or `ACTIVE`
 
 ### `anc_milestone_rules`
 - `id uuid PK`
@@ -173,11 +181,13 @@ Append-only lifecycle snapshots used for audit and exact idempotency replay.
 - `reminder_enabled boolean`
 - `reminder_interval_days int default 3`
 - unique `(plan_version_id, code)`
+- unique `(id, plan_version_id, code)` supports immutable snapshot integrity
 
 ### `pregnancy_milestones`
 - `id uuid PK`
 - `pregnancy_id uuid FK`
 - `rule_id uuid FK`
+- `plan_version_id uuid FK`
 - `code enum K1..K8`
 - `due_at timestamptz nullable`
 - `visit_status enum(UPCOMING,DUE,OVERDUE,CONFIRMED,CANCELLED,NOT_APPLICABLE)`
@@ -186,6 +196,8 @@ Append-only lifecycle snapshots used for audit and exact idempotency replay.
 - `confirmed_by uuid nullable`
 - `created_at`, `updated_at`
 - unique `(pregnancy_id, code)`
+- composite FK `(rule_id, plan_version_id, code)` guarantees the rule identity/code belongs to the snapshot plan
+- composite FK `(pregnancy_id, plan_version_id)` guarantees every milestone uses its pregnancy's `care_plan_version_id`
 
 ### `visit_confirmations`
 Append-only confirmation/correction history.

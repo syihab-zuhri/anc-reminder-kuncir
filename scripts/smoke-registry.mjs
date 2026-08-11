@@ -55,30 +55,119 @@ async function readErrorShape(response, expectedStatus, operation) {
   return { code: error.code, message: error.message, details: error.details };
 }
 
-async function ensureSyntheticActivePlan() {
+async function ensureSyntheticAssignablePlan() {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Synthetic ANC plans are forbidden in production");
+  }
   const existing = await pool.query(
-    "SELECT id FROM anc_plan_versions WHERE status = 'ACTIVE' LIMIT 1",
+    `SELECT plan.id
+       FROM anc_plan_versions AS plan
+      WHERE (plan.plan_kind = 'CLINICAL' AND plan.status = 'ACTIVE')
+         OR (
+           plan.plan_kind = 'SYNTHETIC'
+           AND plan.status = 'DRAFT'
+           AND (SELECT count(*) FROM anc_milestone_rules WHERE plan_version_id = plan.id) = 8
+         )
+      ORDER BY CASE WHEN plan.plan_kind = 'CLINICAL' THEN 0 ELSE 1 END, plan.version_no DESC
+      LIMIT 1`,
   );
   if (existing.rows[0] !== undefined) return;
 
-  const nextVersion = await pool.query(
-    "SELECT COALESCE(MAX(version_no), 0) + 1 AS version_no FROM anc_plan_versions",
-  );
-  const versionNo = Number(nextVersion.rows[0]?.version_no);
-  if (!Number.isSafeInteger(versionNo) || versionNo < 1) {
-    throw new Error("Could not allocate a synthetic ANC plan version number");
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+      "ANC_SYNTHETIC_SMOKE_PLAN",
+    ]);
+    let planId;
+    const draft = await client.query(
+      `SELECT id
+         FROM anc_plan_versions
+        WHERE plan_kind = 'SYNTHETIC' AND status = 'DRAFT'
+        ORDER BY version_no DESC
+        LIMIT 1
+        FOR UPDATE`,
+    );
+    if (draft.rows[0] === undefined) {
+      const nextVersion = await client.query(
+        "SELECT COALESCE(MAX(version_no), 0) + 1 AS version_no FROM anc_plan_versions",
+      );
+      const versionNo = Number(nextVersion.rows[0]?.version_no);
+      if (!Number.isSafeInteger(versionNo) || versionNo < 1) {
+        throw new Error("Could not allocate a synthetic ANC plan version number");
+      }
+      planId = randomUUID();
+      await client.query(
+        `INSERT INTO anc_plan_versions (
+           id, version_no, plan_kind, status, source_reference
+         ) VALUES ($1, $2, 'SYNTHETIC', 'DRAFT', $3)`,
+        [planId, versionNo, "SYNTHETIC_REGISTRY_SMOKE_DEV_ONLY_NOT_CLINICAL_GUIDANCE"],
+      );
+    } else {
+      planId = draft.rows[0].id;
+      await client.query("DELETE FROM anc_milestone_rules WHERE plan_version_id = $1", [planId]);
+    }
+
+    for (const rule of syntheticMilestoneRules()) {
+      await client.query(
+        `INSERT INTO anc_milestone_rules (
+           id, plan_version_id, code, trimester_label,
+           target_week_start, target_week_end, milestone_category,
+           required_facility_policy, allowed_facility_types,
+           reminder_enabled, reminder_interval_days
+         ) VALUES ($1, $2, $3, 'SYNTHETIC_DEV_ONLY', $4, $5, $6, $7, $8::jsonb, $9, 3)`,
+        [
+          randomUUID(),
+          planId,
+          rule.code,
+          rule.targetWeekStart,
+          rule.targetWeekEnd,
+          rule.category,
+          rule.facilityPolicy,
+          JSON.stringify(rule.allowedFacilityTypes),
+          rule.reminderEnabled,
+        ],
+      );
+    }
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
   }
-  await pool.query(
-    `INSERT INTO anc_plan_versions (id, version_no, status)
-     VALUES ($1, $2, 'ACTIVE')`,
-    [randomUUID(), versionNo],
-  );
+}
+
+function syntheticMilestoneRules() {
+  return ["K1", "K2", "K3", "K4", "K5", "K6", "K7", "K8"].map((code, index) => {
+    if (code === "K8") {
+      return {
+        code,
+        targetWeekStart: null,
+        targetWeekEnd: null,
+        category: "DELIVERY",
+        facilityPolicy: "PONED_OR_RS_REQUIRED",
+        allowedFacilityTypes: ["PONED", "HOSPITAL"],
+        reminderEnabled: false,
+      };
+    }
+    const puskesmasRequired = code === "K1" || code === "K4" || code === "K5";
+    return {
+      code,
+      targetWeekStart: index + 1,
+      targetWeekEnd: index + 1,
+      category: "ANC",
+      facilityPolicy: puskesmasRequired ? "PUSKESMAS_REQUIRED" : "FLEXIBLE",
+      allowedFacilityTypes: puskesmasRequired ? ["PUSKESMAS"] : ["PUSKESMAS", "MIDWIFE_PRACTICE"],
+      reminderEnabled: true,
+    };
+  });
 }
 
 const smokeStartedAt = new Date();
 
 try {
-  await ensureSyntheticActivePlan();
+  await ensureSyntheticAssignablePlan();
   const login = await readJson(
     await request("/staff/auth/login", {
       method: "POST",
@@ -154,6 +243,23 @@ try {
     throw new Error(
       "Registry persistence did not preserve the protected atomic registration state",
     );
+  }
+
+  const milestoneTimeline = await readJson(
+    await request(`/pregnancies/${first.pregnancy.id}/milestones`, {
+      headers: { authorization },
+    }),
+    "Synthetic K1-K8 milestone timeline",
+  );
+  if (
+    milestoneTimeline.plan_kind !== "SYNTHETIC" ||
+    milestoneTimeline.production_eligible !== false ||
+    milestoneTimeline.milestones?.length !== 8 ||
+    milestoneTimeline.milestones.map((milestone) => milestone.code).join(",") !==
+      "K1,K2,K3,K4,K5,K6,K7,K8" ||
+    milestoneTimeline.milestones.some((milestone) => milestone.due_at !== null)
+  ) {
+    throw new Error("Synthetic K1-K8 milestones were not initialized safely");
   }
 
   const duplicateWhileActive = await request(`/mothers/${first.mother.id}/pregnancies`, {
@@ -713,7 +819,7 @@ try {
   }
 
   process.stdout.write(
-    "Registry smoke passed: protected registration, pregnancy lifecycle, hashed credential rotation, private mother sessions, and durable throttling.\n",
+    "Registry smoke passed: protected registration, pregnancy lifecycle, K1-K8 milestone snapshot, hashed credential rotation, private mother sessions, and durable throttling.\n",
   );
 } finally {
   process.env.SMOKE_STAFF_PASSWORD = "";

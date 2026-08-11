@@ -11,6 +11,7 @@
     "dev": "node --env-file=../../.env --watch --enable-source-maps --import=tsx src/main.ts",
     "lint": "eslint src test --max-warnings=0",
     "provision:puskesmas": "node --env-file-if-exists=../../.env --import=tsx src/commands/provision-puskesmas.ts",
+    "set:clinical-owner": "node --env-file-if-exists=../../.env --import=tsx src/commands/set-clinical-program-owner.ts",
     "start": "node dist/main.js",
     "test": "vitest run",
     "test:ci": "vitest run",

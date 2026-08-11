@@ -28,6 +28,9 @@ const motherAccessCredentialMigration = loadModule(
 const motherPrivateAccessMigration = loadModule(
   "../migrations/000006_phase_2_mother_private_access.cjs",
 ) as BaselineMigration;
+const ancMilestoneEngineMigration = loadModule(
+  "../migrations/000007_phase_2_anc_milestone_engine.cjs",
+) as BaselineMigration;
 
 describe("baseline database migration", () => {
   it("defines the ERD baseline and privacy-sensitive NIK column", () => {
@@ -186,5 +189,33 @@ describe("phase 2 mother private access migration", () => {
     expect(statement).toContain("DROP TABLE IF EXISTS mother_access_rate_limits");
     expect(statement).toContain("DROP COLUMN IF EXISTS code_lookup_hash");
     expect(statement).toContain("DROP TYPE IF EXISTS mother_access_rate_limit_scope");
+  });
+});
+
+describe("phase 2 ANC milestone engine migration", () => {
+  it("separates synthetic plans, locks governed rules, and enforces snapshot integrity", () => {
+    const sql = vi.fn();
+    ancMilestoneEngineMigration.up({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("CREATE TYPE anc_plan_kind AS ENUM ('CLINICAL', 'SYNTHETIC')");
+    expect(statement).toContain("anc_plan_governance_state");
+    expect(statement).toContain("clinical_program_owner boolean NOT NULL DEFAULT false");
+    expect(statement).toContain("SYNTHETIC plans are development/test fixtures");
+    expect(statement).toContain("anc_plan_versions_complete_rules");
+    expect(statement).toContain("anc_milestone_rules_draft_only");
+    expect(statement).toContain("pregnancy_milestones_rule_snapshot_fk");
+    expect(statement).toContain("pregnancy_milestones_pregnancy_plan_fk");
+    expect(statement).not.toMatch(/INSERT\s+INTO\s+anc_milestone_rules/i);
+  });
+
+  it("provides a reverse migration for every added guard and key", () => {
+    const sql = vi.fn();
+    ancMilestoneEngineMigration.down({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("DROP TRIGGER IF EXISTS anc_plan_versions_transition_guard");
+    expect(statement).toContain("DROP COLUMN IF EXISTS plan_version_id");
+    expect(statement).toContain("DROP TYPE IF EXISTS anc_plan_kind");
   });
 });

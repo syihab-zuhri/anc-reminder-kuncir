@@ -14,3 +14,4 @@ export const AUDIT_SERVICE = Symbol("AUDIT_SERVICE");
 export const SESSION_TOKEN_SERVICE = Symbol("SESSION_TOKEN_SERVICE");
 export const IDEMPOTENCY_SERVICE = Symbol("IDEMPOTENCY_SERVICE");
 export const CLOCK = Symbol("CLOCK");
+export const ANC_PLAN_REPOSITORY = Symbol("ANC_PLAN_REPOSITORY");

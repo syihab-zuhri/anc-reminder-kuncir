@@ -17,6 +17,7 @@ import {
   MOTHER_REGISTRY_REPOSITORY,
 } from "../infrastructure/tokens.js";
 import {
+  ActiveAncPlanInvalidError,
   ActiveAncPlanUnavailableError,
   type MotherRegistryRepository,
 } from "./mother-registry.repository.js";
@@ -93,7 +94,10 @@ export class MotherRegistryService {
       }
       return outcome.value;
     } catch (error) {
-      if (error instanceof ActiveAncPlanUnavailableError) {
+      if (
+        error instanceof ActiveAncPlanUnavailableError ||
+        error instanceof ActiveAncPlanInvalidError
+      ) {
         throw new ApiException({
           status: HttpStatus.CONFLICT,
           code: "REGISTRATION_NOT_READY",

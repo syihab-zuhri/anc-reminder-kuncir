@@ -5,7 +5,7 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** Engineering Lead  
-> **Last Updated:** 2026-08-10  
+> **Last Updated:** 2026-08-11  
 > **Depends On:** DOC-SRS, PRD documents, DOC-PERMISSION, DOC-ERD, DOC-API, DOC-ARCH, DOC-SECURITY, DOC-DSD, DOC-TESTING
 
 ## 1. Change Request Context
@@ -228,11 +228,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Depends on: TASK-P2-006, TASK-P1-003, TASK-P2-012
   - Done when: pagination/scope/status/performance tests lulus.
 
-- [ ] `TASK-P2-010` [L] Implement **server-side K1–K8 milestone engine** dan configurable facility rules
+- [x] `TASK-P2-010` [L] Implement **server-side K1–K8 milestone engine** dan configurable facility rules
   - Owner: Backend + Clinical Reviewer
   - References: `CR-2026-08-08`, PRD-ANC, DOC-ERD, DOC-API
   - Depends on: TASK-P0-007, TASK-P1-003, TASK-P2-002
   - Done when: K1–K8 tersimpan sebagai milestone; K1/K4/K5 menegakkan Puskesmas rule; target/facility rules configurable dan tests lulus.
+  - Evidence: migration `000007` menambahkan lifecycle DRAFT→APPROVED→ACTIVE, clinical-owner gate, immutable version/rule snapshot, dan composite rule-plan integrity; setiap pregnancy baru memperoleh tepat K1–K8 secara atomik. K1/K4/K5 hanya Puskesmas, K2/K3/K6/K7 memakai facility allowlist fleksibel, dan K8 hanya PONED/RS. Synthetic plan dikunci tetap DRAFT dan ditolak di production; contract/API/database tests serta PostgreSQL rollback→up dan registry smoke lulus. Nilai minggu klinis production tetap menunggu `OPEN-CLIN-001` dan tidak di-seed.
 
 - [ ] `TASK-P2-011` [M] Implement server-only calculation usia kehamilan, trimester, milestone berikutnya, due/overdue
   - Owner: Backend

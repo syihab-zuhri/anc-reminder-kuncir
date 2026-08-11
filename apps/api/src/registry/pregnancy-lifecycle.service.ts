@@ -21,7 +21,10 @@ import {
   IDEMPOTENCY_SERVICE,
   PREGNANCY_LIFECYCLE_REPOSITORY,
 } from "../infrastructure/tokens.js";
-import { ActiveAncPlanUnavailableError } from "./mother-registry.repository.js";
+import {
+  ActiveAncPlanInvalidError,
+  ActiveAncPlanUnavailableError,
+} from "./mother-registry.repository.js";
 import {
   ActivePregnancyExistsError,
   PregnancyDatingUnchangedError,
@@ -258,7 +261,10 @@ function mapLifecycleError(error: unknown): unknown {
       message: "Tanggal awal kehamilan tidak berubah.",
     });
   }
-  if (error instanceof ActiveAncPlanUnavailableError) {
+  if (
+    error instanceof ActiveAncPlanUnavailableError ||
+    error instanceof ActiveAncPlanInvalidError
+  ) {
     return new ApiException({
       status: HttpStatus.CONFLICT,
       code: "PREGNANCY_CREATION_NOT_READY",

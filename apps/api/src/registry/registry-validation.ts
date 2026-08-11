@@ -16,7 +16,7 @@ export function assertPregnancyStartDateNotFuture(
   });
 }
 
-function dateOnlyInTimezone(date: Date, timezone: string): string {
+export function dateOnlyInTimezone(date: Date, timezone: string): string {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
     year: "numeric",

@@ -2,6 +2,15 @@ import type { TransactionClient } from "@anc/database";
 import type { MotherRegistrationResponse } from "@anc/contracts";
 import type { QueryResultRow } from "pg";
 
+import {
+  ActiveAncPlanInvalidError,
+  ActiveAncPlanUnavailableError,
+  initializePregnancyMilestones,
+  resolveAssignableAncPlan,
+} from "../anc-plan/anc-milestone-engine.js";
+
+export { ActiveAncPlanInvalidError, ActiveAncPlanUnavailableError };
+
 export interface CreateMotherRegistrationInput {
   readonly motherId: string;
   readonly pregnancyId: string;
@@ -27,17 +36,6 @@ export interface MotherRegistryRepository {
   ): Promise<MotherRegistrationResponse | null>;
 }
 
-export class ActiveAncPlanUnavailableError extends Error {
-  public constructor() {
-    super("No active ANC plan version is available for registration");
-    this.name = "ActiveAncPlanUnavailableError";
-  }
-}
-
-interface ActivePlanRow extends QueryResultRow {
-  readonly id: string;
-}
-
 interface RegistrationLookupRow extends QueryResultRow {
   readonly mother_id: string;
   readonly health_center_id: string;
@@ -55,19 +53,13 @@ interface RegistrationLookupRow extends QueryResultRow {
 }
 
 export class PostgresMotherRegistryRepository implements MotherRegistryRepository {
+  public constructor(private readonly allowSyntheticPlan = false) {}
+
   public async create(
     client: TransactionClient,
     input: CreateMotherRegistrationInput,
   ): Promise<MotherRegistrationResponse> {
-    const plan = await client.query<ActivePlanRow>(
-      `SELECT id
-         FROM anc_plan_versions
-        WHERE status = 'ACTIVE'
-        LIMIT 1
-        FOR KEY SHARE`,
-    );
-    const carePlanVersionId = plan.rows[0]?.id;
-    if (carePlanVersionId === undefined) throw new ActiveAncPlanUnavailableError();
+    const plan = await resolveAssignableAncPlan(client, this.allowSyntheticPlan);
 
     await client.query(
       `INSERT INTO mothers (
@@ -86,14 +78,9 @@ export class PostgresMotherRegistryRepository implements MotherRegistryRepositor
       `INSERT INTO pregnancies (
          id, mother_id, health_center_id, dating_basis, dating_date, status, care_plan_version_id
        ) VALUES ($1, $2, $3, 'PREGNANCY_START_DATE', $4, 'ACTIVE', $5)`,
-      [
-        input.pregnancyId,
-        input.motherId,
-        input.healthCenterId,
-        input.pregnancyStartDate,
-        carePlanVersionId,
-      ],
+      [input.pregnancyId, input.motherId, input.healthCenterId, input.pregnancyStartDate, plan.id],
     );
+    await initializePregnancyMilestones(client, input.pregnancyId, plan);
     await client.query(
       `INSERT INTO consent_records (
          id, mother_id, purpose, status, source, recorded_at
