@@ -53,10 +53,15 @@ Local synthetic data → CI ephemeral DB → staging with synthetic/pilot-approv
 | TEST-SCHEDULE-003 | Two concurrent writers from the same expected date produce exactly one winner and one conflict | Concurrency/DB |
 | TEST-SCHEDULE-004 | Closed pregnancy and terminal milestone states reject schedule mutation | API/security |
 | TEST-SCHEDULE-005 | Idempotency replay returns the immutable original event without duplicate event/audit | API/DB |
-| TEST-VISIT-001 | Bidan confirms K3 without detail form | E2E |
+| TEST-VISIT-001 | Assigned Bidan confirms K3 with only date/facility/idempotency input; validation status remains independent | Contract/API/PostgreSQL |
 | TEST-VISIT-002 | Bidan cannot edit K1–K6 detail | Security |
-| TEST-VISIT-003 | Puskesmas can perform Bidan confirmation | Permission |
+| TEST-VISIT-003 | Bidan is denied K1/K4/K5/K8 or out-of-scope mothers; Puskesmas inherits confirmation for K1–K8 | Permission/API |
 | TEST-VISIT-004 | Confirmation suppresses reminder atomically | Concurrency |
+| TEST-VISIT-005 | Exact replay and same-fact logical duplicate return the initial confirmation without duplicate history/audit | API/DB |
+| TEST-VISIT-006 | Different confirmation facts require the separately authorized Puskesmas correction workflow | API/security |
+| TEST-VISIT-007 | Closed pregnancy, terminal milestone, future/pre-pregnancy date, inactive/cross-center/disallowed facility fail closed | API/security |
+| TEST-VISIT-008 | Two concurrent identical confirmations create one history/audit and return one immutable identity | Concurrency/PostgreSQL |
+| TEST-VISIT-009 | Confirmation history rejects update/delete and confirmed timeline is immediately not reminder-eligible | PostgreSQL/API |
 | TEST-NOTIF-001 | One logical reminder per 3-day window | Clock/concurrency |
 | TEST-NOTIF-002 | Push retryable failures retry under policy | Integration |
 | TEST-NOTIF-003 | Terminal/no-device creates single WA fallback | Integration |

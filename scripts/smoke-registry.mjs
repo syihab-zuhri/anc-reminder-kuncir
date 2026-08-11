@@ -176,6 +176,47 @@ try {
     "Puskesmas login",
   );
   const idempotencyKey = randomUUID();
+  const puskesmasFacility = await readJson(
+    await request("/staff/organization/facilities", {
+      method: "POST",
+      headers: { authorization: `Bearer ${login.access_token}` },
+      body: JSON.stringify({
+        village_id: null,
+        code: `PUSK-${randomUUID().slice(0, 8)}`,
+        name: "Synthetic Puskesmas Facility",
+        facility_type: "PUSKESMAS",
+      }),
+    }),
+    "Synthetic Puskesmas facility creation",
+  );
+  const midwifeFacility = await readJson(
+    await request("/staff/organization/facilities", {
+      method: "POST",
+      headers: { authorization: `Bearer ${login.access_token}` },
+      body: JSON.stringify({
+        village_id: null,
+        code: `BPM-${randomUUID().slice(0, 8)}`,
+        name: "Synthetic Midwife Practice",
+        facility_type: "MIDWIFE_PRACTICE",
+      }),
+    }),
+    "Synthetic midwife facility creation",
+  );
+  const syntheticBidanPassword = "SyntheticBidanSmoke2026";
+  const syntheticBidanLogin = `bidan.smoke.${randomUUID().slice(0, 8)}`;
+  const syntheticBidan = await readJson(
+    await request("/staff/users", {
+      method: "POST",
+      headers: { authorization: `Bearer ${login.access_token}` },
+      body: JSON.stringify({
+        login_identifier: syntheticBidanLogin,
+        display_name: "Synthetic Bidan Smoke",
+        role: "BIDAN",
+        password: syntheticBidanPassword,
+      }),
+    }),
+    "Synthetic Bidan creation",
+  );
   const syntheticNik = "3273014901010001";
   const syntheticPhone = "0812-3456-789";
   const registrationRequest = {
@@ -286,6 +327,30 @@ try {
   ) {
     throw new Error("Server-derived next ANC milestone was inconsistent with the timeline");
   }
+
+  await readJson(
+    await request("/staff/assignments", {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify({
+        staff_user_id: syntheticBidan.id,
+        scope_type: "MOTHER",
+        scope_id: first.mother.id,
+      }),
+    }),
+    "Synthetic Bidan mother assignment",
+  );
+  const bidanLogin = await readJson(
+    await request("/staff/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        login_identifier: syntheticBidanLogin,
+        password: syntheticBidanPassword,
+      }),
+    }),
+    "Synthetic Bidan login",
+  );
+  const bidanAuthorization = `Bearer ${bidanLogin.access_token}`;
 
   const initialScheduleRequest = {
     idempotency_key: randomUUID(),
@@ -427,6 +492,194 @@ try {
     throw new Error("Append-only milestone schedule history accepted an update");
   } catch (error) {
     if (error?.code !== "55000") throw error;
+  }
+
+  const milestoneByCode = Object.fromEntries(
+    milestoneTimeline.milestones.map((milestone) => [milestone.code, milestone]),
+  );
+  const k3ConfirmationRequest = {
+    idempotency_key: randomUUID(),
+    occurred_on: "2026-05-08",
+    facility_id: midwifeFacility.id,
+  };
+  const k3Confirmation = await readJson(
+    await request(`/milestones/${milestoneByCode.K3.id}/confirm`, {
+      method: "POST",
+      headers: { authorization: bidanAuthorization },
+      body: JSON.stringify(k3ConfirmationRequest),
+    }),
+    "Bidan K3 one-action confirmation",
+  );
+  const k3Replay = await readJson(
+    await request(`/milestones/${milestoneByCode.K3.id}/confirm`, {
+      method: "POST",
+      headers: { authorization: bidanAuthorization },
+      body: JSON.stringify(k3ConfirmationRequest),
+    }),
+    "Bidan K3 confirmation replay",
+  );
+  const k3NewKeyDuplicate = await readJson(
+    await request(`/milestones/${milestoneByCode.K3.id}/confirm`, {
+      method: "POST",
+      headers: { authorization: bidanAuthorization },
+      body: JSON.stringify({ ...k3ConfirmationRequest, idempotency_key: randomUUID() }),
+    }),
+    "Bidan K3 logical duplicate",
+  );
+  if (
+    k3Confirmation.code !== "K3" ||
+    k3Confirmation.visit_status !== "CONFIRMED" ||
+    k3Confirmation.record_validation_status !== "INCOMPLETE" ||
+    k3Confirmation.confirmation_source !== "STAFF_WEB" ||
+    k3Confirmation.confirmed_by_staff_id !== syntheticBidan.id ||
+    k3Replay.id !== k3Confirmation.id ||
+    k3NewKeyDuplicate.id !== k3Confirmation.id
+  ) {
+    throw new Error("Bidan K3 confirmation changed detail state or duplicated history");
+  }
+
+  await expectStatus(
+    await request(`/milestones/${milestoneByCode.K4.id}/confirm`, {
+      method: "POST",
+      headers: { authorization: bidanAuthorization },
+      body: JSON.stringify({
+        idempotency_key: randomUUID(),
+        occurred_on: "2026-05-08",
+        facility_id: puskesmasFacility.id,
+      }),
+    }),
+    403,
+    "Bidan K4 confirmation rejection",
+  );
+  const invalidK4Facility = await readErrorShape(
+    await request(`/milestones/${milestoneByCode.K4.id}/confirm`, {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify({
+        idempotency_key: randomUUID(),
+        occurred_on: "2026-05-08",
+        facility_id: midwifeFacility.id,
+      }),
+    }),
+    422,
+    "Puskesmas K4 invalid-facility rejection",
+  );
+  if (invalidK4Facility.code !== "FACILITY_NOT_ALLOWED_FOR_MILESTONE") {
+    throw new Error("K4 facility rule returned the wrong error");
+  }
+  const k4Confirmation = await readJson(
+    await request(`/milestones/${milestoneByCode.K4.id}/confirm`, {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify({
+        idempotency_key: randomUUID(),
+        occurred_on: "2026-05-08",
+        facility_id: puskesmasFacility.id,
+      }),
+    }),
+    "Puskesmas K4 confirmation",
+  );
+  const puskesmasActor = await pool.query(
+    "SELECT id FROM staff_users WHERE login_identifier = $1",
+    [loginIdentifier],
+  );
+  if (
+    k4Confirmation.code !== "K4" ||
+    k4Confirmation.confirmed_by_staff_id !== puskesmasActor.rows[0]?.id
+  ) {
+    throw new Error("Puskesmas did not inherit K4 confirmation capability");
+  }
+
+  const concurrentK6Responses = await Promise.all(
+    [randomUUID(), randomUUID()].map((confirmationIdempotencyKey) =>
+      request(`/milestones/${milestoneByCode.K6.id}/confirm`, {
+        method: "POST",
+        headers: { authorization: bidanAuthorization },
+        body: JSON.stringify({
+          idempotency_key: confirmationIdempotencyKey,
+          occurred_on: "2026-05-08",
+          facility_id: midwifeFacility.id,
+        }),
+      }),
+    ),
+  );
+  if (concurrentK6Responses.some((response) => response.status !== 201)) {
+    throw new Error("Concurrent identical K6 confirmation did not return two successful snapshots");
+  }
+  const concurrentK6Bodies = await Promise.all(
+    concurrentK6Responses.map((response) => response.json()),
+  );
+  if (
+    concurrentK6Bodies[0]?.id !== concurrentK6Bodies[1]?.id ||
+    concurrentK6Bodies[0]?.code !== "K6"
+  ) {
+    throw new Error("Concurrent K6 confirmation created different logical confirmations");
+  }
+
+  const confirmationState = await pool.query(
+    `SELECT
+       milestone.code,
+       milestone.visit_status,
+       milestone.record_validation_status,
+       COUNT(confirmation.id)::int AS confirmation_count
+     FROM pregnancy_milestones AS milestone
+     LEFT JOIN visit_confirmations AS confirmation
+       ON confirmation.milestone_id = milestone.id
+      AND confirmation.action = 'CONFIRM'
+    WHERE milestone.pregnancy_id = $1
+      AND milestone.code IN ('K3', 'K4', 'K6')
+    GROUP BY milestone.id, milestone.code, milestone.visit_status,
+             milestone.record_validation_status
+    ORDER BY milestone.code`,
+    [first.pregnancy.id],
+  );
+  if (
+    confirmationState.rows.length !== 3 ||
+    confirmationState.rows.some(
+      (row) =>
+        row.visit_status !== "CONFIRMED" ||
+        row.record_validation_status !== "INCOMPLETE" ||
+        row.confirmation_count !== 1,
+    )
+  ) {
+    throw new Error("Visit confirmation persistence violated state/dedupe/detail invariants");
+  }
+  const confirmationAudit = await pool.query(
+    `SELECT COUNT(*)::int AS event_count
+       FROM audit_events
+      WHERE created_at >= $1
+        AND action = 'VISIT_CONFIRMED'
+        AND resource_id = ANY($2::uuid[])`,
+    [smokeStartedAt, [milestoneByCode.K3.id, milestoneByCode.K4.id, milestoneByCode.K6.id]],
+  );
+  if (confirmationAudit.rows[0]?.event_count !== 3) {
+    throw new Error("Visit confirmation audit was missing or duplicated");
+  }
+  try {
+    await pool.query("UPDATE visit_confirmations SET occurred_on = '2026-05-09' WHERE id = $1", [
+      k3Confirmation.id,
+    ]);
+    throw new Error("Append-only visit confirmation history accepted an update");
+  } catch (error) {
+    if (error?.code !== "55000") throw error;
+  }
+
+  const confirmedTimeline = await readJson(
+    await request(`/pregnancies/${first.pregnancy.id}/milestones`, {
+      headers: { authorization },
+    }),
+    "Timeline after visit confirmations",
+  );
+  for (const code of ["K3", "K4", "K6"]) {
+    const confirmedMilestone = confirmedTimeline.milestones.find(
+      (milestone) => milestone.code === code,
+    );
+    if (
+      confirmedMilestone?.visit_status !== "CONFIRMED" ||
+      confirmedMilestone.reminder_eligible !== false
+    ) {
+      throw new Error(`Confirmed ${code} remained reminder-eligible`);
+    }
   }
 
   const duplicateWhileActive = await request(`/mothers/${first.mother.id}/pregnancies`, {
@@ -986,7 +1239,7 @@ try {
   }
 
   process.stdout.write(
-    "Registry smoke passed: protected registration, pregnancy lifecycle, concurrent K1-K8 scheduling, hashed credential rotation, private mother sessions, and durable throttling.\n",
+    "Registry smoke passed: protected registration, pregnancy lifecycle, concurrent K1-K8 scheduling/confirmation, hashed credential rotation, private mother sessions, and durable throttling.\n",
   );
 } finally {
   process.env.SMOKE_STAFF_PASSWORD = "";

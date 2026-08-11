@@ -5,7 +5,7 @@
 > **Version:** 1.0.0  
 > **Status:** Review  
 > **Owner:** Software Architect  
-> **Last Updated:** 2026-08-08  
+> **Last Updated:** 2026-08-12  
 > **Depends On:** DOC-SRS, DOC-API, DOC-ERD
 
 ## 1. Architecture Summary
@@ -70,7 +70,7 @@ Worker claims eligible milestone → transaction creates logical cycle → activ
 Staff requests link by fallback action ID → API checks role/scope/state → server renders minimal approved message + normalized phone → returns URL → client opens WhatsApp → optional link-open telemetry → staff may resolve/unreachable manually. No provider callback exists.
 
 ### 6.5 Visit Confirmation
-Bidan/Puskesmas → confirm endpoint → authz + milestone code + facility rule → transaction sets visit confirmed + append history + suppresses pending reminder action/outbox → audit.
+Bidan/Puskesmas → confirm endpoint → authz + assignment + milestone code + facility/date/state rule → transaction locks and sets visit confirmed + append-only history → audit. Server read models immediately derive the confirmed milestone as not reminder-eligible. The reminder worker's atomic pending-action/outbox suppression boundary is completed separately by `TASK-P4-014` so confirmation-vs-send races remain explicit and testable.
 
 ### 6.6 K1–K6 Detail Validation
 Puskesmas only → detail endpoint → schema validation → store sensitive record → validate → trigger program reassessment event.

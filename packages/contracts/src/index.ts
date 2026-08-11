@@ -8,3 +8,4 @@ export * from "./milestone-schedule.js";
 export * from "./organization.js";
 export * from "./registry.js";
 export * from "./request-id.js";
+export * from "./visit-confirmation.js";

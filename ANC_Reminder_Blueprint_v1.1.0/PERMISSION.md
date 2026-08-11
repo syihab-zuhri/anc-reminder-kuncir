@@ -5,7 +5,7 @@
 > **Version:** 1.0.0  
 > **Status:** Review  
 > **Owner:** Security Architect  
-> **Last Updated:** 2026-08-08  
+> **Last Updated:** 2026-08-12  
 > **Depends On:** DOC-SRS
 
 ## 1. Principles
@@ -53,6 +53,8 @@ The default is `false`, including for existing and newly provisioned staff.
 ## 4. Resource Scope
 
 Bidan: explicit assignment/area scope. Puskesmas: Puskesmas organization/facility scope. Bumil: own `mother_id/pregnancy_id` from restricted session. Scope filters are always applied server-side.
+
+`API-VISIT-001` enforces this scope inside the same transaction that locks and confirms the milestone. Bidan replay access is re-evaluated against the current active assignment and K2/K3/K6/K7 code boundary; Puskesmas remains limited to the same health center. Facility IDs must also resolve to an active facility in that center.
 
 ## 5. Row-Level Rules
 

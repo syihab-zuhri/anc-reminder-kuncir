@@ -34,6 +34,9 @@ const ancMilestoneEngineMigration = loadModule(
 const milestoneSchedulingMigration = loadModule(
   "../migrations/000008_phase_2_milestone_scheduling.cjs",
 ) as BaselineMigration;
+const visitConfirmationMigration = loadModule(
+  "../migrations/000009_phase_2_visit_confirmation.cjs",
+) as BaselineMigration;
 
 describe("baseline database migration", () => {
   it("defines the ERD baseline and privacy-sensitive NIK column", () => {
@@ -48,6 +51,7 @@ describe("baseline database migration", () => {
     expect(statement).toContain("CREATE TABLE reminder_cycles");
     expect(statement).toContain("CREATE TABLE program_assessments");
     expect(statement).toContain("CREATE TABLE audit_events");
+    expect(statement).toContain("CREATE TRIGGER visit_confirmations_append_only");
   });
 
   it("contains no production clinical week seed or legal retention interval", () => {
@@ -245,5 +249,29 @@ describe("phase 2 milestone scheduling migration", () => {
     expect(statement).toContain("DROP TABLE IF EXISTS milestone_schedule_events");
     expect(statement).toContain("DROP CONSTRAINT IF EXISTS pregnancy_milestones_identity_unique");
     expect(statement).toContain("DROP TYPE IF EXISTS milestone_schedule_action");
+  });
+});
+
+describe("phase 2 visit confirmation migration", () => {
+  it("adds server-controlled source and logical confirmation dedupe", () => {
+    const sql = vi.fn();
+    visitConfirmationMigration.up({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("ADD COLUMN confirmation_source text");
+    expect(statement).toContain("visit_confirmations_source_valid");
+    expect(statement).toContain("visit_confirmations_one_initial_confirm_idx");
+    expect(statement).toContain("WHERE action = 'CONFIRM'");
+    expect(statement).not.toContain("CREATE TRIGGER visit_confirmations_append_only");
+  });
+
+  it("provides a reverse migration for confirmation guards", () => {
+    const sql = vi.fn();
+    visitConfirmationMigration.down({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).not.toContain("DROP TRIGGER IF EXISTS visit_confirmations_append_only");
+    expect(statement).toContain("DROP INDEX IF EXISTS visit_confirmations_one_initial_confirm_idx");
+    expect(statement).toContain("DROP COLUMN IF EXISTS confirmation_source");
   });
 });
