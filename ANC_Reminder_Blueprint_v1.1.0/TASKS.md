@@ -5,7 +5,7 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** Engineering Lead  
-> **Last Updated:** 2026-08-11  
+> **Last Updated:** 2026-08-12  
 > **Depends On:** DOC-SRS, PRD documents, DOC-PERMISSION, DOC-ERD, DOC-API, DOC-ARCH, DOC-SECURITY, DOC-DSD, DOC-TESTING
 
 ## 1. Change Request Context
@@ -210,11 +210,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Done when: failure tidak membocorkan keberadaan ibu dan security tests lulus.
   - Evidence: migration `000006` menambahkan HMAC credential lookup, credential-bound mother session, dan durable HMAC-only IP/code rate buckets; public validation melakukan normalized constant-time name comparison + scrypt verification dengan satu generic `401`, default throttle 10/IP dan 5/code per 15 menit dengan block 15 menit, opaque 30-day own-only session tanpa refresh, per-request active-state revalidation, logout/reissue revocation, minimum-data `/mother/me`, role-boundary negatives, API/config/contract/migration tests, serta synthetic PostgreSQL authentication/throttle smoke di protected CI.
 
-- [ ] `TASK-P2-006` [L] Implement visit schedule/reschedule state machine di server
+- [x] `TASK-P2-006` [L] Implement visit schedule/reschedule state machine di server
   - Owner: Backend
   - References: FR-009, PRD-CHECKUP, `CR-2026-08-08`
   - Depends on: TASK-P2-002, TASK-P2-010
   - Done when: due-date, timezone, state-transition, dan concurrency tests lulus.
+  - Evidence: `API-MILESTONE-003` Puskesmas-only memakai UUID idempotency dan optimistic concurrency `expected_due_date`; first schedule/reschedule disimpan sebagai event append-only dengan reason wajib untuk reschedule. Tanggal kalender `PRIMARY_TIMEZONE` disimpan sebagai instant UTC, explicit due date mengalahkan rule window, milestone terminal/kehamilan closed ditolak, dan tanggal sebelum awal kehamilan gagal `422`. Contract/API/timezone/state/race tests, migration `up → down → up`, serta synthetic PostgreSQL concurrent-writer smoke lulus.
 
 - [ ] `TASK-P2-008` [M] Implement pregnancy close transaction dan cancellation events
   - Owner: Backend

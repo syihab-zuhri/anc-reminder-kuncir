@@ -15,7 +15,8 @@ export type StaffCapability =
   | "SESSION_REVOKE_SCOPED"
   | "VISIT_CONFIRM_PUSKESMAS"
   | "CLINICAL_RECORD_WRITE"
-  | "CARE_PLAN_MANAGE";
+  | "CARE_PLAN_MANAGE"
+  | "MILESTONE_SCHEDULE";
 
 const bidanCapabilities = new Set<StaffCapability>([
   "STAFF_SELF_READ",
@@ -32,6 +33,7 @@ const puskesmasCapabilities = new Set<StaffCapability>([
   "VISIT_CONFIRM_PUSKESMAS",
   "CLINICAL_RECORD_WRITE",
   "CARE_PLAN_MANAGE",
+  "MILESTONE_SCHEDULE",
 ]);
 const superAdminCapabilities = new Set<StaffCapability>(["STAFF_SELF_READ"]);
 
