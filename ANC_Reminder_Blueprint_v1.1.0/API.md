@@ -381,7 +381,30 @@ to become stale in storage.
   "idempotency_key": "client-generated-uuid"
 }
 ```
-No lab/USG/clinical detail in Bidan confirmation.
+No lab/USG/clinical detail or client-controlled confirmation source is accepted. Unknown fields are rejected.
+
+Successful response (`201`; exact idempotency replay and same-fact logical duplicate return the same immutable confirmation):
+```json
+{
+  "id": "uuid",
+  "milestone_id": "uuid",
+  "pregnancy_id": "uuid",
+  "code": "K3",
+  "visit_status": "CONFIRMED",
+  "record_validation_status": "INCOMPLETE",
+  "occurred_on": "2026-08-08",
+  "facility_id": "uuid",
+  "confirmation_source": "STAFF_WEB",
+  "confirmed_by_staff_id": "uuid",
+  "confirmed_at": "2026-08-08T03:00:00.000Z"
+}
+```
+
+The server accepts an active, in-scope pregnancy and an active same-health-center facility allowed by the milestone's immutable rule snapshot. Bidan must have a current mother/area assignment and may confirm only K2/K3/K6/K7. Puskesmas inherits confirmation and may confirm K1–K8 subject to the same facility rule. `occurred_on` must be a valid local calendar date, not precede pregnancy dating, and not be later than the server's `PRIMARY_TIMEZONE` date. `UPCOMING`, `DUE`, and `OVERDUE` may transition to `CONFIRMED`; `CANCELLED` and `NOT_APPLICABLE` are terminal.
+
+Confirmation and record validation remain independent. K1–K6 may therefore return `record_validation_status: INCOMPLETE` after a valid visit confirmation; K7/K8 remain `NOT_REQUIRED` in MVP. The initial confirmation writes `confirmed_by`, `confirmed_at`, one append-only `CONFIRM` history row, and one redacted `VISIT_CONFIRMED` audit event. Exact idempotency replay or a new-key duplicate with identical `occurred_on` and `facility_id` returns the original row without a new history/audit event. Different facts return `VISIT_CONFIRMATION_CORRECTION_REQUIRED` (`409`) and must use `API-VISIT-002` after its policy is approved.
+
+Other domain errors include `PREGNANCY_NOT_ACTIVE`/`VISIT_CONFIRMATION_INVALID_TRANSITION` (`409`), `VISIT_OCCURRENCE_DATE_IN_FUTURE`/`VISIT_DATE_BEFORE_PREGNANCY`/`VISIT_FACILITY_NOT_AVAILABLE`/`FACILITY_NOT_ALLOWED_FOR_MILESTONE` (`422`), and generic `403` for role, assignment, code, or resource scope denial without resource enumeration.
 
 ### Reminder / `wa.me`
 

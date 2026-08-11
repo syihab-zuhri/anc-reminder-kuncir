@@ -243,11 +243,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Done when: Web/WebView menerima hasil derivasi dari API dan tidak dibutuhkan client-side domain calculation.
   - Evidence: pure server calculator memakai `PREGNANCY_START_DATE`, tanggal kalender `PRIMARY_TIMEZONE`, dan target-week snapshot tanpa hardcoded clinical window/trimester cutoff. Timeline API mengembalikan completed weeks+days, configured trimester label, rule/explicit target dates, authoritative UPCOMING/DUE/OVERDUE, reminder eligibility, dan next unfinished K; endpoint `API-MILESTONE-002` tersedia. Terminal state dipertahankan, closed pregnancy tidak memiliki next/reminder, explicit `due_at` mengalahkan rule window, dan invalid dating gagal tertutup. Contract/API clock-boundary tests serta PostgreSQL registry smoke lulus.
 
-- [ ] `TASK-P2-012` [M] Implement **Bidan one-action visit confirmation** untuk K2/K3/K6/K7
+- [x] `TASK-P2-012` [M] Implement **Bidan one-action visit confirmation** untuk K2/K3/K6/K7
   - Owner: Backend
   - References: `CR-2026-08-08`, PRD-CHECKUP, DOC-PERMISSION, DOC-API
   - Depends on: TASK-P1-003, TASK-P1-004, TASK-P2-010
   - Done when: authorized Bidan dapat set `CONFIRMED` tanpa form klinis; duplicate/unauthorized ditolak; `confirmed_by`/`confirmed_at` diaudit.
+  - Evidence: `API-VISIT-001` menerima hanya `occurred_on`, `facility_id`, dan UUID idempotency key; server menetapkan `STAFF_WEB`, mengunci milestone dalam transaksi, menerapkan role/assignment/health-center/facility/date/state rules, serta mempertahankan `record_validation_status` independen. Exact replay dan duplicate fakta yang sama mengembalikan riwayat awal tanpa event/audit baru; fakta berbeda diarahkan ke workflow koreksi Puskesmas. Contract, API role/scope/state/idempotency/concurrency tests, migration `up → down → up`, dan PostgreSQL smoke lulus.
 
 - [ ] `TASK-P2-013` [L] Implement **Puskesmas K1–K6 detail management dan final validation**
   - Owner: Backend

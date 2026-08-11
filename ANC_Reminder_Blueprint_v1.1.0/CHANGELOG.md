@@ -5,8 +5,22 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** Product/Project Lead  
-> **Last Updated:** 2026-08-11  
+> **Last Updated:** 2026-08-12  
 > **Depends On:** All project documents
+
+## [2026-08-12] Phase 2 One-Action Visit Confirmation
+
+### Added
+
+- `API-VISIT-001` with a strict date/facility/idempotency request and server-controlled `STAFF_WEB` source; no clinical or program-detail fields are accepted.
+- Transactional Bidan assignment and K2/K3/K6/K7 enforcement, Puskesmas K1–K8 inheritance, active pregnancy/same-center facility/rule/date/state validation, and generic out-of-scope denial.
+- Append-only confirmation history, one-initial-confirm database guard, independent visit/record-validation response state, redacted audit, exact replay, same-fact logical dedupe, and concurrent-request serialization.
+- Contract/API/security/concurrency tests plus PostgreSQL migration rollback/reapply and registry smoke coverage.
+
+### Safety Boundary
+
+- A duplicate carrying different facts is not silently overwritten; it requires the separately governed Puskesmas correction workflow (`API-VISIT-002`/`TASK-P2-013` follow-up policy).
+- Confirmed timeline state becomes immediately ineligible for future reminder derivation. Atomic cancellation/suppression against a reminder already in flight remains explicitly tracked by `TASK-P4-014`.
 
 ## [2026-08-11] Phase 2 Server-Derived ANC State
 

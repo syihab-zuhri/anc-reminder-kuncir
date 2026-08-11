@@ -20,6 +20,7 @@ import type { MotherAccessCodeService } from "./mother-access/mother-access-code
 import type { MotherAuthRepository } from "./mother-access/mother-auth.repository.js";
 import type { AncPlanRepository } from "./anc-plan/anc-plan.repository.js";
 import type { MilestoneScheduleRepository } from "./milestone-schedule/milestone-schedule.repository.js";
+import type { VisitConfirmationRepository } from "./visit-confirmation/visit-confirmation.repository.js";
 import { CanonicalErrorFilter } from "./errors/canonical-error.filter.js";
 import { HttpLoggingInterceptor } from "./observability/http-logging.interceptor.js";
 import { JsonLogger } from "./observability/json-logger.js";
@@ -44,6 +45,7 @@ export interface CreateApiApplicationOptions {
   readonly motherAuthRepository?: MotherAuthRepository;
   readonly ancPlanRepository?: AncPlanRepository;
   readonly milestoneScheduleRepository?: MilestoneScheduleRepository;
+  readonly visitConfirmationRepository?: VisitConfirmationRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -94,6 +96,9 @@ export async function createApiApplication(
       ...(options.milestoneScheduleRepository === undefined
         ? {}
         : { milestoneScheduleRepository: options.milestoneScheduleRepository }),
+      ...(options.visitConfirmationRepository === undefined
+        ? {}
+        : { visitConfirmationRepository: options.visitConfirmationRepository }),
       ...(options.auditRepository === undefined
         ? {}
         : { auditRepository: options.auditRepository }),

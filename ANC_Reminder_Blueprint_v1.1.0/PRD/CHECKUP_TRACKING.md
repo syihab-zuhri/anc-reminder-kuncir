@@ -6,7 +6,7 @@
 > **Priority:** P0  
 > **Owner:** Product Owner + Clinical/Program Owner  
 > **Dependencies:** FEAT-ANC, DOC-PERMISSION  
-> **Last Updated:** 2026-08-08
+> **Last Updated:** 2026-08-12
 
 ## 1. Overview
 Memisahkan **konfirmasi kunjungan** dari **validasi detail pencatatan**.
@@ -75,6 +75,8 @@ Puskesmas: timeline + `Kelola Detail Kx` for K1–K6 + validation state.
 
 ## 13. Notifications & Side Effects
 Successful confirmation atomically suppresses pending reminder cycles/fallback actions for same milestone.
+
+Implementation status: `TASK-P2-012` makes the confirmed milestone immediately ineligible in server-composed timeline/next-milestone reads. Atomic coordination with an already-running reminder cycle/outbox remains owned by `TASK-P4-014` and must pass `TEST-VISIT-004` before production.
 
 ## 14. Error & Recovery Behavior
 403 role/scope; 409 invalid transition; 422 facility rule violation; correction workflow for wrong confirmation.

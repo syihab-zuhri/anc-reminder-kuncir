@@ -26,6 +26,7 @@ import {
   IDEMPOTENCY_SERVICE,
   ANC_PLAN_REPOSITORY,
   MILESTONE_SCHEDULE_REPOSITORY,
+  VISIT_CONFIRMATION_REPOSITORY,
 } from "./infrastructure/tokens.js";
 import { StaffAuthController } from "./auth/staff-auth.controller.js";
 import { StaffAuthGuard } from "./auth/staff-auth.guard.js";
@@ -91,6 +92,12 @@ import {
   type MilestoneScheduleRepository,
 } from "./milestone-schedule/milestone-schedule.repository.js";
 import { MilestoneScheduleService } from "./milestone-schedule/milestone-schedule.service.js";
+import { VisitConfirmationController } from "./visit-confirmation/visit-confirmation.controller.js";
+import {
+  PostgresVisitConfirmationRepository,
+  type VisitConfirmationRepository,
+} from "./visit-confirmation/visit-confirmation.repository.js";
+import { VisitConfirmationService } from "./visit-confirmation/visit-confirmation.service.js";
 
 export interface AppModuleOptions {
   readonly config: ApiConfig;
@@ -107,6 +114,7 @@ export interface AppModuleOptions {
   readonly motherAuthRepository?: MotherAuthRepository;
   readonly ancPlanRepository?: AncPlanRepository;
   readonly milestoneScheduleRepository?: MilestoneScheduleRepository;
+  readonly visitConfirmationRepository?: VisitConfirmationRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -127,6 +135,7 @@ export class AppModule {
         MotherAuthController,
         AncPlanController,
         MilestoneScheduleController,
+        VisitConfirmationController,
       ],
       providers: [
         { provide: API_CONFIG, useValue: options.config },
@@ -194,6 +203,11 @@ export class AppModule {
             options.milestoneScheduleRepository ?? new PostgresMilestoneScheduleRepository(),
         },
         {
+          provide: VISIT_CONFIRMATION_REPOSITORY,
+          useValue:
+            options.visitConfirmationRepository ?? new PostgresVisitConfirmationRepository(),
+        },
+        {
           provide: AUDIT_REPOSITORY,
           useValue: options.auditRepository ?? new PostgresAuditRepository(options.databasePool),
         },
@@ -246,6 +260,7 @@ export class AppModule {
         MotherAuthGuard,
         AncPlanService,
         MilestoneScheduleService,
+        VisitConfirmationService,
       ],
     };
   }

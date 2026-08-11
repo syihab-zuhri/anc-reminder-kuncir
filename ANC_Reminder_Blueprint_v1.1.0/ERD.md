@@ -225,7 +225,10 @@ Append-only confirmation/correction history.
 - `facility_id uuid nullable`
 - `occurred_on date nullable`
 - `reason text nullable`
-- `created_at`
+- `confirmation_source text not null` — server-controlled `STAFF_WEB`; migrated historical rows use `LEGACY_UNKNOWN`
+- `created_at timestamptz`
+- append-only trigger rejects `UPDATE` and `DELETE`
+- partial unique index permits only one initial `CONFIRM` row per milestone; future `CORRECT` rows remain separate history
 
 ### `k1_k6_records`
 Puskesmas-managed program details only.
