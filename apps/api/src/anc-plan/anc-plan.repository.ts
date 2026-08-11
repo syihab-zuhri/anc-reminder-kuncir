@@ -3,12 +3,16 @@ import type {
   AncPlanResponse,
   AncPlanRuleInput,
   AncPlanRuleResponse,
-  PregnancyMilestoneListResponse,
   PregnancyMilestoneResponse,
   RuleVersionStatus,
 } from "@anc/contracts";
 import type { DatabasePool, TransactionClient } from "@anc/database";
 import type { QueryResultRow } from "pg";
+
+import type {
+  PregnancyMilestoneSnapshot,
+  PregnancyMilestoneSnapshotItem,
+} from "./anc-derived-state.js";
 
 export interface CreateAncPlanDraftInput {
   readonly planId: string;
@@ -40,7 +44,7 @@ export interface AncPlanRepository {
   approve(client: TransactionClient, input: ApproveAncPlanInput): Promise<AncPlanResponse>;
   activate(client: TransactionClient, input: ActivateAncPlanInput): Promise<AncPlanResponse>;
   findPregnancyMotherId(pregnancyId: string): Promise<string | null>;
-  listPregnancyMilestones(pregnancyId: string): Promise<PregnancyMilestoneListResponse | null>;
+  listPregnancyMilestones(pregnancyId: string): Promise<PregnancyMilestoneSnapshot | null>;
 }
 
 export class AncPlanNotFoundError extends Error {
@@ -111,11 +115,18 @@ interface PlanStateRow extends QueryResultRow {
 
 interface MilestoneHeaderRow extends QueryResultRow {
   readonly pregnancy_id: string;
-  readonly mother_id: string;
   readonly care_plan_version_id: string;
   readonly version_no: number;
   readonly plan_kind: AncPlanKind;
   readonly plan_status: RuleVersionStatus;
+  readonly dating_basis: PregnancyMilestoneSnapshot["datingBasis"];
+  readonly dating_date: string;
+  readonly pregnancy_status: PregnancyMilestoneSnapshot["pregnancyStatus"];
+  readonly closed_at: Date | null;
+}
+
+interface PregnancyMotherRow extends QueryResultRow {
+  readonly mother_id: string;
 }
 
 interface MilestoneRow extends QueryResultRow {
@@ -288,18 +299,11 @@ export class PostgresAncPlanRepository implements AncPlanRepository {
   }
 
   public async findPregnancyMotherId(pregnancyId: string): Promise<string | null> {
-    const result = await this.pool.query<MilestoneHeaderRow>(
-      `SELECT
-         pregnancy.id AS pregnancy_id,
-         pregnancy.mother_id,
-         pregnancy.care_plan_version_id,
-         plan.version_no,
-         plan.plan_kind,
-         plan.status AS plan_status
-       FROM pregnancies AS pregnancy
-       JOIN anc_plan_versions AS plan ON plan.id = pregnancy.care_plan_version_id
-       WHERE pregnancy.id = $1
-       LIMIT 1`,
+    const result = await this.pool.query<PregnancyMotherRow>(
+      `SELECT mother_id
+         FROM pregnancies
+        WHERE id = $1
+        LIMIT 1`,
       [pregnancyId],
     );
     return result.rows[0]?.mother_id ?? null;
@@ -307,15 +311,18 @@ export class PostgresAncPlanRepository implements AncPlanRepository {
 
   public async listPregnancyMilestones(
     pregnancyId: string,
-  ): Promise<PregnancyMilestoneListResponse | null> {
+  ): Promise<PregnancyMilestoneSnapshot | null> {
     const headerResult = await this.pool.query<MilestoneHeaderRow>(
       `SELECT
          pregnancy.id AS pregnancy_id,
-         pregnancy.mother_id,
          pregnancy.care_plan_version_id,
          plan.version_no,
          plan.plan_kind,
-         plan.status AS plan_status
+         plan.status AS plan_status,
+         pregnancy.dating_basis,
+         pregnancy.dating_date::text AS dating_date,
+         pregnancy.status AS pregnancy_status,
+         pregnancy.closed_at
        FROM pregnancies AS pregnancy
        JOIN anc_plan_versions AS plan ON plan.id = pregnancy.care_plan_version_id
        WHERE pregnancy.id = $1
@@ -353,12 +360,16 @@ export class PostgresAncPlanRepository implements AncPlanRepository {
     );
 
     return {
-      pregnancy_id: header.pregnancy_id,
-      care_plan_version_id: header.care_plan_version_id,
-      plan_version_no: header.version_no,
-      plan_kind: header.plan_kind,
-      production_eligible: header.plan_kind === "CLINICAL" && header.plan_status === "ACTIVE",
-      milestones: milestoneResult.rows.map(toMilestoneResponse),
+      pregnancyId: header.pregnancy_id,
+      carePlanVersionId: header.care_plan_version_id,
+      planVersionNo: header.version_no,
+      planKind: header.plan_kind,
+      planStatus: header.plan_status,
+      datingBasis: header.dating_basis,
+      datingDate: header.dating_date,
+      pregnancyStatus: header.pregnancy_status,
+      closedAt: header.closed_at,
+      milestones: milestoneResult.rows.map(toMilestoneSnapshot),
     };
   }
 }
@@ -455,22 +466,22 @@ function requirePlan(plan: AncPlanResponse | null): AncPlanResponse {
   return plan;
 }
 
-function toMilestoneResponse(row: MilestoneRow): PregnancyMilestoneResponse {
+function toMilestoneSnapshot(row: MilestoneRow): PregnancyMilestoneSnapshotItem {
   return {
     id: row.id,
-    pregnancy_id: row.pregnancy_id,
-    rule_id: row.rule_id,
+    pregnancyId: row.pregnancy_id,
+    ruleId: row.rule_id,
     code: row.code,
-    trimester_label: row.trimester_label,
-    target_week_start: row.target_week_start,
-    target_week_end: row.target_week_end,
-    milestone_category: row.milestone_category,
-    required_facility_policy: row.required_facility_policy,
-    allowed_facility_types: row.allowed_facility_types,
-    reminder_enabled: row.reminder_enabled,
-    reminder_interval_days: row.reminder_interval_days,
-    due_at: row.due_at?.toISOString() ?? null,
-    visit_status: row.visit_status,
-    record_validation_status: row.record_validation_status,
+    trimesterLabel: row.trimester_label,
+    targetWeekStart: row.target_week_start,
+    targetWeekEnd: row.target_week_end,
+    milestoneCategory: row.milestone_category,
+    requiredFacilityPolicy: row.required_facility_policy,
+    allowedFacilityTypes: row.allowed_facility_types,
+    reminderEnabled: row.reminder_enabled,
+    reminderIntervalDays: row.reminder_interval_days,
+    dueAt: row.due_at,
+    visitStatus: row.visit_status,
+    recordValidationStatus: row.record_validation_status,
   };
 }

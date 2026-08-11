@@ -7,6 +7,7 @@ import type {
   AncPlanCreateRequest,
   AncPlanResponse,
   PregnancyMilestoneListResponse,
+  PregnancyNextMilestoneResponse,
 } from "@anc/contracts";
 
 import type { AuditService } from "../audit/audit.service.js";
@@ -29,6 +30,11 @@ import {
   AncPlanTransitionError,
   type AncPlanRepository,
 } from "./anc-plan.repository.js";
+import {
+  derivePregnancyMilestoneState,
+  InvalidPregnancyDatingStateError,
+  UnsupportedPregnancyDatingBasisError,
+} from "./anc-derived-state.js";
 import { dateOnlyInTimezone } from "../registry/registry-validation.js";
 
 @Injectable()
@@ -166,15 +172,49 @@ export class AncPlanService {
     const motherId = await this.repository.findPregnancyMotherId(pregnancyId);
     if (motherId === null) throw planTargetForbidden();
     await this.scopedAccess.assertMotherRead(actor, motherId);
-    const milestones = await this.repository.listPregnancyMilestones(pregnancyId);
-    if (milestones === null || milestones.milestones.length !== 8) {
+    const snapshot = await this.repository.listPregnancyMilestones(pregnancyId);
+    if (snapshot === null || snapshot.milestones.length !== 8) {
       throw new ApiException({
         status: HttpStatus.CONFLICT,
         code: "PREGNANCY_MILESTONES_NOT_READY",
         message: "Milestone kehamilan belum lengkap.",
       });
     }
-    return milestones;
+    try {
+      return derivePregnancyMilestoneState(snapshot, this.clock(), this.config.primaryTimezone);
+    } catch (error) {
+      if (error instanceof InvalidPregnancyDatingStateError) {
+        throw new ApiException({
+          status: HttpStatus.CONFLICT,
+          code: "PREGNANCY_DATING_INVALID",
+          message: "Data awal kehamilan belum dapat digunakan untuk kalkulasi.",
+        });
+      }
+      if (error instanceof UnsupportedPregnancyDatingBasisError) {
+        throw new ApiException({
+          status: HttpStatus.CONFLICT,
+          code: "PREGNANCY_DATING_BASIS_UNSUPPORTED",
+          message: "Dasar perhitungan usia kehamilan belum didukung.",
+        });
+      }
+      throw error;
+    }
+  }
+
+  public async nextMilestone(
+    actor: StaffActor,
+    pregnancyId: string,
+  ): Promise<PregnancyNextMilestoneResponse> {
+    const timeline = await this.milestones(actor, pregnancyId);
+    return {
+      pregnancy_id: timeline.pregnancy_id,
+      as_of_date: timeline.as_of_date,
+      gestational_age: timeline.gestational_age,
+      trimester_label: timeline.trimester_label,
+      next_milestone:
+        timeline.milestones.find((milestone) => milestone.code === timeline.next_milestone_code) ??
+        null,
+    };
   }
 
   private async replayPlan(

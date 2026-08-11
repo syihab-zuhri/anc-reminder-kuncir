@@ -5,6 +5,7 @@ import {
   ancPlanCreateRequestSchema,
   type AncPlanResponse,
   type PregnancyMilestoneListResponse,
+  type PregnancyNextMilestoneResponse,
 } from "@anc/contracts";
 import { z } from "zod";
 
@@ -69,6 +70,17 @@ export class AncPlanController {
     @Param("id") pregnancyId: string,
   ): Promise<PregnancyMilestoneListResponse> {
     return this.service.milestones(
+      requireActor(request),
+      parseRequest(uuidPathSchema, pregnancyId),
+    );
+  }
+
+  @Get("pregnancies/:id/milestones/next")
+  public nextMilestone(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") pregnancyId: string,
+  ): Promise<PregnancyNextMilestoneResponse> {
+    return this.service.nextMilestone(
       requireActor(request),
       parseRequest(uuidPathSchema, pregnancyId),
     );

@@ -5,10 +5,10 @@ import {
   ancPlanResponseSchema,
   milestoneCodeSchema,
   pregnancyMilestoneListResponseSchema,
+  pregnancyNextMilestoneResponseSchema,
   type AncPlanResponse,
   type AncPlanRuleInput,
   type MilestoneCode,
-  type PregnancyMilestoneListResponse,
 } from "@anc/contracts";
 import type { DatabasePool, IdempotencyResourceReference, TransactionClient } from "@anc/database";
 import request from "supertest";
@@ -25,6 +25,7 @@ import {
   AncPlanNotFoundError,
   AncPlanTransitionError,
 } from "../src/anc-plan/anc-plan.repository.js";
+import type { PregnancyMilestoneSnapshot } from "../src/anc-plan/anc-derived-state.js";
 import { createApiApplication } from "../src/application.js";
 import { PasswordHasher } from "../src/auth/password-hasher.js";
 import type { StaffActor } from "../src/auth/staff-auth.types.js";
@@ -208,6 +209,27 @@ describe("ANC plan and K1-K8 milestone API", () => {
         .slice(0, 6)
         .every((item) => item.record_validation_status === "INCOMPLETE"),
     ).toBe(true);
+    expect(timeline).toMatchObject({
+      as_of_date: "2026-08-11",
+      gestational_age: { total_days: 14, completed_weeks: 2, additional_days: 0 },
+      next_milestone_code: "K2",
+      trimester_label: "SYNTHETIC_DEV_ONLY",
+    });
+    expect(timeline.milestones[1]).toMatchObject({
+      code: "K2",
+      target_date_start: "2026-08-11",
+      target_date_end: "2026-08-17",
+      schedule_source: "RULE_WINDOW",
+      visit_status: "DUE",
+      reminder_eligible: true,
+    });
+
+    const nextResponse = await request(server())
+      .get(`/api/v1/pregnancies/${pregnancyId}/milestones/next`)
+      .set("authorization", `Bearer ${token}`)
+      .expect(200);
+    const next = pregnancyNextMilestoneResponseSchema.parse(nextResponse.body);
+    expect(next.next_milestone).toMatchObject({ code: "K2", visit_status: "DUE" });
     expect(
       timeline.milestones
         .slice(6)
@@ -348,7 +370,7 @@ class FakeAncPlanRepository implements AncPlanRepository {
 
   public async listPregnancyMilestones(
     targetPregnancyId: string,
-  ): Promise<PregnancyMilestoneListResponse | null> {
+  ): Promise<PregnancyMilestoneSnapshot | null> {
     return targetPregnancyId === pregnancyId ? this.timeline : null;
   }
 
@@ -441,22 +463,43 @@ function planFixture(
   };
 }
 
-function milestoneTimelineFixture(): PregnancyMilestoneListResponse {
+function milestoneTimelineFixture(): PregnancyMilestoneSnapshot {
   return {
-    pregnancy_id: pregnancyId,
-    care_plan_version_id: syntheticPlanId,
-    plan_version_no: 1,
-    plan_kind: "SYNTHETIC",
-    production_eligible: false,
+    pregnancyId,
+    carePlanVersionId: syntheticPlanId,
+    planVersionNo: 1,
+    planKind: "SYNTHETIC",
+    planStatus: "DRAFT",
+    datingBasis: "PREGNANCY_START_DATE",
+    datingDate: "2026-07-28",
+    pregnancyStatus: "ACTIVE",
+    closedAt: null,
     milestones: milestoneCodeSchema.options.map((code, index) => ({
       id: `72000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
-      pregnancy_id: pregnancyId,
-      rule_id: `71000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
-      ...ruleFor(code),
-      reminder_interval_days: 3,
-      due_at: null,
-      visit_status: "UPCOMING",
-      record_validation_status: index < 6 ? "INCOMPLETE" : "NOT_REQUIRED",
+      pregnancyId,
+      ruleId: `71000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+      code,
+      trimesterLabel: "SYNTHETIC_DEV_ONLY",
+      targetWeekStart: code === "K8" ? null : Number(code.slice(1)),
+      targetWeekEnd: code === "K8" ? null : Number(code.slice(1)),
+      milestoneCategory: code === "K8" ? "DELIVERY" : "ANC",
+      requiredFacilityPolicy:
+        code === "K8"
+          ? "PONED_OR_RS_REQUIRED"
+          : code === "K1" || code === "K4" || code === "K5"
+            ? "PUSKESMAS_REQUIRED"
+            : "FLEXIBLE",
+      allowedFacilityTypes:
+        code === "K8"
+          ? ["PONED", "HOSPITAL"]
+          : code === "K1" || code === "K4" || code === "K5"
+            ? ["PUSKESMAS"]
+            : ["PUSKESMAS", "MIDWIFE_PRACTICE"],
+      reminderEnabled: code !== "K8",
+      reminderIntervalDays: 3,
+      dueAt: null,
+      visitStatus: code === "K1" ? "CONFIRMED" : "UPCOMING",
+      recordValidationStatus: index < 6 ? "INCOMPLETE" : "NOT_REQUIRED",
     })),
   };
 }

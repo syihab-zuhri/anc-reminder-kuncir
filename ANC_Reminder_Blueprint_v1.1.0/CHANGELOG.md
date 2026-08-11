@@ -8,6 +8,21 @@
 > **Last Updated:** 2026-08-11  
 > **Depends On:** All project documents
 
+## [2026-08-11] Phase 2 Server-Derived ANC State
+
+### Added
+
+- Server-only gestational completed-week/day calculation using the configured primary timezone and current `PREGNANCY_START_DATE` contract.
+- Rule-window or explicit-schedule derivation of target dates, `UPCOMING`/`DUE`/`OVERDUE`, reminder eligibility, configured trimester label, and next unfinished K.
+- `API-MILESTONE-002` for a scoped next-milestone DTO; the timeline response now includes the same derivation context for thin Web/WebView clients.
+- Timezone-midnight, terminal-state, closed-pregnancy, explicit-schedule, invalid-dating, API scope, and real PostgreSQL smoke coverage.
+
+### Safety Boundary
+
+- No clinical week window or trimester cutoff was added as a constant. Week values and phase labels come from the pregnancy's immutable plan snapshot.
+- Future dating bases require separately approved age-offset semantics; this implementation only consumes the lifecycle's current `PREGNANCY_START_DATE` input.
+- Explicit schedule mutation/rescheduling remains owned by `TASK-P2-006`; this slice only gives an existing `due_at` precedence during derivation.
+
 ## [2026-08-11] Phase 2 ANC K1–K8 Milestone Engine
 
 ### Added
