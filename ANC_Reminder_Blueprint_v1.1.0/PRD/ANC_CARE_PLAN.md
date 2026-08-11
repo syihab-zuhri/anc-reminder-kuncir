@@ -6,7 +6,7 @@
 > **Priority:** P0  
 > **Owner:** Clinical/Program Owner  
 > **Dependencies:** FEAT-REGISTRY, ADR-007  
-> **Last Updated:** 2026-08-08
+> **Last Updated:** 2026-08-12
 
 ## 1. Overview
 K1–K8 adalah milestone/urutan kunjungan. Server menyimpan rule version agar target usia kehamilan/fasilitas dapat berubah tanpa update client.
@@ -77,7 +77,7 @@ Missing active rule version blocks pregnancy milestone creation with operational
 Rule editing requires Puskesmas program permission and audit.
 
 ## 16. Analytics & Audit Events
-`CARE_PLAN_ACTIVATED`, `MILESTONE_CREATED`, `MILESTONE_DUE`, `RULE_REJECTED_FACILITY`.
+`CARE_PLAN_ACTIVATED`, `MILESTONE_CREATED`, `MILESTONE_SCHEDULED`, `MILESTONE_RESCHEDULED`, `MILESTONE_DUE`, `RULE_REJECTED_FACILITY`.
 
 ## 17. Testing Scenarios
 Versioning, historical snapshot, timezone boundary, invalid facility, K8 category.

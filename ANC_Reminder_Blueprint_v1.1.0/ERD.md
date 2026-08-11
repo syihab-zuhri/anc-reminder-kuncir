@@ -5,7 +5,7 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** Data Architect  
-> **Last Updated:** 2026-08-10  
+> **Last Updated:** 2026-08-12  
 > **Depends On:** DOC-SRS, DOC-PERMISSION
 
 ## 1. ERD
@@ -198,6 +198,23 @@ Append-only lifecycle snapshots used for audit and exact idempotency replay.
 - unique `(pregnancy_id, code)`
 - composite FK `(rule_id, plan_version_id, code)` guarantees the rule identity/code belongs to the snapshot plan
 - composite FK `(pregnancy_id, plan_version_id)` guarantees every milestone uses its pregnancy's `care_plan_version_id`
+
+### `milestone_schedule_events`
+Append-only schedule/reschedule snapshots used for audit-safe history and immutable idempotency replay.
+- `id uuid PK`
+- `milestone_id uuid FK`
+- `pregnancy_id uuid FK`
+- `actor_staff_id uuid FK`
+- `action enum(SCHEDULED,RESCHEDULED)`
+- `previous_due_at timestamptz nullable`
+- `previous_due_date date nullable`
+- `scheduled_due_at timestamptz`
+- `scheduled_due_date date`
+- `timezone text`
+- `reason text nullable` — required for `RESCHEDULED`
+- `occurred_at timestamptz`
+- composite FK `(milestone_id, pregnancy_id)` prevents cross-pregnancy history
+- transition check requires no previous date for `SCHEDULED`, and a different previous date plus reason for `RESCHEDULED`
 
 ### `visit_confirmations`
 Append-only confirmation/correction history.

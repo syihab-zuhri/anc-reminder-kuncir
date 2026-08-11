@@ -287,6 +287,148 @@ try {
     throw new Error("Server-derived next ANC milestone was inconsistent with the timeline");
   }
 
+  const initialScheduleRequest = {
+    idempotency_key: randomUUID(),
+    due_date: "2026-05-08",
+    expected_due_date: null,
+  };
+  const initialSchedule = await readJson(
+    await request(`/pregnancies/${first.pregnancy.id}/milestones/K1/due-date`, {
+      method: "PATCH",
+      headers: { authorization },
+      body: JSON.stringify(initialScheduleRequest),
+    }),
+    "Initial milestone schedule",
+  );
+  const initialScheduleReplay = await readJson(
+    await request(`/pregnancies/${first.pregnancy.id}/milestones/K1/due-date`, {
+      method: "PATCH",
+      headers: { authorization },
+      body: JSON.stringify(initialScheduleRequest),
+    }),
+    "Initial milestone schedule replay",
+  );
+  if (
+    initialSchedule.action !== "SCHEDULED" ||
+    initialSchedule.previous_due_date !== null ||
+    initialSchedule.due_date !== "2026-05-08" ||
+    initialSchedule.due_at !== "2026-05-07T17:00:00.000Z" ||
+    initialSchedule.timezone !== "Asia/Jakarta" ||
+    initialScheduleReplay.event_id !== initialSchedule.event_id
+  ) {
+    throw new Error("Initial milestone schedule or immutable replay was invalid");
+  }
+
+  const rescheduleRequest = {
+    idempotency_key: randomUUID(),
+    due_date: "2026-05-10",
+    expected_due_date: "2026-05-08",
+    reason: "Synthetic agreed schedule correction",
+  };
+  const rescheduled = await readJson(
+    await request(`/pregnancies/${first.pregnancy.id}/milestones/K1/due-date`, {
+      method: "PATCH",
+      headers: { authorization },
+      body: JSON.stringify(rescheduleRequest),
+    }),
+    "Milestone reschedule",
+  );
+  const immutableInitialReplay = await readJson(
+    await request(`/pregnancies/${first.pregnancy.id}/milestones/K1/due-date`, {
+      method: "PATCH",
+      headers: { authorization },
+      body: JSON.stringify(initialScheduleRequest),
+    }),
+    "Initial schedule replay after reschedule",
+  );
+  if (
+    rescheduled.action !== "RESCHEDULED" ||
+    rescheduled.previous_due_date !== "2026-05-08" ||
+    rescheduled.due_date !== "2026-05-10" ||
+    rescheduled.due_at !== "2026-05-09T17:00:00.000Z" ||
+    immutableInitialReplay.event_id !== initialSchedule.event_id ||
+    immutableInitialReplay.due_date !== "2026-05-08"
+  ) {
+    throw new Error("Milestone reschedule lost its transition or immutable history");
+  }
+
+  const concurrentScheduleResponses = await Promise.all(
+    ["2026-05-15", "2026-05-16"].map((dueDate) =>
+      request(`/pregnancies/${first.pregnancy.id}/milestones/K2/due-date`, {
+        method: "PATCH",
+        headers: { authorization },
+        body: JSON.stringify({
+          idempotency_key: randomUUID(),
+          due_date: dueDate,
+          expected_due_date: null,
+        }),
+      }),
+    ),
+  );
+  if (
+    concurrentScheduleResponses
+      .map((response) => response.status)
+      .sort((left, right) => left - right)
+      .join(",") !== "200,409"
+  ) {
+    throw new Error("Concurrent milestone scheduling did not produce one winner and one conflict");
+  }
+  const concurrentBodies = await Promise.all(
+    concurrentScheduleResponses.map((response) => response.json()),
+  );
+  const concurrentConflict = concurrentBodies.find((body) => body.error !== undefined);
+  if (concurrentConflict?.error?.code !== "MILESTONE_SCHEDULE_CHANGED") {
+    throw new Error("Concurrent milestone scheduling returned the wrong conflict semantics");
+  }
+
+  const scheduleState = await pool.query(
+    `SELECT
+       milestone.code,
+       milestone.due_at,
+       COUNT(event.id)::int AS event_count
+     FROM pregnancy_milestones AS milestone
+     LEFT JOIN milestone_schedule_events AS event ON event.milestone_id = milestone.id
+    WHERE milestone.pregnancy_id = $1
+      AND milestone.code IN ('K1', 'K2')
+    GROUP BY milestone.id, milestone.code, milestone.due_at
+    ORDER BY milestone.code`,
+    [first.pregnancy.id],
+  );
+  const k1ScheduleState = scheduleState.rows.find((row) => row.code === "K1");
+  const k2ScheduleState = scheduleState.rows.find((row) => row.code === "K2");
+  if (
+    k1ScheduleState?.event_count !== 2 ||
+    k1ScheduleState.due_at?.toISOString() !== "2026-05-09T17:00:00.000Z" ||
+    k2ScheduleState?.event_count !== 1
+  ) {
+    throw new Error("Milestone schedule persistence violated transition or concurrency invariants");
+  }
+  const scheduleAudit = await pool.query(
+    `SELECT action, COUNT(*)::int AS event_count
+       FROM audit_events
+      WHERE created_at >= $1
+        AND action IN ('MILESTONE_SCHEDULED', 'MILESTONE_RESCHEDULED')
+      GROUP BY action`,
+    [smokeStartedAt],
+  );
+  const scheduleAuditCounts = Object.fromEntries(
+    scheduleAudit.rows.map((event) => [event.action, event.event_count]),
+  );
+  if (
+    scheduleAuditCounts.MILESTONE_SCHEDULED !== 2 ||
+    scheduleAuditCounts.MILESTONE_RESCHEDULED !== 1
+  ) {
+    throw new Error("Milestone schedule audit was missing or duplicated by replay/concurrency");
+  }
+  try {
+    await pool.query("UPDATE milestone_schedule_events SET reason = 'MUTATED' WHERE id = $1", [
+      initialSchedule.event_id,
+    ]);
+    throw new Error("Append-only milestone schedule history accepted an update");
+  } catch (error) {
+    if (error?.code !== "55000") throw error;
+  }
+
   const duplicateWhileActive = await request(`/mothers/${first.mother.id}/pregnancies`, {
     method: "POST",
     headers: { authorization },
@@ -844,7 +986,7 @@ try {
   }
 
   process.stdout.write(
-    "Registry smoke passed: protected registration, pregnancy lifecycle, K1-K8 milestone snapshot, hashed credential rotation, private mother sessions, and durable throttling.\n",
+    "Registry smoke passed: protected registration, pregnancy lifecycle, concurrent K1-K8 scheduling, hashed credential rotation, private mother sessions, and durable throttling.\n",
   );
 } finally {
   process.env.SMOKE_STAFF_PASSWORD = "";

@@ -31,6 +31,9 @@ const motherPrivateAccessMigration = loadModule(
 const ancMilestoneEngineMigration = loadModule(
   "../migrations/000007_phase_2_anc_milestone_engine.cjs",
 ) as BaselineMigration;
+const milestoneSchedulingMigration = loadModule(
+  "../migrations/000008_phase_2_milestone_scheduling.cjs",
+) as BaselineMigration;
 
 describe("baseline database migration", () => {
   it("defines the ERD baseline and privacy-sensitive NIK column", () => {
@@ -217,5 +220,30 @@ describe("phase 2 ANC milestone engine migration", () => {
     expect(statement).toContain("DROP TRIGGER IF EXISTS anc_plan_versions_transition_guard");
     expect(statement).toContain("DROP COLUMN IF EXISTS plan_version_id");
     expect(statement).toContain("DROP TYPE IF EXISTS anc_plan_kind");
+  });
+});
+
+describe("phase 2 milestone scheduling migration", () => {
+  it("adds append-only schedule transitions with local-date and UTC snapshots", () => {
+    const sql = vi.fn();
+    milestoneSchedulingMigration.up({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("CREATE TABLE milestone_schedule_events");
+    expect(statement).toContain("milestone_schedule_events_transition_shape");
+    expect(statement).toContain("previous_due_date date");
+    expect(statement).toContain("scheduled_due_at timestamptz NOT NULL");
+    expect(statement).toContain("milestone_schedule_events_append_only");
+    expect(statement).toContain("pregnancy_milestones_identity_unique");
+  });
+
+  it("provides a reverse migration for the schedule history and identity key", () => {
+    const sql = vi.fn();
+    milestoneSchedulingMigration.down({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("DROP TABLE IF EXISTS milestone_schedule_events");
+    expect(statement).toContain("DROP CONSTRAINT IF EXISTS pregnancy_milestones_identity_unique");
+    expect(statement).toContain("DROP TYPE IF EXISTS milestone_schedule_action");
   });
 });

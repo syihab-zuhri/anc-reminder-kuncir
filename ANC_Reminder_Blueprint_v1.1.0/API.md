@@ -5,7 +5,7 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** Backend Lead  
-> **Last Updated:** 2026-08-11  
+> **Last Updated:** 2026-08-12  
 > **Depends On:** DOC-SRS, DOC-ERD, DOC-PERMISSION
 
 ## 1. Principles
@@ -305,6 +305,37 @@ tasks populate it.
 Implemented errors include `ANC_PLAN_NOT_AVAILABLE` (`404`), `ANC_PLAN_INVALID_TRANSITION` (`409`),
 `ANC_PLAN_NOT_EFFECTIVE` (`409`), `ANC_PLAN_RULES_INCOMPLETE` (`422`),
 `PREGNANCY_MILESTONES_NOT_READY` (`409`), and scope-safe `FORBIDDEN` (`403`).
+
+#### Milestone schedule/reschedule
+
+`API-MILESTONE-003` accepts a strict request body. `expected_due_date` is mandatory and represents the exact
+local date last read by the client; use `null` only when the milestone has no explicit date. This optimistic
+precondition prevents concurrent staff actions from silently overwriting each other. `reason` is optional for the
+first schedule and mandatory for a reschedule.
+
+```json
+{
+  "idempotency_key": "client-generated-uuid",
+  "due_date": "2026-08-14",
+  "expected_due_date": "2026-08-12",
+  "reason": "Tanggal disepakati ulang"
+}
+```
+
+The response is an immutable transition snapshot with `event_id`, `pregnancy_id`, `milestone_id`, `code`,
+`action=SCHEDULED|RESCHEDULED`, `previous_due_date`, `due_date`, `due_at`, `timezone`, nullable `reason`, and
+`occurred_at`. Replaying the same idempotency key returns the same event snapshot even after a later reschedule.
+
+Only same-center Puskesmas staff can mutate K1–K8. The pregnancy must be active and the milestone must not be
+`CONFIRMED`, `CANCELLED`, or `NOT_APPLICABLE`. A valid historical date is accepted so an already-overdue target
+can be recorded, but it cannot precede the pregnancy dating date. The local calendar date is interpreted at
+midnight in `PRIMARY_TIMEZONE` and persisted as a UTC `timestamptz`; the timezone and local date are also retained
+in append-only history.
+
+Schedule errors include `MILESTONE_SCHEDULE_CHANGED` (`409`), `MILESTONE_DUE_DATE_UNCHANGED` (`409`),
+`MILESTONE_NOT_SCHEDULABLE` (`409`), `PREGNANCY_NOT_ACTIVE` (`409`),
+`MILESTONE_DUE_DATE_BEFORE_PREGNANCY` (`422`), `MILESTONE_RESCHEDULE_REASON_REQUIRED` (`422`), and scope-safe
+`FORBIDDEN` (`403`).
 
 #### Server-derived pregnancy state
 

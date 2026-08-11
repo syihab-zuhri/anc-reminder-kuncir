@@ -25,6 +25,7 @@ import {
   STAFF_AUTH_REPOSITORY,
   IDEMPOTENCY_SERVICE,
   ANC_PLAN_REPOSITORY,
+  MILESTONE_SCHEDULE_REPOSITORY,
 } from "./infrastructure/tokens.js";
 import { StaffAuthController } from "./auth/staff-auth.controller.js";
 import { StaffAuthGuard } from "./auth/staff-auth.guard.js";
@@ -84,6 +85,12 @@ import {
   type AncPlanRepository,
 } from "./anc-plan/anc-plan.repository.js";
 import { AncPlanService } from "./anc-plan/anc-plan.service.js";
+import { MilestoneScheduleController } from "./milestone-schedule/milestone-schedule.controller.js";
+import {
+  PostgresMilestoneScheduleRepository,
+  type MilestoneScheduleRepository,
+} from "./milestone-schedule/milestone-schedule.repository.js";
+import { MilestoneScheduleService } from "./milestone-schedule/milestone-schedule.service.js";
 
 export interface AppModuleOptions {
   readonly config: ApiConfig;
@@ -99,6 +106,7 @@ export interface AppModuleOptions {
   readonly motherAccessCodeService?: MotherAccessCodeService;
   readonly motherAuthRepository?: MotherAuthRepository;
   readonly ancPlanRepository?: AncPlanRepository;
+  readonly milestoneScheduleRepository?: MilestoneScheduleRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -118,6 +126,7 @@ export class AppModule {
         MotherAccessCredentialController,
         MotherAuthController,
         AncPlanController,
+        MilestoneScheduleController,
       ],
       providers: [
         { provide: API_CONFIG, useValue: options.config },
@@ -180,6 +189,11 @@ export class AppModule {
             ),
         },
         {
+          provide: MILESTONE_SCHEDULE_REPOSITORY,
+          useValue:
+            options.milestoneScheduleRepository ?? new PostgresMilestoneScheduleRepository(),
+        },
+        {
           provide: AUDIT_REPOSITORY,
           useValue: options.auditRepository ?? new PostgresAuditRepository(options.databasePool),
         },
@@ -231,6 +245,7 @@ export class AppModule {
         MotherAuthService,
         MotherAuthGuard,
         AncPlanService,
+        MilestoneScheduleService,
       ],
     };
   }

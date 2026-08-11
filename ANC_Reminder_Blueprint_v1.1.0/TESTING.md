@@ -5,7 +5,7 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** QA Lead  
-> **Last Updated:** 2026-08-11  
+> **Last Updated:** 2026-08-12  
 > **Depends On:** DOC-SRS, PRD documents, DOC-API
 
 ## 1. Strategy
@@ -48,6 +48,11 @@ Local synthetic data → CI ephemeral DB → staging with synthetic/pilot-approv
 | TEST-ANC-006 | Terminal milestone states remain terminal; closed pregnancy caps age at `closed_at` and has no next/reminder eligibility | Unit/API |
 | TEST-ANC-007 | Dating later than server calculation date fails closed | Unit/API |
 | TEST-ANC-008 | Dating basis without approved age-offset semantics fails closed | Unit/API |
+| TEST-SCHEDULE-001 | First explicit schedule stores the local date, timezone snapshot, and matching UTC instant | Contract/API/DB |
+| TEST-SCHEDULE-002 | Reschedule requires the exact previous local date and a reason | API/DB |
+| TEST-SCHEDULE-003 | Two concurrent writers from the same expected date produce exactly one winner and one conflict | Concurrency/DB |
+| TEST-SCHEDULE-004 | Closed pregnancy and terminal milestone states reject schedule mutation | API/security |
+| TEST-SCHEDULE-005 | Idempotency replay returns the immutable original event without duplicate event/audit | API/DB |
 | TEST-VISIT-001 | Bidan confirms K3 without detail form | E2E |
 | TEST-VISIT-002 | Bidan cannot edit K1–K6 detail | Security |
 | TEST-VISIT-003 | Puskesmas can perform Bidan confirmation | Permission |

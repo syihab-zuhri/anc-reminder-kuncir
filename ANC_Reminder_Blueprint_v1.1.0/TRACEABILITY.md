@@ -5,7 +5,7 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** QA Lead  
-> **Last Updated:** 2026-08-11  
+> **Last Updated:** 2026-08-12  
 > **Depends On:** DOC-SRS, PRD documents, DOC-TASKS
 
 ## 1. P0 Matrix
@@ -19,7 +19,7 @@
 | FR-005 | FEAT-REGISTRY | API-MOTHER-001/API-PREG | pregnancies.dating_date | Puskesmas | TASK-P2-001/P2-002 | TEST-REG-002/004 + lifecycle | Covered |
 | FR-006 | FEAT-MOTHER-ACCESS | API-MACCESS-001 | credentials | Bumil/Puskesmas | TASK-P2-003/004 | TEST-AUTH-002 | Covered |
 | FR-007 | FEAT-MOTHER-ACCESS | reissue | credentials | Puskesmas | TASK-P2-003 | revoke/reissue | Covered |
-| FR-009 | FEAT-ANC | API-MILESTONE-003 | milestone rules | Puskesmas | TASK-P2-006 | due-date tests | Covered |
+| FR-009 | FEAT-ANC | API-MILESTONE-003 | milestone due date + append-only schedule events | Puskesmas | TASK-P2-006 | TEST-SCHEDULE-001..005 + PostgreSQL race smoke | Backend Verified |
 | FR-015 | FEAT-NOTIF | API-DEVICE-001 | devices | Bumil | TASK-P4-004/005 | mobile integration | Covered |
 | FR-017 | FEAT-CHECKUP/NOTIF | confirm/close | milestone/reminder | staff | TASK-P4-014 | TEST-VISIT-004 | Covered |
 | FR-018 | FEAT-REGISTRY/NOTIF | consent | consent_records | Puskesmas/Bumil | TASK-P2-001 | consent test | Covered |

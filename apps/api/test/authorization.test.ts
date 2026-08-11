@@ -18,6 +18,8 @@ describe("central authorization policy", () => {
     expect(policy.hasCapability(puskesmas, "MOTHER_BASIC_READ")).toBe(true);
     expect(policy.hasCapability(bidan, "CLINICAL_RECORD_WRITE")).toBe(false);
     expect(policy.hasCapability(puskesmas, "CLINICAL_RECORD_WRITE")).toBe(true);
+    expect(policy.hasCapability(bidan, "MILESTONE_SCHEDULE")).toBe(false);
+    expect(policy.hasCapability(puskesmas, "MILESTONE_SCHEDULE")).toBe(true);
   });
 
   it("denies Super Admin routine health access by default", () => {
