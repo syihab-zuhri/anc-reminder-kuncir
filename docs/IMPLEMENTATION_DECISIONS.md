@@ -57,3 +57,12 @@ Phase 0 menyediakan workspace Capacitor, validasi trusted origin, dan halaman fa
 - Durable throttle menyimpan HMAC bucket saja. Default yang dapat dikonfigurasi: 10 gagal/IP dan 5 gagal/code dalam 15 menit, lalu block 15 menit; success hanya membersihkan bucket code agar histori abuse IP tidak hilang.
 - Restricted bearer memiliki 256-bit randomness, default TTL 30 hari, tanpa refresh endpoint. Database menyimpan HMAC token saja dan setiap request memvalidasi ulang session, credential, health center, serta active pregnancy.
 - `/mother/me` sengaja hanya mengirim ID/display name/active pregnancy/session context. Logout mencabut session; mother bearer tidak diterima oleh staff guard atau endpoint mutasi pregnancy.
+
+## 2026-08-11 - Phase 2 ANC milestone engine
+
+- Setiap pregnancy baru menyimpan snapshot tepat delapan rule K1–K8 dan `care_plan_version_id`; foreign key komposit mencegah milestone merujuk rule, code, atau plan lain.
+- Struktur fasilitas yang sudah diputuskan ditegakkan pada contract dan database: K1/K4/K5 hanya Puskesmas, K2/K3/K6/K7 fleksibel berdasarkan allowlist, dan K8 hanya PONED/RS.
+- Draft dapat dibuat oleh Puskesmas, sedangkan approve/activate memerlukan flag eksplisit `clinical_program_owner=false` secara default. Ketiga mutasi idempotent dan diaudit.
+- Grant/revoke clinical owner hanya melalui command operasional dengan frasa konfirmasi, target Puskesmas yang eksplisit, alasan wajib, dan audit append-only.
+- Plan `SYNTHETIC` hanya untuk development/test, tidak dapat keluar dari DRAFT, tidak production-eligible, dan tidak dapat dipilih pada runtime production.
+- Tidak ada seed nilai minggu klinis production. `OPEN-CLIN-001` tetap menjadi gate untuk approval/activation plan `CLINICAL`; due date serta status due/overdue tetap milik `TASK-P2-006`/`TASK-P2-011`.

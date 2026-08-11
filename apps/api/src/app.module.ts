@@ -24,6 +24,7 @@ import {
   SESSION_TOKEN_SERVICE,
   STAFF_AUTH_REPOSITORY,
   IDEMPOTENCY_SERVICE,
+  ANC_PLAN_REPOSITORY,
 } from "./infrastructure/tokens.js";
 import { StaffAuthController } from "./auth/staff-auth.controller.js";
 import { StaffAuthGuard } from "./auth/staff-auth.guard.js";
@@ -77,6 +78,12 @@ import {
   type MotherAuthRepository,
 } from "./mother-access/mother-auth.repository.js";
 import { MotherAuthService } from "./mother-access/mother-auth.service.js";
+import { AncPlanController } from "./anc-plan/anc-plan.controller.js";
+import {
+  PostgresAncPlanRepository,
+  type AncPlanRepository,
+} from "./anc-plan/anc-plan.repository.js";
+import { AncPlanService } from "./anc-plan/anc-plan.service.js";
 
 export interface AppModuleOptions {
   readonly config: ApiConfig;
@@ -91,6 +98,7 @@ export interface AppModuleOptions {
   readonly motherAccessCredentialRepository?: MotherAccessCredentialRepository;
   readonly motherAccessCodeService?: MotherAccessCodeService;
   readonly motherAuthRepository?: MotherAuthRepository;
+  readonly ancPlanRepository?: AncPlanRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -109,6 +117,7 @@ export class AppModule {
         PregnancyLifecycleController,
         MotherAccessCredentialController,
         MotherAuthController,
+        AncPlanController,
       ],
       providers: [
         { provide: API_CONFIG, useValue: options.config },
@@ -140,12 +149,15 @@ export class AppModule {
         },
         {
           provide: MOTHER_REGISTRY_REPOSITORY,
-          useValue: options.motherRegistryRepository ?? new PostgresMotherRegistryRepository(),
+          useValue:
+            options.motherRegistryRepository ??
+            new PostgresMotherRegistryRepository(options.config.nodeEnv !== "production"),
         },
         {
           provide: PREGNANCY_LIFECYCLE_REPOSITORY,
           useValue:
-            options.pregnancyLifecycleRepository ?? new PostgresPregnancyLifecycleRepository(),
+            options.pregnancyLifecycleRepository ??
+            new PostgresPregnancyLifecycleRepository(options.config.nodeEnv !== "production"),
         },
         {
           provide: MOTHER_ACCESS_CREDENTIAL_REPOSITORY,
@@ -157,6 +169,15 @@ export class AppModule {
           provide: MOTHER_AUTH_REPOSITORY,
           useValue:
             options.motherAuthRepository ?? new PostgresMotherAuthRepository(options.databasePool),
+        },
+        {
+          provide: ANC_PLAN_REPOSITORY,
+          useValue:
+            options.ancPlanRepository ??
+            new PostgresAncPlanRepository(
+              options.databasePool,
+              options.config.nodeEnv !== "production",
+            ),
         },
         {
           provide: AUDIT_REPOSITORY,
@@ -209,6 +230,7 @@ export class AppModule {
         MotherAccessCredentialService,
         MotherAuthService,
         MotherAuthGuard,
+        AncPlanService,
       ],
     };
   }

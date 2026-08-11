@@ -2,7 +2,10 @@ import type { PregnancyLifecycleResponse } from "@anc/contracts";
 import type { TransactionClient } from "@anc/database";
 import type { QueryResultRow } from "pg";
 
-import { ActiveAncPlanUnavailableError } from "./mother-registry.repository.js";
+import {
+  initializePregnancyMilestones,
+  resolveAssignableAncPlan,
+} from "../anc-plan/anc-milestone-engine.js";
 
 export type PregnancyLifecycleAction = "CREATED" | "CLOSED";
 
@@ -103,6 +106,8 @@ interface PregnancyRow extends QueryResultRow {
 }
 
 export class PostgresPregnancyLifecycleRepository implements PregnancyLifecycleRepository {
+  public constructor(private readonly allowSyntheticPlan = false) {}
+
   public async create(
     client: TransactionClient,
     input: CreatePregnancyInput,
@@ -126,28 +131,15 @@ export class PostgresPregnancyLifecycleRepository implements PregnancyLifecycleR
     );
     if (activePregnancy.rows[0] !== undefined) throw new ActivePregnancyExistsError();
 
-    const plan = await client.query<IdRow>(
-      `SELECT id
-         FROM anc_plan_versions
-        WHERE status = 'ACTIVE'
-        LIMIT 1
-        FOR KEY SHARE`,
-    );
-    const carePlanVersionId = plan.rows[0]?.id;
-    if (carePlanVersionId === undefined) throw new ActiveAncPlanUnavailableError();
+    const plan = await resolveAssignableAncPlan(client, this.allowSyntheticPlan);
 
     await client.query(
       `INSERT INTO pregnancies (
          id, mother_id, health_center_id, dating_basis, dating_date, status, care_plan_version_id
        ) VALUES ($1, $2, $3, 'PREGNANCY_START_DATE', $4, 'ACTIVE', $5)`,
-      [
-        input.pregnancyId,
-        input.motherId,
-        input.healthCenterId,
-        input.pregnancyStartDate,
-        carePlanVersionId,
-      ],
+      [input.pregnancyId, input.motherId, input.healthCenterId, input.pregnancyStartDate, plan.id],
     );
+    await initializePregnancyMilestones(client, input.pregnancyId, plan);
     await client.query(
       `INSERT INTO pregnancy_lifecycle_events (
          id, pregnancy_id, actor_staff_id, action, dating_basis, dating_date,

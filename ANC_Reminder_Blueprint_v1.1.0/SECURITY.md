@@ -86,6 +86,11 @@ code bucket, preserving IP abuse history. Edge throttling remains an additional 
 
 Role + scope + operation + milestone code + resource ownership. Puskesmas superset Bidan. Bumil never confirm. Super Admin denied health data default.
 
+ANC plan management uses a second governance boundary: Puskesmas may create a complete draft, but approval and
+activation require an active staff account explicitly flagged as `clinical_program_owner`. The flag defaults to
+false. Synthetic plans are database-constrained to `DRAFT`, are not production-eligible, and the application only
+permits their assignment outside production.
+
 ## 6. Encryption and Secret Management
 
 TLS in transit. Secrets/environment variables never committed. DB/storage encryption capability enabled where hosting supports it. FCM service credentials in secret store. NIK must use protected/encrypted persistence appropriate to the deployment; phone/token fields may also require application/DB encryption based on threat review. NIK must never appear in application logs, push payloads, `wa.me` URLs, analytics payloads, or generic audit metadata.
@@ -107,6 +112,9 @@ delete with SQLSTATE `55000`. Authentication, session, staff, organization, assi
 mother authentication security actions use this service; later domain tasks must wire confirmation/validation
 events through the same boundary. Public mother failures contain only a generic reason and no actor/resource ID;
 successful access/logout use the `BUMIL` actor type without recording the code, name input, source IP, or token.
+
+ANC plan draft creation, approval, and activation are audited with plan/version identifiers and a bounded approval
+reference. Approval signatures or source documents must remain in separately controlled storage, not in this public repository.
 
 ## 9.1 Idempotency Metadata
 

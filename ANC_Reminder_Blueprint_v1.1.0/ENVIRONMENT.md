@@ -107,3 +107,12 @@ No real Bumil data. Seed rule weeks are clearly marked test-only until clinical 
 operator inputs for `npm run staff:provision:puskesmas`; they are deliberately absent from
 `.env.example`. Use a secret manager or ephemeral process environment, clear the password after use,
 and never place production values in repository files.
+
+## 9. Clinical Program Owner Designation
+
+`CLINICAL_OWNER_CONFIRM`, `CLINICAL_OWNER_HEALTH_CENTER_CODE`,
+`CLINICAL_OWNER_LOGIN_IDENTIFIER`, `CLINICAL_OWNER_ENABLED`, and `CLINICAL_OWNER_REASON` are transient
+operator inputs for `npm run staff:set:clinical-owner`. The confirmation phrase must be exactly
+`CHANGE_CLINICAL_PROGRAM_OWNER`; enabled accepts only `true` or `false`. Grant is refused unless the target is
+an active Puskesmas account. Every actual state change is audited. Do not grant this capability for synthetic
+identity data or before the production approver has been formally designated.

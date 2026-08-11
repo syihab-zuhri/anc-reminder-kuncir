@@ -38,6 +38,7 @@
     "security:secrets": "node scripts/check-secrets.mjs",
     "security:dependencies": "npm audit --audit-level=high",
     "staff:provision:puskesmas": "npm run provision:puskesmas --workspace=@anc/api",
+    "staff:set:clinical-owner": "npm run set:clinical-owner --workspace=@anc/api",
     "verify": "npm run build:packages && npm run format:check && npm run lint && npm run typecheck && npm run test:ci && npm run build && npm run security:secrets"
   },
   "devDependencies": {

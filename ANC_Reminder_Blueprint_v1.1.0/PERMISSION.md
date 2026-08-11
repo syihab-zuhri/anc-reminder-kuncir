@@ -24,6 +24,10 @@ Backend enforcement, least privilege, explicit resource scope, deny-by-default, 
 
 `CLINICAL_PROGRAM_OWNER` is a governance capability that may be granted to selected Puskesmas staff, not a mandatory separate login role.
 
+The implementation stores this grant as `staff_users.clinical_program_owner`. Draft creation requires the
+Puskesmas care-plan capability; approval and activation additionally require this explicit active-account flag.
+The default is `false`, including for existing and newly provisioned staff.
+
 ## 3. Capability Matrix
 
 | Capability | Bumil | Bidan | Puskesmas | Super Admin | Worker |
@@ -85,6 +89,9 @@ active assignment state. Disabling a Bidan revokes all active sessions in the sa
 ## 9. Sensitive Operations
 
 Care-plan activation, program-rule activation, confirmation correction, record validation correction, credential reissue, export, and break-glass require audit.
+
+ANC plan draft creation, approval, and activation are separate audited actions. Approval evidence is referenced
+by an identifier only; the public repository and generic audit metadata must not contain a signature or sensitive attachment.
 
 ## 10. Authorization Failure Behavior
 

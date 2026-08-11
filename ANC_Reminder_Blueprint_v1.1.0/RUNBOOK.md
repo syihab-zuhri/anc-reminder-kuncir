@@ -32,6 +32,13 @@ After migration, set the transient `PROVISION_*` inputs documented in `DOC-ENV`,
 confirmation phrase `CREATE_INITIAL_PUSKESMAS`, then run `npm run staff:provision:puskesmas`.
 The command refuses a second Puskesmas account for the same health center and never prints the password.
 
+### Clinical program owner
+
+Only after formal owner designation, set the transient `CLINICAL_OWNER_*` inputs documented in `DOC-ENV` and
+run `npm run staff:set:clinical-owner`. Use `CLINICAL_OWNER_ENABLED=true` to grant or `false` to revoke. The
+command requires the exact phrase `CHANGE_CLINICAL_PROGRAM_OWNER`, refuses a grant to an inactive/non-Puskesmas
+account, writes an append-only system audit event, and prints only the target ID plus resulting boolean state.
+
 ## 5. Smoke Tests
 Staff login; mother name+code; dashboard; K3 confirm by Bidan; Bidan denied detail write; Puskesmas detail validation; forced push terminal failure creates WA action; WA link generation; program status read.
 

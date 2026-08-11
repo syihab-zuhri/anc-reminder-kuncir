@@ -35,6 +35,9 @@ export type PregnancyStatus = z.infer<typeof pregnancyStatusSchema>;
 export const ruleVersionStatusSchema = z.enum(["DRAFT", "APPROVED", "ACTIVE", "ARCHIVED"]);
 export type RuleVersionStatus = z.infer<typeof ruleVersionStatusSchema>;
 
+export const ancPlanKindSchema = z.enum(["CLINICAL", "SYNTHETIC"]);
+export type AncPlanKind = z.infer<typeof ancPlanKindSchema>;
+
 export const milestoneCodeSchema = z.enum(["K1", "K2", "K3", "K4", "K5", "K6", "K7", "K8"]);
 export type MilestoneCode = z.infer<typeof milestoneCodeSchema>;
 

@@ -12,6 +12,8 @@ const allowedMetadataKeys = new Set([
   "scope_id",
   "scope_type",
   "target_staff_user_id",
+  "version_no",
+  "approval_reference",
 ]);
 const forbiddenKeyPattern = /(nik|password|secret|token|phone|address|clinical|diagnosis)/i;
 
