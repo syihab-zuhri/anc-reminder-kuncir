@@ -5,8 +5,26 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** Product/Project Lead  
-> **Last Updated:** 2026-08-12  
+> **Last Updated:** 2026-08-13  
 > **Depends On:** All project documents
+
+## [2026-08-13] Phase 2 Configurable Program Status Evaluator (Sigizi Kesga / Hak Janin)
+
+### Added
+
+- `TASK-P2-014` Configurable Program Status Evaluator (`apps/api/src/program-status/`): versioned program rules with `DRAFT → APPROVED → ACTIVE` lifecycle governed by the designated Clinical/Program Owner, pure `evaluateProgramEvidence` evaluator supporting `MILESTONE_VALIDATED` and `FIELD_PRESENT` requirements over K1–K6 evidence, and append-only `program_assessments` storing `rule_version` snapshots with `SYSTEM`/`STAFF` evaluator attribution.
+- `API-PROGRAM-001` (`GET /pregnancies/:id/program-status`): live read-only evaluation for scoped Puskesmas/Bidan; returns `NOT_EVALUATED` with an operational notice while no approved rule is active.
+- `API-PROGRAM-002` (`POST /pregnancies/:id/program-status/recalculate`): Puskesmas-only idempotent assessment persistence with optional reason; denied for Bidan, Bumil, Super Admin, and cross-center actors.
+- `API-PROGRAM-003` (`GET /pregnancies/:id/program-status/history`): queryable assessment history; rule version changes never rewrite stored assessments.
+- Program rule management endpoints (`POST /program-rules/versions`, `.../approve`, `.../activate`, `GET /program-rules/active`) with idempotency, advisory-lock version allocation, and audit events `PROGRAM_RULE_DRAFT_CREATED` / `PROGRAM_RULE_APPROVED` / `PROGRAM_RULE_ACTIVATED`.
+- SYSTEM re-evaluation hook after K1–K6 record save/validate/reopen, emitting `PROGRAM_ASSESSMENT_RECALCULATED` and `PROGRAM_STATUS_CHANGED` audit events.
+- Migration `000012_phase_2_program_status.cjs`: governance columns, lifecycle transition guard, draft-only requirement mutation, requirement completeness gate, append-only assessment protection, and history indexes.
+- Authorization capability `PROGRAM_STATUS_MANAGE` restricted to Puskesmas.
+- 25 new tests (6 evaluator unit, 19 integration) covering AC-PROG-001..004, lifecycle/effective-date enforcement, idempotency replay/conflict, and role-boundary negatives.
+
+### Notes
+
+- No program rule values are seeded: production labels stay inactive pending `OPEN-CLIN-002` clinical/program approval; K6 alone never grants `MET` without an approved requirement set.
 
 ## [2026-08-12] Phase 4 Background Worker, Outbox & WhatsApp Fallback
 
