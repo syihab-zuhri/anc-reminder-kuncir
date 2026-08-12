@@ -371,7 +371,9 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - References: `CR-2026-08-08`, PRD-NOTIF, DOC-API
   - Depends on: TASK-P0-009, TASK-P2-001
   - Done when: nomor dinormalisasi, server memilih target/template, pesan URL-encoded, data sensitif dilarang pada URL, authorization test lulus, dan response hanya berisi link/action metadata.
-  - Evidence: Implemented `API-WA-001` (`GET /api/v1/wa-fallback/queue`), `API-WA-002` (`POST /api/v1/wa-fallback/:id/generate-link`), and `API-WA-003` (`POST /api/v1/wa-fallback/:id/resolve`) in `apps/api/src/wa-fallback/`. Generates server-side URL-encoded `https://wa.me/` link with explicit security disclaimer ("Link wa.me ini adalah aksi manual Bidan dan tidak menjamin status pengiriman/penerimaan pesan di WhatsApp"), denies Super Admin access to operational queue, and updates s- [x] `TASK-P4-012` [M] Implement notification/reminder event semantics untuk Push dan `wa.me`
+  - Evidence: Implemented `API-WA-001` (`GET /api/v1/wa-fallback/queue`), `API-WA-002` (`POST /api/v1/wa-fallback/:id/generate-link`), and `API-WA-003` (`POST /api/v1/wa-fallback/:id/resolve`) in `apps/api/src/wa-fallback/`. Generates server-side URL-encoded `https://wa.me/` link with explicit security disclaimer ("Link wa.me ini adalah aksi manual Bidan dan tidak menjamin status pengiriman/penerimaan pesan di WhatsApp"), denies Super Admin access to operational queue, and updates status `READY` -> `LINK_GENERATED` -> `RESOLVED`. Passed integration test suite `apps/api/test/wa-fallback.integration.test.ts`.
+
+- [x] `TASK-P4-012` [M] Implement notification/reminder event semantics untuk Push dan `wa.me`
   - Owner: Backend
   - References: `CR-2026-08-08`, PRD-NOTIF, DOC-ERD
   - Depends on: TASK-P4-001, TASK-P4-011
@@ -397,7 +399,7 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - References: FR-038, PRD-NOTIF, PRD-DASHBOARD
   - Depends on: TASK-P4-012, TASK-P4-008
   - Done when: push terminal/no-device + fallback `UNREACHABLE` atau melewati configurable SLA muncul di Puskesmas aggregate queue; tidak ada klaim provider failure untuk `wa.me`.
-  - Evidence: Overdue milestones and unresolved fallbacks are automatically surfaced in Puskesmas priority action queue (`priority_action_queue` with `WA_FALLBACK_REQUIRED`) and `unresolved_wa_fallbacks_count` in Puskesmas summary dashboard.`UNREACHABLE` atau melewati configurable SLA muncul di Puskesmas aggregate queue; tidak ada klaim provider failure untuk `wa.me`.
+  - Evidence: Overdue milestones and unresolved fallbacks are automatically surfaced in Puskesmas priority action queue (`priority_action_queue` with `WA_FALLBACK_REQUIRED`) and `unresolved_wa_fallbacks_count` in Puskesmas summary dashboard.
 
 ## Phase 5 — P1 Features
 
@@ -407,11 +409,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Depends on: TASK-P2-010, TASK-P1-004
   - Done when: reason/approval/audit wajib atau task dipindah Deferred.
 
-- [ ] `TASK-P5-004` [L] Add organization reports/export dengan privacy controls
+- [x] `TASK-P5-004` [L] Add organization reports/export dengan privacy controls
   - Owner: Backend + Frontend
   - References: FR-026
   - Depends on: TASK-P2-009
   - Done when: scope/masking/export authorization/audit tests lulus.
+  - Evidence: Implemented `API-REPORT-001` (`GET /api/v1/reports/summary`) in `apps/api/src/reports/`. Generates organization summary with total registered mothers, active pregnancies, confirmed visits (K1–K8), and validated clinical records broken down by village for Puskesmas staff. Denies Super Admin access with isolated privacy notice. Added unit/integration test suite `apps/api/test/reports.integration.test.ts`. Passed full verification suite.
 
 - [ ] `TASK-P5-005` [M] Add Puskesmas configuration UI untuk versioned milestone/facility rules setelah clinical approval
   - Owner: Full Stack + Clinical

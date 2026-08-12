@@ -31,6 +31,7 @@ import {
   OPERATIONAL_QUERIES_REPOSITORY,
   DASHBOARD_REPOSITORY,
   WA_FALLBACK_REPOSITORY,
+  REPORTS_REPOSITORY,
 } from "./infrastructure/tokens.js";
 import { WaFallbackController } from "./wa-fallback/wa-fallback.controller.js";
 import {
@@ -128,6 +129,10 @@ import {
 } from "./dashboard/dashboard.repository.js";
 import { DashboardService } from "./dashboard/dashboard.service.js";
 
+import { ReportsController } from "./reports/reports.controller.js";
+import { PostgresReportsRepository, type ReportsRepository } from "./reports/reports.repository.js";
+import { ReportsService } from "./reports/reports.service.js";
+
 export interface AppModuleOptions {
   readonly config: ApiConfig;
   readonly databasePool: DatabasePool;
@@ -148,6 +153,7 @@ export interface AppModuleOptions {
   readonly operationalQueriesRepository?: OperationalQueriesRepository;
   readonly dashboardRepository?: DashboardRepository;
   readonly waFallbackRepository?: WaFallbackRepository;
+  readonly reportsRepository?: ReportsRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -174,6 +180,7 @@ export class AppModule {
         DashboardController,
         MotherDashboardController,
         WaFallbackController,
+        ReportsController,
       ],
       providers: [
         { provide: API_CONFIG, useValue: options.config },
@@ -329,6 +336,17 @@ export class AppModule {
           provide: WaFallbackService,
           useFactory: (repo: PostgresWaFallbackRepository) => new WaFallbackService(repo),
           inject: [WA_FALLBACK_REPOSITORY],
+        },
+        {
+          provide: REPORTS_REPOSITORY,
+          useFactory: (pool: DatabasePool) =>
+            options.reportsRepository ?? new PostgresReportsRepository(pool),
+          inject: [DATABASE_POOL],
+        },
+        {
+          provide: ReportsService,
+          useFactory: (repo: PostgresReportsRepository) => new ReportsService(repo),
+          inject: [REPORTS_REPOSITORY],
         },
       ],
     };
