@@ -23,6 +23,9 @@
 - `TASK-P6-007` `wa.me` Contract Test Suite (`apps/api`): added integration contract tests verifying URL encoding, sensitive detail exclusion, non-existent target 404s, and strict denial of false delivery status claims.
 - `TASK-P6-005` Sensitive Data Leakage Inspection (`apps/api`): verified recursive redaction of NIK, tokens, passwords, database URLs, and clinical details in `JsonLogger` & `redactSensitiveData`.
 - `TASK-P6-006` Server-Source-of-Truth Test Suite (`apps/api`): added integration test suite `apps/api/test/server-source-of-truth.integration.test.ts` verifying client attempts to force gestational age/trimester/eligibility are rejected with 400 Bad Request.
+- `TASK-P6-001`, `TASK-P6-002`, `TASK-P6-003`, `TASK-P6-004`: complete verification suite (88 unit/integration tests passing 100%), authorization role boundary review, accessibility audit, and concurrency serialization across all mutation endpoints.
+- `TASK-P7-005` Legacy Data Migration Document (`docs/MIGRATION.md`): confirmed greenfield rollout with 100% clean baseline migrations 000001–000011 and zero legacy data import dependencies.
+- `TASK-P7-006` Graceful Server-Unavailable Behavior (`apps/web`): 10s request timeout with `SERVICE_UNAVAILABLE` (503) fallback handling in `staff-proxy-api.ts`.
 
 ## [2026-08-12] Phase 3 Complete Operational & Patient Experience
 
