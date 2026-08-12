@@ -37,6 +37,9 @@ const milestoneSchedulingMigration = loadModule(
 const visitConfirmationMigration = loadModule(
   "../migrations/000009_phase_2_visit_confirmation.cjs",
 ) as BaselineMigration;
+const clinicalRecordValidationMigration = loadModule(
+  "../migrations/000010_phase_2_clinical_record_validation.cjs",
+) as BaselineMigration;
 
 describe("baseline database migration", () => {
   it("defines the ERD baseline and privacy-sensitive NIK column", () => {
@@ -273,5 +276,33 @@ describe("phase 2 visit confirmation migration", () => {
     expect(statement).not.toContain("DROP TRIGGER IF EXISTS visit_confirmations_append_only");
     expect(statement).toContain("DROP INDEX IF EXISTS visit_confirmations_one_initial_confirm_idx");
     expect(statement).toContain("DROP COLUMN IF EXISTS confirmation_source");
+  });
+});
+
+describe("phase 2 clinical record validation migration", () => {
+  it("binds K1-K6 records to supported milestone codes and immutable revisions", () => {
+    const sql = vi.fn();
+    clinicalRecordValidationMigration.up({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("k1_k6_records_code_supported");
+    expect(statement).toContain("status = 'VALIDATED'");
+    expect(statement).toContain("CREATE TABLE k1_k6_record_revisions");
+    expect(statement).toContain("k1_k6_record_revisions_record_number_unique");
+    expect(statement).toContain("legacy-revision-1");
+    expect(statement).toContain("record_validation_status = record.status");
+    expect(statement).toContain("k1_k6_record_revisions_append_only");
+    expect(statement).toContain("record_validation_events_state_snapshot");
+  });
+
+  it("provides an explicit reverse migration", () => {
+    const sql = vi.fn();
+    clinicalRecordValidationMigration.down({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("DROP TABLE IF EXISTS k1_k6_record_revisions");
+    expect(statement).toContain("DROP COLUMN IF EXISTS revision_id");
+    expect(statement).toContain("DROP COLUMN IF EXISTS milestone_code");
+    expect(statement).toContain("pregnancy_milestones_id_code_unique");
   });
 });

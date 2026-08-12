@@ -1,5 +1,6 @@
 export * from "./anc-plan.js";
 export * from "./auth.js";
+export * from "./clinical-record.js";
 export * from "./domain.js";
 export * from "./errors.js";
 export * from "./idempotency.js";

@@ -8,6 +8,20 @@
 > **Last Updated:** 2026-08-12  
 > **Depends On:** All project documents
 
+## [2026-08-12] Phase 2 Puskesmas K1–K6 Detail Validation
+
+### Added
+
+- Puskesmas-only `API-VISIT-003..006` for no-store current-detail read, versioned save, final validation, and reasoned reopen.
+- Bounded opaque-schema JSON payloads, optimistic revision concurrency, append-only sensitive snapshots, and immutable validation-state snapshots.
+- Confirmed-visit prerequisite, synchronized record/milestone validation state, explicit validation attestation, validator/time pairing, idempotent logical dedupe, and redacted identity-only audit.
+- Role/scope/K1–K6/state/payload/idempotency/concurrency tests plus PostgreSQL migration rollback/reapply and registry smoke coverage.
+
+### Safety Boundary
+
+- No 10T/component list from the unsigned draft approval form is hardcoded as production truth. `schema_version` remains an opaque governance hook until the Clinical/Program Owner completes approval.
+- Bidan, Bumil, Super Admin, K7/K8, and cross-center access cannot read or mutate the sensitive detail payload.
+
 ## [2026-08-12] Phase 2 One-Action Visit Confirmation
 
 ### Added

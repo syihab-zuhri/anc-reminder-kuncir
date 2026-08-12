@@ -54,6 +54,8 @@ K1–K6 normally use `INCOMPLETE/VALIDATED`; K7/K8 use `NOT_REQUIRED` in MVP.
 - Puskesmas inherits Bidan confirmation capability.
 - Reminder suppression occurs on valid `CONFIRMED`, not after detail validation.
 - Correction after confirmation/validation requires Puskesmas and audit; no hard delete.
+- Detail saves use optimistic concurrency and append-only revisions; a validated record must be reopened with a reason before correction.
+- Final validation requires an already confirmed visit and explicit Puskesmas review attestation. Automatic component completeness remains configuration-driven and cannot use unapproved hardcoded fields.
 
 ## 9. Acceptance Criteria
 `AC-CHECK-001`: Given assigned Bidan and K3 due, when confirm, then status becomes CONFIRMED without clinical form.  
@@ -62,6 +64,9 @@ K1–K6 normally use `INCOMPLETE/VALIDATED`; K7/K8 use `NOT_REQUIRED` in MVP.
 `AC-CHECK-004`: Given CONFIRMED, scheduler cannot create future K3 cycle.  
 `AC-CHECK-005`: Given Bumil calls confirm API, server returns 403.  
 `AC-CHECK-006`: duplicate confirm does not create duplicate audit/state.
+`AC-CHECK-007`: Given two Puskesmas editors save from one revision, exactly one succeeds and one reloads after conflict.  
+`AC-CHECK-008`: Given a confirmed K1–K6 record, validation synchronizes record/milestone state and preserves validator/time.  
+`AC-CHECK-009`: Given a validated record, edit is rejected until a reasoned reopen creates an immutable event.
 
 ## 10. UI/UX Specifications
 Bidan: one prominent `Konfirmasi Sudah Periksa` action, optional confirmation dialog only.  

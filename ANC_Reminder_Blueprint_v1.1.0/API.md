@@ -406,6 +406,63 @@ Confirmation and record validation remain independent. K1–K6 may therefore ret
 
 Other domain errors include `PREGNANCY_NOT_ACTIVE`/`VISIT_CONFIRMATION_INVALID_TRANSITION` (`409`), `VISIT_OCCURRENCE_DATE_IN_FUTURE`/`VISIT_DATE_BEFORE_PREGNANCY`/`VISIT_FACILITY_NOT_AVAILABLE`/`FACILITY_NOT_ALLOWED_FOR_MILESTONE` (`422`), and generic `403` for role, assignment, code, or resource scope denial without resource enumeration.
 
+`API-VISIT-003..006` are Puskesmas-only, same-health-center, K1–K6 endpoints. Bidan, Bumil, Super Admin, K7/K8, and cross-center targets receive generic `403`. Responses carry `Cache-Control: no-store`.
+
+`PUT /milestones/{id}/record` request:
+```json
+{
+  "idempotency_key": "client-generated-uuid",
+  "expected_revision_id": null,
+  "schema_version": "approved-schema-version",
+  "record_payload": {
+    "component_key": { "state": "RECORDED" }
+  }
+}
+```
+
+Use `expected_revision_id: null` only when creating the first record. Subsequent writes must send the exact current revision UUID. One of two concurrent writers wins; the stale writer receives `CLINICAL_RECORD_REVISION_CHANGED` (`409`). A validated record returns `CLINICAL_RECORD_REOPEN_REQUIRED` (`409`) until reopened. The payload must be a non-empty JSON object, is limited to 64 KiB, maximum depth 8 and 1024 nodes, and rejects unsafe/invalid object keys. `schema_version` is an opaque separately governed identifier; it does not itself prove clinical approval.
+
+`GET /milestones/{id}/record` and successful mutation response:
+```json
+{
+  "record_id": "uuid",
+  "milestone_id": "uuid",
+  "pregnancy_id": "uuid",
+  "code": "K3",
+  "revision_id": "uuid",
+  "revision_no": 2,
+  "schema_version": "approved-schema-version",
+  "record_payload": {
+    "component_key": { "state": "RECORDED" }
+  },
+  "record_validation_status": "INCOMPLETE",
+  "validated_at": null,
+  "validated_by_staff_id": null
+}
+```
+
+`POST /milestones/{id}/record/validate` request:
+```json
+{
+  "idempotency_key": "client-generated-uuid",
+  "expected_revision_id": "uuid",
+  "attestation": "DETAIL_REVIEWED_COMPLETE"
+}
+```
+
+Final validation requires an active pregnancy, a non-terminal K1–K6 milestone, an existing exact revision, and `visit_status=CONFIRMED`. It atomically synchronizes the record and milestone to `VALIDATED`, stores validator/time, appends an immutable validation snapshot, and emits a redacted `RECORD_VALIDATED` audit event. Until a production-approved component schema/rule exists, the attestation is an explicit accountable Puskesmas action rather than a server claim that unapproved clinical fields are complete.
+
+`POST /milestones/{id}/record/reopen` request:
+```json
+{
+  "idempotency_key": "client-generated-uuid",
+  "expected_revision_id": "uuid",
+  "reason": "Required correction explanation"
+}
+```
+
+Reopen atomically returns both states to `INCOMPLETE`, preserves the validated revision, and appends a reasoned immutable event. The next edit creates a new revision; history is never overwritten. Exact idempotency replay and same-state logical duplicate return the original immutable mutation without duplicate history/audit. Generic audit metadata never contains `record_payload`.
+
 ### Reminder / `wa.me`
 
 | Operation ID | Method | Path | Actor |

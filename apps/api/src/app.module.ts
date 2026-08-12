@@ -27,6 +27,7 @@ import {
   ANC_PLAN_REPOSITORY,
   MILESTONE_SCHEDULE_REPOSITORY,
   VISIT_CONFIRMATION_REPOSITORY,
+  CLINICAL_RECORD_REPOSITORY,
 } from "./infrastructure/tokens.js";
 import { StaffAuthController } from "./auth/staff-auth.controller.js";
 import { StaffAuthGuard } from "./auth/staff-auth.guard.js";
@@ -98,6 +99,12 @@ import {
   type VisitConfirmationRepository,
 } from "./visit-confirmation/visit-confirmation.repository.js";
 import { VisitConfirmationService } from "./visit-confirmation/visit-confirmation.service.js";
+import { ClinicalRecordController } from "./clinical-record/clinical-record.controller.js";
+import {
+  PostgresClinicalRecordRepository,
+  type ClinicalRecordRepository,
+} from "./clinical-record/clinical-record.repository.js";
+import { ClinicalRecordService } from "./clinical-record/clinical-record.service.js";
 
 export interface AppModuleOptions {
   readonly config: ApiConfig;
@@ -115,6 +122,7 @@ export interface AppModuleOptions {
   readonly ancPlanRepository?: AncPlanRepository;
   readonly milestoneScheduleRepository?: MilestoneScheduleRepository;
   readonly visitConfirmationRepository?: VisitConfirmationRepository;
+  readonly clinicalRecordRepository?: ClinicalRecordRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -136,6 +144,7 @@ export class AppModule {
         AncPlanController,
         MilestoneScheduleController,
         VisitConfirmationController,
+        ClinicalRecordController,
       ],
       providers: [
         { provide: API_CONFIG, useValue: options.config },
@@ -208,6 +217,12 @@ export class AppModule {
             options.visitConfirmationRepository ?? new PostgresVisitConfirmationRepository(),
         },
         {
+          provide: CLINICAL_RECORD_REPOSITORY,
+          useValue:
+            options.clinicalRecordRepository ??
+            new PostgresClinicalRecordRepository(options.databasePool),
+        },
+        {
           provide: AUDIT_REPOSITORY,
           useValue: options.auditRepository ?? new PostgresAuditRepository(options.databasePool),
         },
@@ -261,6 +276,7 @@ export class AppModule {
         AncPlanService,
         MilestoneScheduleService,
         VisitConfirmationService,
+        ClinicalRecordService,
       ],
     };
   }

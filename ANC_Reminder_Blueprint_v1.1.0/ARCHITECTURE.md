@@ -73,7 +73,7 @@ Staff requests link by fallback action ID → API checks role/scope/state → se
 Bidan/Puskesmas → confirm endpoint → authz + assignment + milestone code + facility/date/state rule → transaction locks and sets visit confirmed + append-only history → audit. Server read models immediately derive the confirmed milestone as not reminder-eligible. The reminder worker's atomic pending-action/outbox suppression boundary is completed separately by `TASK-P4-014` so confirmation-vs-send races remain explicit and testable.
 
 ### 6.6 K1–K6 Detail Validation
-Puskesmas only → detail endpoint → schema validation → store sensitive record → validate → trigger program reassessment event.
+Puskesmas → no-store detail endpoint → same-center/K1–K6 authorization → bounded schema-versioned payload → transaction lock + expected revision → current record + append-only revision. Final validation additionally requires confirmed visit, exact revision, and explicit attestation; it synchronizes record/milestone state and appends immutable validation snapshot + redacted audit. Reopen requires reason before a new revision. Downstream configurable program assessment remains a separate task.
 
 ## 7. Sync vs Async
 
