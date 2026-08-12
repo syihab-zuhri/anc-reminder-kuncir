@@ -129,13 +129,22 @@ export class PostgresDashboardRepository implements DashboardRepository {
       };
     });
 
+    const unresolvedWaRes = await this.pool.query<{ count: string }>(
+      `SELECT COUNT(*) as count 
+       FROM wa_fallback_actions wf
+       JOIN mothers m ON wf.mother_id = m.id
+       WHERE m.health_center_id = $1 AND wf.status IN ('READY', 'LINK_GENERATED')`,
+      [actor.healthCenterId],
+    );
+    const unresolvedWaCount = parseInt(unresolvedWaRes.rows[0]?.count ?? "0", 10);
+
     return {
       summary: {
         total_active_pregnancies: totalActivePregnancies,
         milestones_due_count: dueCount,
         milestones_overdue_count: overdueCount,
         pending_validations_count: pendingValCount,
-        unresolved_wa_fallbacks_count: 0,
+        unresolved_wa_fallbacks_count: unresolvedWaCount,
       },
       priority_action_queue: priorityActionQueue,
     };

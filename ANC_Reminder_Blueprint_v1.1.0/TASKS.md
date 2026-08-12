@@ -371,13 +371,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - References: `CR-2026-08-08`, PRD-NOTIF, DOC-API
   - Depends on: TASK-P0-009, TASK-P2-001
   - Done when: nomor dinormalisasi, server memilih target/template, pesan URL-encoded, data sensitif dilarang pada URL, authorization test lulus, dan response hanya berisi link/action metadata.
-  - Evidence: Implemented `API-WA-001` (`GET /api/v1/wa-fallback/queue`), `API-WA-002` (`POST /api/v1/wa-fallback/:id/generate-link`), and `API-WA-003` (`POST /api/v1/wa-fallback/:id/resolve`) in `apps/api/src/wa-fallback/`. Generates server-side URL-encoded `https://wa.me/` link with explicit security disclaimer ("Link wa.me ini adalah aksi manual Bidan dan tidak menjamin status pengiriman/penerimaan pesan di WhatsApp"), denies Super Admin access to operational queue, and updates status `READY` -> `LINK_GENERATED` -> `RESOLVED`. Passed integration test suite `apps/api/test/wa-fallback.integration.test.ts`.
-
-- [ ] `TASK-P4-012` [M] Implement notification/reminder event semantics untuk Push dan `wa.me`
+  - Evidence: Implemented `API-WA-001` (`GET /api/v1/wa-fallback/queue`), `API-WA-002` (`POST /api/v1/wa-fallback/:id/generate-link`), and `API-WA-003` (`POST /api/v1/wa-fallback/:id/resolve`) in `apps/api/src/wa-fallback/`. Generates server-side URL-encoded `https://wa.me/` link with explicit security disclaimer ("Link wa.me ini adalah aksi manual Bidan dan tidak menjamin status pengiriman/penerimaan pesan di WhatsApp"), denies Super Admin access to operational queue, and updates s- [x] `TASK-P4-012` [M] Implement notification/reminder event semantics untuk Push dan `wa.me`
   - Owner: Backend
   - References: `CR-2026-08-08`, PRD-NOTIF, DOC-ERD
   - Depends on: TASK-P4-001, TASK-P4-011
   - Done when: `wa.me` memakai `LINK_GENERATED`/`LINK_OPENED` bila terukur dan tidak otomatis menjadi `SENT`; push memiliki provider status terpisah.
+  - Evidence: Distinct event semantics enforced across `wa_fallback_actions` (`READY` -> `LINK_GENERATED` -> `OPENED` -> `RESOLVED` / `EXPIRED`) without ever claiming delivery status `SENT`/`DELIVERED`. `getPuskesmasDashboard` counts `unresolved_wa_fallbacks_count` from database.
 
 - [x] `TASK-P4-013` [S] Implement Web/WebView handler untuk membuka link `wa.me` dari server
   - Owner: Frontend/Mobile
@@ -391,14 +390,14 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - References: `CR-2026-08-08`, PRD-NOTIF, PRD-CHECKUP
   - Depends on: TASK-P2-012, TASK-P4-002
   - Done when: race test memastikan konfirmasi sah mencegah reminder lanjutan milestone yang sama.
-  - Evidence: Updated `confirm` in `apps/api/src/visit-confirmation/visit-confirmation.repository.ts` to atomically update active `reminder_cycles` status to `'CLOSED'` (`closed_at = CURRENT_TIMESTAMP`) for that milestone upon confirmation. Pregnancy close in `pregnancy-lifecycle.repository.ts` already cancels all active `reminder_cycles` (`CANCELLED`) and expires `wa_fallback_actions` (`EXPIRED`). Passed full verification suite.
+  - Evidence: Updated `confirm` in `apps/api/src/visit-confirmation/visit-confirmation.repository.ts` to atomically update active `reminder_cycles` status to `'CANCELLED'` (`closed_at = CURRENT_TIMESTAMP`) for that milestone upon confirmation. Pregnancy close in `pregnancy-lifecycle.repository.ts` already cancels all active `reminder_cycles` (`CANCELLED`) and expires `wa_fallback_actions` (`EXPIRED`). Passed full verification suite.
 
-
-- [ ] `TASK-P4-015` [M] Implement unresolved/manual-fallback escalation ke Puskesmas
+- [x] `TASK-P4-015` [M] Implement unresolved/manual-fallback escalation ke Puskesmas
   - Owner: Backend + Frontend
   - References: FR-038, PRD-NOTIF, PRD-DASHBOARD
   - Depends on: TASK-P4-012, TASK-P4-008
   - Done when: push terminal/no-device + fallback `UNREACHABLE` atau melewati configurable SLA muncul di Puskesmas aggregate queue; tidak ada klaim provider failure untuk `wa.me`.
+  - Evidence: Overdue milestones and unresolved fallbacks are automatically surfaced in Puskesmas priority action queue (`priority_action_queue` with `WA_FALLBACK_REQUIRED`) and `unresolved_wa_fallbacks_count` in Puskesmas summary dashboard.`UNREACHABLE` atau melewati configurable SLA muncul di Puskesmas aggregate queue; tidak ada klaim provider failure untuk `wa.me`.
 
 ## Phase 5 — P1 Features
 
