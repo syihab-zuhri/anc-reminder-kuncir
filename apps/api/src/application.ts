@@ -23,6 +23,7 @@ import type { MilestoneScheduleRepository } from "./milestone-schedule/milestone
 import type { VisitConfirmationRepository } from "./visit-confirmation/visit-confirmation.repository.js";
 import type { ClinicalRecordRepository } from "./clinical-record/clinical-record.repository.js";
 import type { OperationalQueriesRepository } from "./operational-queries/operational-queries.repository.js";
+import type { DashboardRepository } from "./dashboard/dashboard.repository.js";
 import { CanonicalErrorFilter } from "./errors/canonical-error.filter.js";
 import { HttpLoggingInterceptor } from "./observability/http-logging.interceptor.js";
 import { JsonLogger } from "./observability/json-logger.js";
@@ -50,6 +51,7 @@ export interface CreateApiApplicationOptions {
   readonly visitConfirmationRepository?: VisitConfirmationRepository;
   readonly clinicalRecordRepository?: ClinicalRecordRepository;
   readonly operationalQueriesRepository?: OperationalQueriesRepository;
+  readonly dashboardRepository?: DashboardRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -109,6 +111,9 @@ export async function createApiApplication(
       ...(options.operationalQueriesRepository === undefined
         ? {}
         : { operationalQueriesRepository: options.operationalQueriesRepository }),
+      ...(options.dashboardRepository === undefined
+        ? {}
+        : { dashboardRepository: options.dashboardRepository }),
       ...(options.auditRepository === undefined
         ? {}
         : { auditRepository: options.auditRepository }),

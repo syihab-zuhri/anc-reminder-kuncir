@@ -29,6 +29,7 @@ import {
   VISIT_CONFIRMATION_REPOSITORY,
   CLINICAL_RECORD_REPOSITORY,
   OPERATIONAL_QUERIES_REPOSITORY,
+  DASHBOARD_REPOSITORY,
 } from "./infrastructure/tokens.js";
 import { StaffAuthController } from "./auth/staff-auth.controller.js";
 import { StaffAuthGuard } from "./auth/staff-auth.guard.js";
@@ -112,6 +113,13 @@ import {
   type OperationalQueriesRepository,
 } from "./operational-queries/operational-queries.repository.js";
 import { OperationalQueriesService } from "./operational-queries/operational-queries.service.js";
+import { DashboardController } from "./dashboard/dashboard.controller.js";
+import { MotherDashboardController } from "./dashboard/mother-dashboard.controller.js";
+import {
+  PostgresDashboardRepository,
+  type DashboardRepository,
+} from "./dashboard/dashboard.repository.js";
+import { DashboardService } from "./dashboard/dashboard.service.js";
 
 export interface AppModuleOptions {
   readonly config: ApiConfig;
@@ -131,6 +139,7 @@ export interface AppModuleOptions {
   readonly visitConfirmationRepository?: VisitConfirmationRepository;
   readonly clinicalRecordRepository?: ClinicalRecordRepository;
   readonly operationalQueriesRepository?: OperationalQueriesRepository;
+  readonly dashboardRepository?: DashboardRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -154,6 +163,8 @@ export class AppModule {
         VisitConfirmationController,
         ClinicalRecordController,
         OperationalQueriesController,
+        DashboardController,
+        MotherDashboardController,
       ],
       providers: [
         { provide: API_CONFIG, useValue: options.config },
@@ -238,6 +249,11 @@ export class AppModule {
             new PostgresOperationalQueriesRepository(options.databasePool),
         },
         {
+          provide: DASHBOARD_REPOSITORY,
+          useValue:
+            options.dashboardRepository ?? new PostgresDashboardRepository(options.databasePool),
+        },
+        {
           provide: AUDIT_REPOSITORY,
           useValue: options.auditRepository ?? new PostgresAuditRepository(options.databasePool),
         },
@@ -293,6 +309,7 @@ export class AppModule {
         VisitConfirmationService,
         ClinicalRecordService,
         OperationalQueriesService,
+        DashboardService,
       ],
     };
   }

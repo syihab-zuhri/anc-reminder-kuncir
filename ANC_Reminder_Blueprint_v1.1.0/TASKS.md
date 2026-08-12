@@ -265,11 +265,11 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Depends on: TASK-P2-013
   - Done when: label hanya muncul jika rule kelengkapan yang disetujui terpenuhi; K6 saja tidak mengubah status tanpa rule.
 
-- [ ] `TASK-P2-015` [M] Implement server-composed dashboard/view-model endpoints untuk Puskesmas, Bidan, dan Bumil
+- [x] `TASK-P2-015` [M] Implement server-composed dashboard/view-model endpoints untuk Puskesmas, Bidan, dan Bumil
   - Owner: Backend
   - References: DOC-API, `CR-2026-08-08`
   - Depends on: TASK-P2-009, TASK-P2-011, TASK-P2-012, TASK-P2-013
-  - Done when: tiap role menerima DTO minimal sesuai kewenangan tanpa client-side domain join/calculation.
+  - Done when: tiap role menerima DTO minimal sesuai kewenangan tanpa client-side domain join/calculation. `[x] Implemented API-DASH-001 (/dashboard/puskesmas), API-DASH-002 (/dashboard/bidan), and API-DASH-003 (/mother/me/dashboard, /dashboard/bumil) with Zod contracts, PostgresDashboardRepository, and integration tests.`
 
 ## Phase 3 — P0 Frontend / Client Experience
 
