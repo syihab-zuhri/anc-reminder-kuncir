@@ -8,6 +8,16 @@
 > **Last Updated:** 2026-08-12  
 > **Depends On:** All project documents
 
+## [2026-08-12] Phase 3 Frontend Administration & Patient Access UIs
+
+### Added
+
+- `TASK-P3-001` Organization & Staff Administration UI (`OrganizationAdminPanel`): facilities CRUD, village management, staff account creation, and village assignments with Puskesmas role boundaries.
+- `TASK-P3-002` Mother Registration & Consent UI (`MotherRegistrationPanel`): 5 required fields (`full_name`, `nik`, `address`, `phone_number`, `pregnancy_start_date`), consent selection (`REMINDER`, `DATA_PROCESSING`), client validation, review state, and privacy-preserving success screen displaying redacted NIK (`3515************`).
+- `TASK-P3-003` Mother Access Handoff & Reissue UI (`MotherAccessPanel`): initial 16-character access code issuance, handoff warning callout displaying plaintext access code ONCE, credential reissue with reason, and credential revocation workflow.
+- `apps/web/app/api/staff-proxy/[...path]` BFF catch-all proxy route handler automatically forwarding authenticated Next.js requests to backend API (`API_BASE_URL`) with CSRF protection and HTTP-only session cookie rotation.
+- Updated `StaffWorkspace` layout with modular navigation tabs and updated `staff.css` styles.
+
 ## [2026-08-12] Phase 2 Server-Composed Dashboard Endpoints
 
 ### Added

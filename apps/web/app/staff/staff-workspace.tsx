@@ -6,20 +6,25 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { BrandMark } from "@/components/brand-mark";
+import { MotherAccessPanel } from "@/components/mother-access-panel";
+import { MotherRegistrationPanel } from "@/components/mother-registration-panel";
+import { OrganizationAdminPanel } from "@/components/organization-admin-panel";
 
 type SessionState =
   | { readonly kind: "loading" }
   | { readonly kind: "ready"; readonly staff: StaffMeResponse }
   | { readonly kind: "unavailable" };
 
+type ModuleTab = "summary" | "admin" | "register" | "access";
+
 const roleCopy = {
   BIDAN: {
-    label: "Bidan",
-    description: "Kunjungan dan tindak lanjut dalam penugasan Anda.",
+    label: "Bidan Lapangan",
+    description: "Kunjungan, konfirmasi periksa, dan tindak lanjut dalam penugasan wilayah Anda.",
   },
   PUSKESMAS: {
-    label: "Puskesmas",
-    description: "Cakupan layanan, petugas, dan tindak lanjut satu wilayah kerja.",
+    label: "Operator Puskesmas",
+    description: "Cakupan fasilitas, desa binaan, pendaftaran ibu hamil, dan penugasan wilayah.",
   },
   SUPER_ADMIN: {
     label: "Super Admin",
@@ -31,6 +36,7 @@ export function StaffWorkspace() {
   const router = useRouter();
   const [session, setSession] = useState<SessionState>({ kind: "loading" });
   const [loggingOut, setLoggingOut] = useState(false);
+  const [activeTab, setActiveTab] = useState<ModuleTab>("summary");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -98,26 +104,45 @@ export function StaffWorkspace() {
           <BrandMark />
         </Link>
         <nav aria-label="Navigasi ruang petugas">
-          <a className="is-current" href="#ringkasan" aria-current="page">
+          <button
+            type="button"
+            className={activeTab === "summary" ? "is-current" : ""}
+            onClick={() => setActiveTab("summary")}
+          >
             <span>01</span> Ringkasan
-          </a>
-          <a href="#modul">
-            <span>02</span> Modul kerja
-          </a>
-          <a href="#sesi">
-            <span>03</span> Sesi aman
-          </a>
+          </button>
+          <button
+            type="button"
+            className={activeTab === "admin" ? "is-current" : ""}
+            onClick={() => setActiveTab("admin")}
+          >
+            <span>02</span> Administrasi
+          </button>
+          <button
+            type="button"
+            className={activeTab === "register" ? "is-current" : ""}
+            onClick={() => setActiveTab("register")}
+          >
+            <span>03</span> Register Bumil
+          </button>
+          <button
+            type="button"
+            className={activeTab === "access" ? "is-current" : ""}
+            onClick={() => setActiveTab("access")}
+          >
+            <span>04</span> Kode Akses
+          </button>
         </nav>
         <button className="staff-rail-logout" type="button" onClick={logout} disabled={loggingOut}>
           {loggingOut ? "Keluar…" : "Keluar"}
         </button>
       </aside>
 
-      <main className="staff-workspace-main" id="ringkasan">
+      <main className="staff-workspace-main">
         <header className="staff-workspace-header">
           <div>
             <span className="staff-workspace-date">Ruang kerja / akses terverifikasi</span>
-            <p>Pengingat ANC</p>
+            <p>Sistem Pengingat ANC Kuncir</p>
           </div>
           <div className="staff-identity-chip">
             <span>{staff.display_name.slice(0, 1).toUpperCase()}</span>
@@ -128,65 +153,101 @@ export function StaffWorkspace() {
           </div>
         </header>
 
-        <section className="staff-workspace-hero" aria-labelledby="workspace-title">
-          <div>
-            <p className="staff-kicker">Selamat datang kembali</p>
-            <h1 id="workspace-title">Ruang kerja terhubung.</h1>
-          </div>
-          <p>{currentRole.description}</p>
-        </section>
+        {activeTab === "summary" && (
+          <>
+            <section className="staff-workspace-hero" aria-labelledby="workspace-title">
+              <div>
+                <p className="staff-kicker">Selamat datang kembali</p>
+                <h1 id="workspace-title">Ruang Kerja Petugas ANC.</h1>
+              </div>
+              <p>{currentRole.description}</p>
+            </section>
 
-        <section className="staff-module-grid" id="modul" aria-labelledby="module-title">
-          <div className="staff-section-heading">
-            <p className="staff-kicker">Modul bertahap</p>
-            <h2 id="module-title">Fondasi akses aktif. Data domain menyusul per tahap.</h2>
-          </div>
-          <article className="staff-module-card module-primary">
-            <span className="staff-module-index">01</span>
-            <div>
-              <p className="staff-module-state">Akses siap</p>
-              <h3>Identitas &amp; scope</h3>
-              <p>Peran dan sesi Anda diverifikasi langsung oleh server.</p>
-            </div>
-          </article>
-          <article className="staff-module-card">
-            <span className="staff-module-index">02</span>
-            <div>
-              <p className="staff-module-state is-muted">Tahap berikut</p>
-              <h3>Register ibu hamil</h3>
-              <p>Akan tersedia setelah service registry dan persetujuan data selesai.</p>
-            </div>
-          </article>
-          <article className="staff-module-card">
-            <span className="staff-module-index">03</span>
-            <div>
-              <p className="staff-module-state is-muted">Tahap berikut</p>
-              <h3>Kunjungan &amp; tindak lanjut</h3>
-              <p>Status tetap dihitung server, bukan oleh halaman ini.</p>
-            </div>
-          </article>
-        </section>
+            <section className="staff-module-grid" aria-labelledby="module-title">
+              <div className="staff-section-heading">
+                <p className="staff-kicker">Modul Utama Sistem</p>
+                <h2 id="module-title">Pilih modul di bilah samping atau kartu di bawah ini.</h2>
+              </div>
+              <article
+                className="staff-module-card module-primary"
+                onClick={() => setActiveTab("admin")}
+                style={{ cursor: "pointer" }}
+              >
+                <span className="staff-module-index">01</span>
+                <div>
+                  <p className="staff-module-state">TASK-P3-001</p>
+                  <h3>Administrasi Organisasi</h3>
+                  <p>Kelola fasilitas, desa binaan, akun petugas, dan penugasan wilayah.</p>
+                </div>
+              </article>
+              <article
+                className="staff-module-card module-primary"
+                onClick={() => setActiveTab("register")}
+                style={{ cursor: "pointer" }}
+              >
+                <span className="staff-module-index">02</span>
+                <div>
+                  <p className="staff-module-state">TASK-P3-002</p>
+                  <h3>Pendaftaran Ibu Hamil &amp; Consent</h3>
+                  <p>Register pasien 5-field wajib dengan enkripsi NIK &amp; form persetujuan.</p>
+                </div>
+              </article>
+              <article
+                className="staff-module-card module-primary"
+                onClick={() => setActiveTab("access")}
+                style={{ cursor: "pointer" }}
+              >
+                <span className="staff-module-index">03</span>
+                <div>
+                  <p className="staff-module-state">TASK-P3-003</p>
+                  <h3>Penyerahan Kode Akses (Handoff)</h3>
+                  <p>
+                    Terbitkan &amp; serahkan kode akses 16 karakter secara langsung kepada pasien.
+                  </p>
+                </div>
+              </article>
+            </section>
 
-        <section className="staff-session-card" id="sesi" aria-labelledby="session-title">
-          <div>
-            <p className="staff-kicker">Sesi aman</p>
-            <h2 id="session-title">Token tidak tersedia untuk JavaScript halaman.</h2>
-          </div>
-          <dl>
-            <div>
-              <dt>Peran aktif</dt>
-              <dd>{currentRole.label}</dd>
-            </div>
-            <div>
-              <dt>Status akun</dt>
-              <dd>{staff.status === "ACTIVE" ? "Aktif" : staff.status}</dd>
-            </div>
-            <div>
-              <dt>Pembaruan sesi</dt>
-              <dd>Otomatis via server</dd>
-            </div>
-          </dl>
-        </section>
+            <section className="staff-session-card" aria-labelledby="session-title">
+              <div>
+                <p className="staff-kicker">Keamanan Sesi</p>
+                <h2 id="session-title">
+                  Token akses dikelola server secara HTTP-only (BFF Pattern).
+                </h2>
+              </div>
+              <dl>
+                <div>
+                  <dt>Peran Aktif</dt>
+                  <dd>{currentRole.label}</dd>
+                </div>
+                <div>
+                  <dt>ID Petugas</dt>
+                  <dd>
+                    <code>{staff.id}</code>
+                  </dd>
+                </div>
+                <div>
+                  <dt>Fasilitas Utama</dt>
+                  <dd>{staff.health_center_id ?? "Seluruh Wilayah (Puskesmas)"}</dd>
+                </div>
+                <div>
+                  <dt>Status Akun</dt>
+                  <dd>{staff.status === "ACTIVE" ? "Aktif Terverifikasi" : staff.status}</dd>
+                </div>
+              </dl>
+            </section>
+          </>
+        )}
+
+        {activeTab === "admin" && (
+          <OrganizationAdminPanel userRole={staff.role} healthCenterId={staff.health_center_id} />
+        )}
+
+        {activeTab === "register" && (
+          <MotherRegistrationPanel userRole={staff.role} healthCenterId={staff.health_center_id} />
+        )}
+
+        {activeTab === "access" && <MotherAccessPanel userRole={staff.role} />}
       </main>
     </div>
   );
