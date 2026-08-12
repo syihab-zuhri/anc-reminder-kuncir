@@ -46,9 +46,6 @@ exports.up = (pgm) => {
     CREATE UNIQUE INDEX program_rule_requirements_version_unique_idx
       ON program_rule_requirements (program_rule_version_id, requirement_type, milestone_code);
 
-    CREATE INDEX program_assessments_history_idx
-      ON program_assessments (pregnancy_id, evaluated_at DESC, id DESC);
-
     CREATE FUNCTION program_rule_has_requirements(version_id uuid)
     RETURNS boolean
     LANGUAGE sql
@@ -182,7 +179,6 @@ exports.down = (pgm) => {
     DROP FUNCTION IF EXISTS program_enforce_rule_requirements_on_governed_status();
     DROP FUNCTION IF EXISTS program_rule_has_requirements(uuid);
 
-    DROP INDEX IF EXISTS program_assessments_history_idx;
     DROP INDEX IF EXISTS program_rule_requirements_version_unique_idx;
 
     ALTER TABLE program_rule_requirements
