@@ -8,6 +8,16 @@
 > **Last Updated:** 2026-08-12  
 > **Depends On:** All project documents
 
+## [2026-08-12] Phase 3 Complete Operational & Patient Experience
+
+### Added
+
+- `TASK-P3-005` & `TASK-P3-006` Operational Dashboard Shell (`RoleDashboardShell`): Puskesmas summary/priority action queue, Bidan assigned-area summary/confirmation queue, and scoped operational mother search.
+- `TASK-P3-007` Super Admin deny-by-default notice for routine operational health queries in accordance with isolated security policy.
+- `TASK-P3-008` Puskesmas K1–K6 Detail Management UI (`PuskesmasClinicalRecordPanel`): versioned clinical record detail editing, validation (`VALIDATED`), and reopening (`INCOMPLETE`) with explicit role boundary checks denying Bidan access.
+- `TASK-P3-009` Bidan Konfirmasi Sudah Periksa UI (`BidanVisitConfirmationPanel`): simple one-action visit confirmation for K2/K3/K6/K7 without clinical form fields.
+- `TASK-P3-010` & `TASK-P3-011` Bumil Patient Portal (`BumilPatientPortal`): responsive K1–K8 timeline, next milestone recommendation, and server-calculated gestational age/trimester display strictly enforcing the thin-client architecture.
+
 ## [2026-08-12] Phase 3 Frontend Administration & Patient Access UIs
 
 ### Added

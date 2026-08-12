@@ -5,17 +5,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { BidanVisitConfirmationPanel } from "@/components/bidan-visit-confirmation-panel";
 import { BrandMark } from "@/components/brand-mark";
+import { BumilPatientPortal } from "@/components/bumil-patient-portal";
 import { MotherAccessPanel } from "@/components/mother-access-panel";
 import { MotherRegistrationPanel } from "@/components/mother-registration-panel";
 import { OrganizationAdminPanel } from "@/components/organization-admin-panel";
+import { PuskesmasClinicalRecordPanel } from "@/components/puskesmas-clinical-record-panel";
+import { RoleDashboardShell } from "@/components/role-dashboard-shell";
 
 type SessionState =
   | { readonly kind: "loading" }
   | { readonly kind: "ready"; readonly staff: StaffMeResponse }
   | { readonly kind: "unavailable" };
 
-type ModuleTab = "summary" | "admin" | "register" | "access";
+type ModuleTab = "summary" | "admin" | "register" | "access" | "clinical" | "confirm" | "bumil";
 
 const roleCopy = {
   BIDAN: {
@@ -109,7 +113,7 @@ export function StaffWorkspace() {
             className={activeTab === "summary" ? "is-current" : ""}
             onClick={() => setActiveTab("summary")}
           >
-            <span>01</span> Ringkasan
+            <span>01</span> Dashboard
           </button>
           <button
             type="button"
@@ -131,6 +135,27 @@ export function StaffWorkspace() {
             onClick={() => setActiveTab("access")}
           >
             <span>04</span> Kode Akses
+          </button>
+          <button
+            type="button"
+            className={activeTab === "clinical" ? "is-current" : ""}
+            onClick={() => setActiveTab("clinical")}
+          >
+            <span>05</span> Detail K1–K6
+          </button>
+          <button
+            type="button"
+            className={activeTab === "confirm" ? "is-current" : ""}
+            onClick={() => setActiveTab("confirm")}
+          >
+            <span>06</span> Konfirmasi Periksa
+          </button>
+          <button
+            type="button"
+            className={activeTab === "bumil" ? "is-current" : ""}
+            onClick={() => setActiveTab("bumil")}
+          >
+            <span>07</span> Portal Bumil
           </button>
         </nav>
         <button className="staff-rail-logout" type="button" onClick={logout} disabled={loggingOut}>
@@ -155,58 +180,7 @@ export function StaffWorkspace() {
 
         {activeTab === "summary" && (
           <>
-            <section className="staff-workspace-hero" aria-labelledby="workspace-title">
-              <div>
-                <p className="staff-kicker">Selamat datang kembali</p>
-                <h1 id="workspace-title">Ruang Kerja Petugas ANC.</h1>
-              </div>
-              <p>{currentRole.description}</p>
-            </section>
-
-            <section className="staff-module-grid" aria-labelledby="module-title">
-              <div className="staff-section-heading">
-                <p className="staff-kicker">Modul Utama Sistem</p>
-                <h2 id="module-title">Pilih modul di bilah samping atau kartu di bawah ini.</h2>
-              </div>
-              <article
-                className="staff-module-card module-primary"
-                onClick={() => setActiveTab("admin")}
-                style={{ cursor: "pointer" }}
-              >
-                <span className="staff-module-index">01</span>
-                <div>
-                  <p className="staff-module-state">TASK-P3-001</p>
-                  <h3>Administrasi Organisasi</h3>
-                  <p>Kelola fasilitas, desa binaan, akun petugas, dan penugasan wilayah.</p>
-                </div>
-              </article>
-              <article
-                className="staff-module-card module-primary"
-                onClick={() => setActiveTab("register")}
-                style={{ cursor: "pointer" }}
-              >
-                <span className="staff-module-index">02</span>
-                <div>
-                  <p className="staff-module-state">TASK-P3-002</p>
-                  <h3>Pendaftaran Ibu Hamil &amp; Consent</h3>
-                  <p>Register pasien 5-field wajib dengan enkripsi NIK &amp; form persetujuan.</p>
-                </div>
-              </article>
-              <article
-                className="staff-module-card module-primary"
-                onClick={() => setActiveTab("access")}
-                style={{ cursor: "pointer" }}
-              >
-                <span className="staff-module-index">03</span>
-                <div>
-                  <p className="staff-module-state">TASK-P3-003</p>
-                  <h3>Penyerahan Kode Akses (Handoff)</h3>
-                  <p>
-                    Terbitkan &amp; serahkan kode akses 16 karakter secara langsung kepada pasien.
-                  </p>
-                </div>
-              </article>
-            </section>
+            <RoleDashboardShell userRole={staff.role} healthCenterId={staff.health_center_id} />
 
             <section className="staff-session-card" aria-labelledby="session-title">
               <div>
@@ -248,6 +222,12 @@ export function StaffWorkspace() {
         )}
 
         {activeTab === "access" && <MotherAccessPanel userRole={staff.role} />}
+
+        {activeTab === "clinical" && <PuskesmasClinicalRecordPanel userRole={staff.role} />}
+
+        {activeTab === "confirm" && <BidanVisitConfirmationPanel userRole={staff.role} />}
+
+        {activeTab === "bumil" && <BumilPatientPortal />}
       </main>
     </div>
   );
