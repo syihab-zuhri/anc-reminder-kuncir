@@ -4,6 +4,7 @@ import type {
   BidanDashboardResponse,
   MotherSummary,
   PuskesmasDashboardResponse,
+  WaFallbackItem,
 } from "@anc/contracts";
 import { useEffect, useState } from "react";
 
@@ -23,8 +24,16 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
   const [searchResults, setSearchResults] = useState<MotherSummary[]>([]);
   const [searching, setSearching] = useState(false);
 
+  // TASK-P4-013: WhatsApp Fallback Actions Queue
+  const [waQueue, setWaQueue] = useState<WaFallbackItem[]>([]);
+  const [waLoading, setWaLoading] = useState(false);
+  const [waActionMessage, setWaActionMessage] = useState<string | null>(null);
+
   useEffect(() => {
     void fetchDashboardData();
+    if (userRole !== "SUPER_ADMIN") {
+      void fetchWaQueue();
+    }
 
     async function fetchDashboardData(): Promise<void> {
       setLoading(true);
@@ -56,35 +65,89 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
     }
   }, [userRole]);
 
+  async function fetchWaQueue(): Promise<void> {
+    setWaLoading(true);
+    try {
+      const res = await fetch("/api/staff-proxy/wa-fallback/queue");
+      if (res.ok) {
+        const data = (await res.json()) as { items: WaFallbackItem[] };
+        setWaQueue(data.items);
+      }
+    } catch {
+      // Best-effort load for fallback queue
+    } finally {
+      setWaLoading(false);
+    }
+  }
+
   async function handleSearchMothers(e: React.FormEvent): Promise<void> {
     e.preventDefault();
     if (!searchQuery.trim()) return;
-    setSearching(true);
 
+    setSearching(true);
     try {
-      const res = await fetch(
-        `/api/staff-proxy/mothers?search=${encodeURIComponent(searchQuery.trim())}`,
-      );
+      const res = await fetch(`/api/staff-proxy/mothers?search=${encodeURIComponent(searchQuery)}`);
       if (res.ok) {
         const data = (await res.json()) as { items: MotherSummary[] };
-        setSearchResults(data.items ?? []);
+        setSearchResults(data.items);
       }
     } catch {
-      // Best effort operational search
+      // Handle search network failure gracefully
     } finally {
       setSearching(false);
     }
   }
 
+  async function handleGenerateWaLink(id: string): Promise<void> {
+    setWaActionMessage(null);
+    try {
+      const res = await fetch(`/api/staff-proxy/wa-fallback/${id}/generate-link`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        setWaActionMessage("Gagal membuat link wa.me server-side.");
+        return;
+      }
+      const data = (await res.json()) as { wa_me_url: string; disclaimer: string };
+      window.open(data.wa_me_url, "_blank");
+      setWaActionMessage(`[READY → LINK_GENERATED] ${data.disclaimer}`);
+      void fetchWaQueue();
+    } catch {
+      setWaActionMessage("Gagal menghubungkan ke server.");
+    }
+  }
+
+  async function handleResolveWaFallback(id: string): Promise<void> {
+    setWaActionMessage(null);
+    try {
+      const res = await fetch(`/api/staff-proxy/wa-fallback/${id}/resolve`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ manual_note: "Tindak lanjut dikirim manual via HP Bidan." }),
+      });
+      if (!res.ok) {
+        setWaActionMessage("Gagal menyelesaikan status pengingat WhatsApp.");
+        return;
+      }
+      setWaActionMessage("Tindak lanjut WhatsApp berhasil diselesaikan.");
+      void fetchWaQueue();
+    } catch {
+      setWaActionMessage("Gagal menghubungkan ke server.");
+    }
+  }
+
   if (userRole === "SUPER_ADMIN") {
     return (
-      <div className="staff-panel-card staff-panel-restricted">
-        <span className="staff-panel-badge badge-warning">Deny by Default</span>
-        <h3>Dashboard Operasional Tidak Tersedia untuk Super Admin</h3>
-        <p>
-          Super Admin tidak memiliki akses ke data operasional kesehatan pasien rutin sesuai
-          kebijakan keamanan terisolasi.
-        </p>
+      <div className="staff-panel-card">
+        <div className="staff-alert alert-warning">
+          <p>
+            <strong>Pemberitahuan Akses Terisolasi Super Admin (TASK-P3-007):</strong>
+            <br />
+            Sesuai kebijakan keamanan dan privasi data (PRD-SECURITY, ADR-004), akun Super Admin
+            diberi hak akses <em>deny-by-default</em> dan dilarang melihat data kesehatan
+            operasional rutin ibu hamil.
+          </p>
+        </div>
       </div>
     );
   }
@@ -92,8 +155,7 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
   if (loading) {
     return (
       <div className="staff-panel-card">
-        <p className="staff-kicker">Memuat Dashboard Operasional…</p>
-        <div className="loading-spinner" />
+        <p>Memuat data dashboard operasional...</p>
       </div>
     );
   }
@@ -213,54 +275,45 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
         <div className="dashboard-content-grid">
           <div className="metrics-row">
             <div className="metric-card">
-              <span className="metric-label">Bumil Dalam Penugasan</span>
+              <span className="metric-label">Bumil Terdaftar di Desa Anda</span>
               <strong className="metric-value">{bidanData.summary.assigned_mothers_count}</strong>
             </div>
             <div className="metric-card">
-              <span className="metric-label">Jadwal Due</span>
+              <span className="metric-label">Jadwal Due Periode Ini</span>
               <strong className="metric-value text-due">
                 {bidanData.summary.milestones_due_count}
               </strong>
             </div>
             <div className="metric-card">
-              <span className="metric-label">Jadwal Overdue</span>
+              <span className="metric-label">Milestone Overdue</span>
               <strong className="metric-value text-overdue">
                 {bidanData.summary.milestones_overdue_count}
               </strong>
             </div>
             <div className="metric-card">
-              <span className="metric-label">Total Tindakan</span>
-              <strong className="metric-value">{bidanData.summary.action_required_count}</strong>
+              <span className="metric-label">Perlu Tindakan Bidan</span>
+              <strong className="metric-value text-pending">
+                {bidanData.summary.action_required_count}
+              </strong>
             </div>
           </div>
 
-          <div className="village-chips">
-            <h4>Desa Binaan Aktif:</h4>
-            {bidanData.assigned_villages.length === 0 ? (
-              <span className="chip">Belum ada penugasan desa</span>
-            ) : (
-              bidanData.assigned_villages.map((v) => (
-                <span key={v.village_id} className="chip chip-active">
-                  {v.village_name}
-                </span>
-              ))
-            )}
-          </div>
-
           <div className="queue-section">
-            <h3>Antrean Konfirmasi Pemeriksaan (Confirmation Queue)</h3>
+            <h3>Antrean Konfirmasi Pemeriksaan Bidan (K2 / K3 / K6 / K7)</h3>
             {bidanData.confirmation_queue.length === 0 ? (
-              <p className="empty-notice">Tidak ada antrean konfirmasi pemeriksaan saat ini.</p>
+              <p className="empty-notice">
+                Tidak ada antrean konfirmasi pemeriksaan Bidan saat ini.
+              </p>
             ) : (
               <div className="table-responsive">
                 <table className="staff-table">
                   <thead>
                     <tr>
                       <th>Nama Pasien</th>
-                      <th>No. Telepon</th>
+                      <th>Telepon</th>
                       <th>Desa</th>
                       <th>Milestone</th>
-                      <th>Status Visit</th>
+                      <th>Status</th>
                       <th>Jatuh Tempo</th>
                     </tr>
                   </thead>
@@ -270,9 +323,7 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
                         <td>
                           <strong>{item.mother_full_name}</strong>
                         </td>
-                        <td>
-                          <code>{item.mother_phone_masked}</code>
-                        </td>
+                        <td>{item.mother_phone_masked}</td>
                         <td>{item.village_name ?? "-"}</td>
                         <td>
                           <span className="badge-code">{item.milestone_code}</span>
@@ -295,46 +346,75 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
         </div>
       )}
 
-      {/* Operational Search Section */}
-      <section className="operational-search-section">
-        <h3>Pencarian Pasien Ibu Hamil (Pencarian Operasional Terlingkup)</h3>
-        <form className="search-form" onSubmit={handleSearchMothers}>
-          <input
-            type="text"
-            placeholder="Cari nama ibu hamil..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <button className="btn-primary" type="submit" disabled={searching}>
-            {searching ? "Mencari…" : "Cari Pasien"}
+      {/* TASK-P4-013: WhatsApp Fallback Actions Queue */}
+      <div className="queue-section" style={{ marginTop: "2rem" }}>
+        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h3>Antrean Tindak Lanjut WhatsApp (TASK-P4-013)</h3>
+          <button className="btn-secondary" type="button" onClick={() => void fetchWaQueue()}>
+            {waLoading ? "Memuat..." : "Refresh Queue"}
           </button>
-        </form>
+        </header>
 
-        {searchResults.length > 0 && (
-          <div className="table-responsive search-results-table">
+        <p className="field-hint" style={{ marginBottom: "1rem" }}>
+          Link <code>wa.me</code> ini adalah aksi manual Bidan/Puskesmas. Sistem{" "}
+          <strong>tidak pernah</strong> mengklaim pengiriman otomatis (<code>SENT</code>/
+          <code>DELIVERED</code>).
+        </p>
+
+        {waActionMessage && (
+          <div className="staff-alert alert-info" style={{ marginBottom: "1rem" }}>
+            <p>{waActionMessage}</p>
+          </div>
+        )}
+
+        {waQueue.length === 0 ? (
+          <p className="empty-notice">Tidak ada antrean tindak lanjut WhatsApp aktif saat ini.</p>
+        ) : (
+          <div className="table-responsive">
             <table className="staff-table">
               <thead>
                 <tr>
-                  <th>Nama Lengkap</th>
+                  <th>Nama Ibu Hamil</th>
                   <th>Nomor Telepon</th>
-                  <th>Desa</th>
-                  <th>Status Kehamilan</th>
+                  <th>Milestone</th>
+                  <th>Jatuh Tempo</th>
+                  <th>Status</th>
+                  <th>Aksi Manual</th>
                 </tr>
               </thead>
               <tbody>
-                {searchResults.map((mother) => (
-                  <tr key={mother.id}>
+                {waQueue.map((item) => (
+                  <tr key={item.id}>
                     <td>
-                      <strong>{mother.full_name}</strong>
+                      <strong>{item.mother_full_name}</strong>
                     </td>
+                    <td>{item.phone_number_masked}</td>
                     <td>
-                      <code>{mother.phone_masked}</code>
+                      <span className="badge-code">{item.milestone_code}</span>
                     </td>
-                    <td>{mother.village_name ?? "-"}</td>
+                    <td>{item.due_at ?? "-"}</td>
                     <td>
-                      <span className="badge-status status-active">
-                        {mother.active_pregnancy?.status ?? "AKTIF"}
+                      <span className={`badge-status status-${item.status.toLowerCase()}`}>
+                        {item.status}
                       </span>
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <button
+                          className="btn-primary"
+                          type="button"
+                          onClick={() => void handleGenerateWaLink(item.id)}
+                        >
+                          Buka WhatsApp
+                        </button>
+                        <button
+                          className="btn-secondary"
+                          type="button"
+                          onClick={() => void handleResolveWaFallback(item.id)}
+                        >
+                          Selesai
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -342,7 +422,65 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
             </table>
           </div>
         )}
-      </section>
+      </div>
+
+      {/* Scoped Operational Search */}
+      <div className="search-section" style={{ marginTop: "2rem" }}>
+        <h3>Cari Ibu Hamil Terdaftar</h3>
+        <form onSubmit={(e) => void handleSearchMothers(e)} className="search-form">
+          <input
+            className="staff-input"
+            type="text"
+            placeholder="Ketik nama atau telepon..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <button className="btn-primary" type="submit" disabled={searching}>
+            {searching ? "Mencari..." : "Cari Pasien"}
+          </button>
+        </form>
+
+        {searchResults.length > 0 && (
+          <div className="table-responsive" style={{ marginTop: "1rem" }}>
+            <table className="staff-table">
+              <thead>
+                <tr>
+                  <th>Nama Lengkap</th>
+                  <th>Telepon Tereduksi</th>
+                  <th>Desa</th>
+                  <th>Kehamilan Aktif</th>
+                  <th>Usia Kehamilan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {searchResults.map((m) => (
+                  <tr key={m.id}>
+                    <td>
+                      <strong>{m.full_name}</strong>
+                    </td>
+                    <td>{m.phone_masked}</td>
+                    <td>{m.village_name ?? "-"}</td>
+                    <td>
+                      <span
+                        className={`badge-status status-${
+                          m.active_pregnancy?.status.toLowerCase() ?? "none"
+                        }`}
+                      >
+                        {m.active_pregnancy?.status ?? "TIDAK ADA"}
+                      </span>
+                    </td>
+                    <td>
+                      {m.active_pregnancy
+                        ? `${m.active_pregnancy.completed_weeks} mgg ${m.active_pregnancy.completed_days} hari (${m.active_pregnancy.trimester_label})`
+                        : "-"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

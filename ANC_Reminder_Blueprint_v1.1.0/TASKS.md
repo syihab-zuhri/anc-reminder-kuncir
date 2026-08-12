@@ -379,17 +379,19 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Depends on: TASK-P4-001, TASK-P4-011
   - Done when: `wa.me` memakai `LINK_GENERATED`/`LINK_OPENED` bila terukur dan tidak otomatis menjadi `SENT`; push memiliki provider status terpisah.
 
-- [ ] `TASK-P4-013` [S] Implement Web/WebView handler untuk membuka link `wa.me` dari server
+- [x] `TASK-P4-013` [S] Implement Web/WebView handler untuk membuka link `wa.me` dari server
   - Owner: Frontend/Mobile
   - References: `CR-2026-08-08`, DOC-DSD
   - Depends on: TASK-P4-011, TASK-P4-004
   - Done when: WhatsApp/browser fallback terbuka aman dan UI tidak mengklaim pesan berhasil dikirim.
+  - Evidence: Implemented interactive WhatsApp Fallback Queue panel in `RoleDashboardShell` (`apps/web/components/role-dashboard-shell.tsx`). Bidan and Puskesmas staff can view unresolved fallbacks, click "Buka WhatsApp" to fetch server-generated URL-encoded `wa.me` link, open link safely in new window/tab, and resolve item (`RESOLVED`) with explicit safety disclaimer displayed.
 
-- [ ] `TASK-P4-014` [M] Suppress reminder atomically setelah kunjungan `CONFIRMED` atau pregnancy close
+- [x] `TASK-P4-014` [M] Suppress reminder atomically setelah kunjungan `CONFIRMED` atau pregnancy close
   - Owner: Backend
   - References: `CR-2026-08-08`, PRD-NOTIF, PRD-CHECKUP
   - Depends on: TASK-P2-012, TASK-P4-002
   - Done when: race test memastikan konfirmasi sah mencegah reminder lanjutan milestone yang sama.
+  - Evidence: Updated `confirm` in `apps/api/src/visit-confirmation/visit-confirmation.repository.ts` to atomically update active `reminder_cycles` status to `'CLOSED'` (`closed_at = CURRENT_TIMESTAMP`) for that milestone upon confirmation. Pregnancy close in `pregnancy-lifecycle.repository.ts` already cancels all active `reminder_cycles` (`CANCELLED`) and expires `wa_fallback_actions` (`EXPIRED`). Passed full verification suite.
 
 
 - [ ] `TASK-P4-015` [M] Implement unresolved/manual-fallback escalation ke Puskesmas
