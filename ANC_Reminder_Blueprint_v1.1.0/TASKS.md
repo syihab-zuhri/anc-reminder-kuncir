@@ -450,17 +450,19 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Depends on: TASK-P4-014
   - Done when: target accepted terpenuhi atau direvisi dengan evidence dan owner.
 
-- [ ] `TASK-P6-005` [M] Inspect logs/error tracking/analytics untuk sensitive data leakage
+- [x] `TASK-P6-005` [M] Inspect logs/error tracking/analytics untuk sensitive data leakage
   - Owner: Security + DevOps
   - References: NFR-014, DOC-SECURITY
   - Depends on: TASK-P0-006, TASK-P4-012
   - Done when: credential dan detail sensitif tidak muncul pada log yang tidak seharusnya.
+  - Evidence: Implemented recursive redaction in `JsonLogger` & `redactSensitiveData` ([`apps/api/src/observability/redaction.ts`](file:///D:/posyandu%20kuncir/apps/api/src/observability/redaction.ts)). Verified in `apps/api/test/redaction.test.ts` that NIK, tokens, passwords, database URLs, and clinical details are automatically sanitized.
 
-- [ ] `TASK-P6-006` [M] Add server-source-of-truth tests untuk Web dan WebView
+- [x] `TASK-P6-006` [M] Add server-source-of-truth tests untuk Web dan WebView
   - Owner: QA + Frontend + Backend
   - References: `CR-2026-08-08`, ADR server-driven
   - Depends on: TASK-P3-011, TASK-P2-015
   - Done when: manipulasi client tidak dapat mengubah K/trimester/facility/program status tanpa server validation.
+  - Evidence: Added integration test suite [`apps/api/test/server-source-of-truth.integration.test.ts`](file:///D:/posyandu%20kuncir/apps/api/test/server-source-of-truth.integration.test.ts) verifying client attempts to inject gestational age, trimester, or eligibility properties are rejected with 400 Bad Request, and visit status cannot be forged without server-validated milestone targets.
 
 - [x] `TASK-P6-007` [S] Add `wa.me` contract tests
   - Owner: QA + Backend

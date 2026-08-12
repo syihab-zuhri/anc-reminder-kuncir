@@ -21,6 +21,8 @@
 - `TASK-P5-005` Versioned Care Plan Configuration UI (`apps/web`): added sub-tab in `OrganizationAdminPanel` displaying active ANC care plan version, approval status, clinical owner grant info, target weeks, allowed facility types, and validation policies per milestone.
 - `TASK-P5-003` Facility Override Approval (`apps/api`): added `hasClinicalOwnerOverride` support in `isFacilityTypeAllowed` allowing facility policy overrides when approved by Clinical Owner.
 - `TASK-P6-007` `wa.me` Contract Test Suite (`apps/api`): added integration contract tests verifying URL encoding, sensitive detail exclusion, non-existent target 404s, and strict denial of false delivery status claims.
+- `TASK-P6-005` Sensitive Data Leakage Inspection (`apps/api`): verified recursive redaction of NIK, tokens, passwords, database URLs, and clinical details in `JsonLogger` & `redactSensitiveData`.
+- `TASK-P6-006` Server-Source-of-Truth Test Suite (`apps/api`): added integration test suite `apps/api/test/server-source-of-truth.integration.test.ts` verifying client attempts to force gestational age/trimester/eligibility are rejected with 400 Bad Request.
 
 ## [2026-08-12] Phase 3 Complete Operational & Patient Experience
 
