@@ -21,10 +21,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:ci": "vitest run",
-    "migrate:create": "node-pg-migrate --migrations-dir migrations --migrations-table anc_migrations --migration-file-language cjs --migration-filename-format index create",
-    "migrate:up": "node-pg-migrate --migrations-dir migrations --migrations-table anc_migrations --single-transaction up",
-    "migrate:down": "node-pg-migrate --migrations-dir migrations --migrations-table anc_migrations --single-transaction down",
-    "migrate:redo": "node-pg-migrate --migrations-dir migrations --migrations-table anc_migrations --single-transaction redo"
+    "migrate:create": "node --env-file-if-exists=../../.env ../../node_modules/node-pg-migrate/bin/node-pg-migrate --migrations-dir migrations --migrations-table anc_migrations --migration-file-language cjs --migration-filename-format index create",
+    "migrate:up": "node --env-file-if-exists=../../.env ../../node_modules/node-pg-migrate/bin/node-pg-migrate --migrations-dir migrations --migrations-table anc_migrations --single-transaction up",
+    "migrate:down": "node --env-file-if-exists=../../.env ../../node_modules/node-pg-migrate/bin/node-pg-migrate --migrations-dir migrations --migrations-table anc_migrations --single-transaction down",
+    "migrate:redo": "node --env-file-if-exists=../../.env ../../node_modules/node-pg-migrate/bin/node-pg-migrate --migrations-dir migrations --migrations-table anc_migrations --single-transaction redo"
   },
   "engines": {
     "node": ">=22"

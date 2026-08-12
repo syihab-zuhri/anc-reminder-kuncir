@@ -24,6 +24,7 @@ import type { VisitConfirmationRepository } from "./visit-confirmation/visit-con
 import type { ClinicalRecordRepository } from "./clinical-record/clinical-record.repository.js";
 import type { OperationalQueriesRepository } from "./operational-queries/operational-queries.repository.js";
 import type { DashboardRepository } from "./dashboard/dashboard.repository.js";
+import type { WaFallbackRepository } from "./wa-fallback/wa-fallback.repository.js";
 import { CanonicalErrorFilter } from "./errors/canonical-error.filter.js";
 import { HttpLoggingInterceptor } from "./observability/http-logging.interceptor.js";
 import { JsonLogger } from "./observability/json-logger.js";
@@ -52,6 +53,7 @@ export interface CreateApiApplicationOptions {
   readonly clinicalRecordRepository?: ClinicalRecordRepository;
   readonly operationalQueriesRepository?: OperationalQueriesRepository;
   readonly dashboardRepository?: DashboardRepository;
+  readonly waFallbackRepository?: WaFallbackRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -114,6 +116,9 @@ export async function createApiApplication(
       ...(options.dashboardRepository === undefined
         ? {}
         : { dashboardRepository: options.dashboardRepository }),
+      ...(options.waFallbackRepository === undefined
+        ? {}
+        : { waFallbackRepository: options.waFallbackRepository }),
       ...(options.auditRepository === undefined
         ? {}
         : { auditRepository: options.auditRepository }),

@@ -27,6 +27,7 @@ apps/android/android/**/build/
 # Editors and operating systems
 .idea/
 .vscode/
+.codex/config.toml
 .DS_Store
 Thumbs.db
 
@@ -34,3 +35,7 @@ Thumbs.db
 playwright-report/
 test-results/
 .tmp/
+
+human.md
+run.md
+sesion-agent.md

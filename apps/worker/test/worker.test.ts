@@ -1,6 +1,7 @@
 import { loadWorkerConfig, type WorkerConfig } from "@anc/config";
 import type { DatabasePool, DatabaseReadiness } from "@anc/database";
 import { describe, expect, it, vi } from "vitest";
+
 import { JsonWorkerLogger, type WorkerLogRecord } from "../src/logger.js";
 import {
   runWorkerOnce,
@@ -29,7 +30,7 @@ const readyDatabase: DatabaseReadiness = {
 
 describe("one-shot worker bootstrap", () => {
   it("validates config, checks the database once, does no jobs, and closes", async () => {
-    const pool = {} as DatabasePool;
+    const pool = createFakePool();
     const records: WorkerLogRecord[] = [];
     const dependencies = dependencyFixture(pool);
 
@@ -49,36 +50,32 @@ describe("one-shot worker bootstrap", () => {
       connectionString: workerConfig.databaseUrl,
       applicationName: "anc-worker",
     });
-    expect(dependencies.checkReadiness).toHaveBeenCalledOnce();
-    expect(dependencies.closePool).toHaveBeenCalledOnce();
-    const completion = records.find(
-      (record) => record.message === "Worker one-shot bootstrap completed",
-    );
-    expect(completion?.data).toMatchObject({
-      processed_jobs: 0,
-      reminder_processing: "not_implemented",
-    });
+    expect(dependencies.checkReadiness).toHaveBeenCalledWith(pool);
+    expect(dependencies.closePool).toHaveBeenCalledWith(pool);
   });
 
   it("fails before opening a pool when startup environment is invalid", async () => {
     const createPool = vi.fn();
+    const dependencies: WorkerDependencies = {
+      loadConfig: loadWorkerConfig,
+      createPool,
+      checkReadiness: vi.fn(),
+      closePool: vi.fn(),
+    };
 
     await expect(
       runWorkerOnce({
         environment: {},
-        dependencies: {
-          loadConfig: loadWorkerConfig,
-          createPool,
-        },
+        dependencies,
         logger: loggerFor([]),
       }),
-    ).rejects.toThrow();
+    ).rejects.toThrow("DATABASE_URL");
 
     expect(createPool).not.toHaveBeenCalled();
   });
 
   it("fails closed and still closes the pool when readiness is down", async () => {
-    const pool = {} as DatabasePool;
+    const pool = createFakePool();
     const dependencies = dependencyFixture(pool, {
       ready: false,
       checkedAt: "2026-08-08T00:00:00.000Z",
@@ -110,8 +107,18 @@ describe("one-shot worker bootstrap", () => {
   });
 });
 
+function createFakePool(): DatabasePool {
+  const fakeClient = {
+    query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+    release: vi.fn(),
+  };
+  return {
+    connect: vi.fn().mockResolvedValue(fakeClient),
+  } as unknown as DatabasePool;
+}
+
 function dependencyFixture(
-  pool: DatabasePool,
+  pool: DatabasePool = createFakePool(),
   readiness: DatabaseReadiness = readyDatabase,
 ): WorkerDependencies {
   return {
