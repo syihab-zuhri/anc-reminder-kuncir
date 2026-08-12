@@ -3,6 +3,7 @@
 import type {
   BidanDashboardResponse,
   MotherSummary,
+  OrganizationReportResponse,
   PuskesmasDashboardResponse,
   WaFallbackItem,
 } from "@anc/contracts";
@@ -29,10 +30,17 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
   const [waLoading, setWaLoading] = useState(false);
   const [waActionMessage, setWaActionMessage] = useState<string | null>(null);
 
+  // TASK-P5-004: Organization Summary Reports
+  const [reportData, setReportData] = useState<OrganizationReportResponse | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+
   useEffect(() => {
     void fetchDashboardData();
     if (userRole !== "SUPER_ADMIN") {
       void fetchWaQueue();
+    }
+    if (userRole === "PUSKESMAS") {
+      void fetchReportSummary();
     }
 
     async function fetchDashboardData(): Promise<void> {
@@ -77,6 +85,21 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
       // Best-effort load for fallback queue
     } finally {
       setWaLoading(false);
+    }
+  }
+
+  async function fetchReportSummary(): Promise<void> {
+    setReportLoading(true);
+    try {
+      const res = await fetch("/api/staff-proxy/reports/summary");
+      if (res.ok) {
+        const data = (await res.json()) as OrganizationReportResponse;
+        setReportData(data);
+      }
+    } catch {
+      // Best-effort load for reports summary
+    } finally {
+      setReportLoading(false);
     }
   }
 
@@ -343,6 +366,59 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* TASK-P5-004: Organization Summary Reports per Village */}
+      {userRole === "PUSKESMAS" && (
+        <div className="queue-section" style={{ marginTop: "2rem" }}>
+          <header
+            style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+          >
+            <h3>Laporan Ringkasan Aggregat Wilayah Per Desa (TASK-P5-004)</h3>
+            <button
+              className="btn-secondary"
+              type="button"
+              onClick={() => void fetchReportSummary()}
+            >
+              {reportLoading ? "Memuat..." : "Refresh Laporan"}
+            </button>
+          </header>
+
+          {reportData === null ? (
+            <p className="empty-notice">Memuat data laporan agregat wilayah...</p>
+          ) : reportData.village_breakdown.length === 0 ? (
+            <p className="empty-notice">Belum ada data desa terdaftar di wilayah kerja ini.</p>
+          ) : (
+            <div className="table-responsive" style={{ marginTop: "1rem" }}>
+              <table className="staff-table">
+                <thead>
+                  <tr>
+                    <th>Desa / Kelurahan</th>
+                    <th>Total Ibu Hamil</th>
+                    <th>Kehamilan Aktif</th>
+                    <th>Pemeriksaan Dikonfirmasi (K1-K8)</th>
+                    <th>Rekam Klinis Tervalidasi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportData.village_breakdown.map((row, idx) => (
+                    <tr key={row.village_id ?? `v-${idx}`}>
+                      <td>
+                        <strong>{row.village_name ?? "Luar Wilayah"}</strong>
+                      </td>
+                      <td>{row.total_mothers} orang</td>
+                      <td>{row.active_pregnancies} bumil</td>
+                      <td>{row.confirmed_visits} visit</td>
+                      <td>
+                        <span className="badge-code">{row.validated_records} rekam</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

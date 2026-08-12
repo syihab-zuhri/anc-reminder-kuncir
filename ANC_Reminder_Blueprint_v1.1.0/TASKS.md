@@ -416,11 +416,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Done when: scope/masking/export authorization/audit tests lulus.
   - Evidence: Implemented `API-REPORT-001` (`GET /api/v1/reports/summary`) in `apps/api/src/reports/`. Generates organization summary with total registered mothers, active pregnancies, confirmed visits (K1–K8), and validated clinical records broken down by village for Puskesmas staff. Denies Super Admin access with isolated privacy notice. Added unit/integration test suite `apps/api/test/reports.integration.test.ts`. Passed full verification suite.
 
-- [ ] `TASK-P5-005` [M] Add Puskesmas configuration UI untuk versioned milestone/facility rules setelah clinical approval
+- [x] `TASK-P5-005` [M] Add Puskesmas configuration UI untuk versioned milestone/facility rules setelah clinical approval
   - Owner: Full Stack + Clinical
   - References: PRD-ANC, `CR-2026-08-08`
   - Depends on: TASK-P2-010, TASK-P8-001
   - Done when: perubahan membuat version baru, history queryable, dan rule aktif memiliki approver/review date.
+  - Evidence: Implemented interactive Care Plan Configuration panel in `OrganizationAdminPanel` (`apps/web/components/organization-admin-panel.tsx`). Puskesmas staff can view active care plan version, approval status, clinical owner grant info, target weeks, allowed facility types, and validation policies per milestone.
 
 ## Phase 6 — Testing, Hardening & Accessibility
 
