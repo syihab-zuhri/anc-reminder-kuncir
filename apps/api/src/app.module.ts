@@ -28,6 +28,7 @@ import {
   MILESTONE_SCHEDULE_REPOSITORY,
   VISIT_CONFIRMATION_REPOSITORY,
   CLINICAL_RECORD_REPOSITORY,
+  OPERATIONAL_QUERIES_REPOSITORY,
 } from "./infrastructure/tokens.js";
 import { StaffAuthController } from "./auth/staff-auth.controller.js";
 import { StaffAuthGuard } from "./auth/staff-auth.guard.js";
@@ -105,6 +106,12 @@ import {
   type ClinicalRecordRepository,
 } from "./clinical-record/clinical-record.repository.js";
 import { ClinicalRecordService } from "./clinical-record/clinical-record.service.js";
+import { OperationalQueriesController } from "./operational-queries/operational-queries.controller.js";
+import {
+  PostgresOperationalQueriesRepository,
+  type OperationalQueriesRepository,
+} from "./operational-queries/operational-queries.repository.js";
+import { OperationalQueriesService } from "./operational-queries/operational-queries.service.js";
 
 export interface AppModuleOptions {
   readonly config: ApiConfig;
@@ -123,6 +130,7 @@ export interface AppModuleOptions {
   readonly milestoneScheduleRepository?: MilestoneScheduleRepository;
   readonly visitConfirmationRepository?: VisitConfirmationRepository;
   readonly clinicalRecordRepository?: ClinicalRecordRepository;
+  readonly operationalQueriesRepository?: OperationalQueriesRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -145,6 +153,7 @@ export class AppModule {
         MilestoneScheduleController,
         VisitConfirmationController,
         ClinicalRecordController,
+        OperationalQueriesController,
       ],
       providers: [
         { provide: API_CONFIG, useValue: options.config },
@@ -223,6 +232,12 @@ export class AppModule {
             new PostgresClinicalRecordRepository(options.databasePool),
         },
         {
+          provide: OPERATIONAL_QUERIES_REPOSITORY,
+          useValue:
+            options.operationalQueriesRepository ??
+            new PostgresOperationalQueriesRepository(options.databasePool),
+        },
+        {
           provide: AUDIT_REPOSITORY,
           useValue: options.auditRepository ?? new PostgresAuditRepository(options.databasePool),
         },
@@ -277,6 +292,7 @@ export class AppModule {
         MilestoneScheduleService,
         VisitConfirmationService,
         ClinicalRecordService,
+        OperationalQueriesService,
       ],
     };
   }

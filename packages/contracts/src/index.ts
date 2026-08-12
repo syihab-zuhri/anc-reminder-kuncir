@@ -6,6 +6,7 @@ export * from "./errors.js";
 export * from "./idempotency.js";
 export * from "./mother-access.js";
 export * from "./milestone-schedule.js";
+export * from "./operational-query.js";
 export * from "./organization.js";
 export * from "./registry.js";
 export * from "./request-id.js";

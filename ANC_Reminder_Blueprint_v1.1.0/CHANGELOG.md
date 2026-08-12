@@ -8,6 +8,16 @@
 > **Last Updated:** 2026-08-12  
 > **Depends On:** All project documents
 
+## [2026-08-12] Phase 2 Scoped Operational Queries
+
+### Added
+
+- `API-MOTHER-002` (`GET /mothers`), `API-MOTHER-003` (`GET /mothers/:id`), and `API-MILESTONE-004` (`GET /operational/milestones`) endpoints for operational queries.
+- Scoped authorization: Puskesmas accesses aggregate health center scope; Bidan is limited to assigned village/mother scope; Super Admin access is denied by default.
+- Cursor-based pagination (`cursor`, `limit`), filtering by search text, village ID, pregnancy status, visit status, milestone code, and due date range.
+- Derived gestational age (weeks + days) and trimester labels calculated server-side.
+- Zod contract schemas, contract tests, and integration test suite.
+
 ## [2026-08-12] Phase 2 Pregnancy Close Cancellation
 
 ### Added
