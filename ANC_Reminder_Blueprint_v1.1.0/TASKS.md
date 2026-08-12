@@ -194,7 +194,7 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - References: FR-005, FR-024, DOC-ERD
   - Depends on: TASK-P2-001
   - Done when: one-active-pregnancy, revision history, dan close tests lulus.
-  - Evidence: migration `000004` menegakkan same-center FK, partial unique active pregnancy, append-only dating revisions/lifecycle snapshots; API Puskesmas-only create/revise/close memakai immutable idempotency replay, audit, scope-safe errors, 29 API tests, 16 database tests, dan synthetic PostgreSQL lifecycle smoke di protected CI. Cancellation milestone/reminder tetap owning task `TASK-P2-008`.
+  - Evidence: migration `000004` menegakkan same-center FK, partial unique active pregnancy, append-only dating revisions/lifecycle snapshots; API Puskesmas-only create/revise/close memakai immutable idempotency replay, audit, scope-safe errors, 29 API tests, 16 database tests, dan synthetic PostgreSQL lifecycle smoke di protected CI. Cancellation milestone/reminder kemudian diselesaikan oleh `TASK-P2-008`.
 
 - [x] `TASK-P2-003` [L] Implement mother access credential issue/hash/revoke/reissue sesuai auth decision
   - Owner: Backend + Security
@@ -217,11 +217,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Done when: due-date, timezone, state-transition, dan concurrency tests lulus.
   - Evidence: `API-MILESTONE-003` Puskesmas-only memakai UUID idempotency dan optimistic concurrency `expected_due_date`; first schedule/reschedule disimpan sebagai event append-only dengan reason wajib untuk reschedule. Tanggal kalender `PRIMARY_TIMEZONE` disimpan sebagai instant UTC, explicit due date mengalahkan rule window, milestone terminal/kehamilan closed ditolak, dan tanggal sebelum awal kehamilan gagal `422`. Contract/API/timezone/state/race tests, migration `up → down → up`, serta synthetic PostgreSQL concurrent-writer smoke lulus.
 
-- [ ] `TASK-P2-008` [M] Implement pregnancy close transaction dan cancellation events
+- [x] `TASK-P2-008` [M] Implement pregnancy close transaction dan cancellation events
   - Owner: Backend
   - References: FR-024
   - Depends on: TASK-P2-002, TASK-P2-012, TASK-P2-013
   - Done when: future milestone/reminder disuppress konsisten setelah pregnancy close.
+  - Evidence: `API-PREG-003` mengunci pregnancy lalu dalam satu transaksi menyimpan close snapshot, membatalkan hanya milestone `UPCOMING/DUE/OVERDUE` dan reminder cycle unresolved, meng-expire aksi `wa.me` unresolved, menutup pregnancy, serta menulis ledger pembatalan append-only. State terminal dipertahankan; exact replay dan double-close concurrent tidak menggandakan history/audit. Trigger database mengunci parent pregnancy dan menolak reminder aktif baru setelah close. API/database tests, fresh migration, rollback→reapply, serta PostgreSQL registry smoke lulus.
 
 - [ ] `TASK-P2-009` [M] Implement scoped overdue/pending/confirmation operational queries
   - Owner: Backend

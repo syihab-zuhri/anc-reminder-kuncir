@@ -40,6 +40,9 @@ const visitConfirmationMigration = loadModule(
 const clinicalRecordValidationMigration = loadModule(
   "../migrations/000010_phase_2_clinical_record_validation.cjs",
 ) as BaselineMigration;
+const pregnancyCloseCancellationMigration = loadModule(
+  "../migrations/000011_phase_2_pregnancy_close_cancellation.cjs",
+) as BaselineMigration;
 
 describe("baseline database migration", () => {
   it("defines the ERD baseline and privacy-sensitive NIK column", () => {
@@ -304,5 +307,33 @@ describe("phase 2 clinical record validation migration", () => {
     expect(statement).toContain("DROP COLUMN IF EXISTS revision_id");
     expect(statement).toContain("DROP COLUMN IF EXISTS milestone_code");
     expect(statement).toContain("pregnancy_milestones_id_code_unique");
+  });
+});
+
+describe("phase 2 pregnancy close cancellation migration", () => {
+  it("adds immutable cancellation snapshots and serializes reminder writes with close", () => {
+    const sql = vi.fn();
+    pregnancyCloseCancellationMigration.up({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("CREATE TABLE pregnancy_close_cancellation_events");
+    expect(statement).toContain("pregnancy_close_cancellations_snapshot_shape");
+    expect(statement).toContain("pregnancy_close_cancellation_events_append_only");
+    expect(statement).toContain("anc_guard_reminder_cycle_active_pregnancy");
+    expect(statement).toContain("FOR SHARE OF pregnancy");
+    expect(statement).toContain("reminder_cycles_active_pregnancy_guard");
+  });
+
+  it("provides an explicit reverse migration for every close guard", () => {
+    const sql = vi.fn();
+    pregnancyCloseCancellationMigration.down({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("DROP TABLE IF EXISTS pregnancy_close_cancellation_events");
+    expect(statement).toContain(
+      "DROP FUNCTION IF EXISTS anc_guard_reminder_cycle_active_pregnancy",
+    );
+    expect(statement).toContain("DROP CONSTRAINT IF EXISTS reminder_cycles_identity_unique");
+    expect(statement).toContain("DROP TYPE IF EXISTS pregnancy_close_cancellation_target");
   });
 });

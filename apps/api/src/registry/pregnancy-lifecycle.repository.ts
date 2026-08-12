@@ -14,6 +14,16 @@ export interface PregnancyMutationResult {
   readonly pregnancy: PregnancyLifecycleResponse;
 }
 
+export interface PregnancyCloseCancellationSummary {
+  readonly milestonesCancelled: number;
+  readonly reminderCyclesCancelled: number;
+  readonly waActionsExpired: number;
+}
+
+export interface PregnancyCloseMutationResult extends PregnancyMutationResult {
+  readonly cancellation: PregnancyCloseCancellationSummary;
+}
+
 export interface CreatePregnancyInput {
   readonly pregnancyId: string;
   readonly lifecycleEventId: string;
@@ -49,7 +59,10 @@ export interface PregnancyLifecycleRepository {
     client: TransactionClient,
     input: RevisePregnancyDatingInput,
   ): Promise<PregnancyMutationResult>;
-  close(client: TransactionClient, input: ClosePregnancyInput): Promise<PregnancyMutationResult>;
+  close(
+    client: TransactionClient,
+    input: ClosePregnancyInput,
+  ): Promise<PregnancyCloseMutationResult>;
   findLifecycleMutation(
     client: TransactionClient,
     lifecycleEventId: string,
@@ -206,16 +219,10 @@ export class PostgresPregnancyLifecycleRepository implements PregnancyLifecycleR
   public async close(
     client: TransactionClient,
     input: ClosePregnancyInput,
-  ): Promise<PregnancyMutationResult> {
+  ): Promise<PregnancyCloseMutationResult> {
     const pregnancy = await lockPregnancy(client, input.pregnancyId, input.healthCenterId);
     if (pregnancy.status !== "ACTIVE") throw new PregnancyNotActiveError();
 
-    await client.query(
-      `UPDATE pregnancies
-          SET status = 'CLOSED', closed_at = $2
-        WHERE id = $1`,
-      [input.pregnancyId, input.closedAt],
-    );
     await client.query(
       `INSERT INTO pregnancy_lifecycle_events (
          id, pregnancy_id, actor_staff_id, action, dating_basis, dating_date,
@@ -231,12 +238,97 @@ export class PostgresPregnancyLifecycleRepository implements PregnancyLifecycleR
         input.closedAt,
       ],
     );
+
+    const cancelledReminderCycles = await client.query<IdRow>(
+      `WITH candidates AS (
+         SELECT cycle.id,
+                cycle.milestone_id,
+                cycle.status::text AS previous_status
+           FROM reminder_cycles AS cycle
+           JOIN pregnancy_milestones AS milestone ON milestone.id = cycle.milestone_id
+          WHERE milestone.pregnancy_id = $1
+            AND cycle.status IN (
+              'PENDING',
+              'PUSH_ATTEMPTING',
+              'WA_ACTION_REQUIRED',
+              'MANUAL_FOLLOWUP',
+              'ESCALATED'
+            )
+          FOR UPDATE OF cycle
+       ), cancelled AS (
+         UPDATE reminder_cycles AS cycle
+            SET status = 'CANCELLED', closed_at = $3
+           FROM candidates AS candidate
+          WHERE cycle.id = candidate.id
+        RETURNING cycle.id, cycle.milestone_id, candidate.previous_status
+       )
+       INSERT INTO pregnancy_close_cancellation_events (
+         lifecycle_event_id, pregnancy_id, milestone_id, reminder_cycle_id,
+         target, previous_status, cancelled_at
+       )
+       SELECT $2, $1, milestone_id, id, 'REMINDER_CYCLE', previous_status, $3
+         FROM cancelled
+       RETURNING id`,
+      [input.pregnancyId, input.lifecycleEventId, input.closedAt],
+    );
+
+    const expiredWaActions = await client.query<IdRow>(
+      `UPDATE wa_fallback_actions AS action
+          SET status = 'EXPIRED'
+        WHERE action.reminder_cycle_id IN (
+          SELECT cancellation.reminder_cycle_id
+            FROM pregnancy_close_cancellation_events AS cancellation
+           WHERE cancellation.lifecycle_event_id = $1
+             AND cancellation.target = 'REMINDER_CYCLE'
+        )
+          AND action.status IN ('READY', 'LINK_GENERATED', 'LINK_OPENED')
+      RETURNING action.id`,
+      [input.lifecycleEventId],
+    );
+
+    const cancelledMilestones = await client.query<IdRow>(
+      `WITH candidates AS (
+         SELECT milestone.id,
+                milestone.visit_status::text AS previous_status
+           FROM pregnancy_milestones AS milestone
+          WHERE milestone.pregnancy_id = $1
+            AND milestone.visit_status IN ('UPCOMING', 'DUE', 'OVERDUE')
+          FOR UPDATE
+       ), cancelled AS (
+         UPDATE pregnancy_milestones AS milestone
+            SET visit_status = 'CANCELLED'
+           FROM candidates AS candidate
+          WHERE milestone.id = candidate.id
+        RETURNING milestone.id, candidate.previous_status
+       )
+       INSERT INTO pregnancy_close_cancellation_events (
+         lifecycle_event_id, pregnancy_id, milestone_id, reminder_cycle_id,
+         target, previous_status, cancelled_at
+       )
+       SELECT $2, $1, id, NULL, 'MILESTONE', previous_status, $3
+         FROM cancelled
+       RETURNING id`,
+      [input.pregnancyId, input.lifecycleEventId, input.closedAt],
+    );
+
+    await client.query(
+      `UPDATE pregnancies
+          SET status = 'CLOSED', closed_at = $2
+        WHERE id = $1`,
+      [input.pregnancyId, input.closedAt],
+    );
+
     return {
       mutationId: input.lifecycleEventId,
       pregnancy: {
         ...toPregnancyResponse(pregnancy),
         status: "CLOSED",
         closed_at: input.closedAt.toISOString(),
+      },
+      cancellation: {
+        milestonesCancelled: cancelledMilestones.rowCount ?? 0,
+        reminderCyclesCancelled: cancelledReminderCycles.rowCount ?? 0,
+        waActionsExpired: expiredWaActions.rowCount ?? 0,
       },
     };
   }

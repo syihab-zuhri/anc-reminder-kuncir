@@ -246,9 +246,14 @@ Close an active pregnancy:
 ```
 
 All three mutations are Puskesmas-only, same-health-center scoped, and idempotent. The server enforces at most
-one active pregnancy per mother. Dating revision and lifecycle event snapshots are append-only. This slice
-does not accept client-derived HPL, gestational age, trimester, milestone status, or K1-K8 dates. Full
-milestone/reminder cancellation on close remains the owning responsibility of `TASK-P2-008`.
+one active pregnancy per mother. Dating revision and lifecycle event snapshots are append-only. A successful
+close atomically sets every unfinished `UPCOMING`/`DUE`/`OVERDUE` milestone to `CANCELLED`, cancels every
+unresolved reminder cycle, expires its unresolved `wa.me` action, and appends cancellation snapshots. Existing
+`CONFIRMED`/`CANCELLED`/`NOT_APPLICABLE` milestones and terminal reminder outcomes remain unchanged. A database
+guard serializes reminder writes with pregnancy close and rejects any new non-cancelled cycle afterward. The
+response remains the immutable pregnancy lifecycle snapshot; cancellation counts are stored only in safe audit
+metadata. This endpoint does not accept client-derived HPL, gestational age, trimester, milestone status, or
+K1-K8 dates.
 
 Errors include `ACTIVE_PREGNANCY_EXISTS` (`409`), `PREGNANCY_NOT_ACTIVE` (`409`),
 `PREGNANCY_DATING_UNCHANGED` (`409`), future dating input (`422`), and safe scoped denial (`403`).

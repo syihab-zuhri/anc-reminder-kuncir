@@ -8,6 +8,20 @@
 > **Last Updated:** 2026-08-12  
 > **Depends On:** All project documents
 
+## [2026-08-12] Phase 2 Pregnancy Close Cancellation
+
+### Added
+
+- Atomic expansion of `API-PREG-003`: unfinished milestones and unresolved reminder cycles are cancelled in the same transaction as pregnancy close; unresolved `wa.me` actions become `EXPIRED`.
+- Append-only per-milestone/per-cycle cancellation snapshots linked to the immutable pregnancy close event.
+- A database pregnancy-lock guard that rejects new active reminder-cycle writes after close and serializes scheduler-vs-close races.
+- Exact replay, concurrent double-close, terminal-state preservation, audit-count, append-only, fresh migration, rollback/reapply, and PostgreSQL smoke coverage.
+
+### Safety Boundary
+
+- Confirmed, already-cancelled, not-applicable, and terminal reminder outcomes are historical facts and are never overwritten by close.
+- The generic audit stores cancellation counts and the operational reason only; it does not copy clinical records or reminder content.
+
 ## [2026-08-12] Phase 2 Puskesmas K1–K6 Detail Validation
 
 ### Added

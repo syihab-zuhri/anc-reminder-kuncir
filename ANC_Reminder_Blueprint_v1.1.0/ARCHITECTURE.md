@@ -75,6 +75,9 @@ Bidan/Puskesmas → confirm endpoint → authz + assignment + milestone code + f
 ### 6.6 K1–K6 Detail Validation
 Puskesmas → no-store detail endpoint → same-center/K1–K6 authorization → bounded schema-versioned payload → transaction lock + expected revision → current record + append-only revision. Final validation additionally requires confirmed visit, exact revision, and explicit attestation; it synchronizes record/milestone state and appends immutable validation snapshot + redacted audit. Reopen requires reason before a new revision. Downstream configurable program assessment remains a separate task.
 
+### 6.7 Pregnancy Close Cancellation
+Puskesmas → idempotent close endpoint → same-center authorization → pregnancy row lock → lifecycle snapshot → lock/cancel unresolved reminder cycles → expire unresolved `wa.me` actions → lock/cancel unfinished milestones → close pregnancy → safe count-only audit. A reminder-cycle database trigger locks the parent pregnancy for active writes, so a scheduler racing with close either commits first and is cancelled by close or waits and is rejected after close.
+
 ## 7. Sync vs Async
 
 Synchronous: auth, CRUD, confirm, detail, dashboard, WA-link generation.  
@@ -84,7 +87,7 @@ Async: due scheduling, FCM retries, fallback escalation, program reassessment op
 
 Critical transaction examples:
 - confirmation + reminder suppression + audit/outbox;
-- pregnancy close + future reminder cancellation;
+- pregnancy close + unfinished milestone/unresolved reminder cancellation + immutable cancellation ledger;
 - fallback creation idempotency;
 - program assessment write with rule version snapshot.
 

@@ -30,6 +30,7 @@ import {
   PregnancyDatingUnchangedError,
   PregnancyNotActiveError,
   PregnancyTargetUnavailableError,
+  type PregnancyCloseCancellationSummary,
   type PregnancyLifecycleRepository,
 } from "./pregnancy-lifecycle.repository.js";
 import { assertPregnancyStartDateNotFuture } from "./registry-validation.js";
@@ -173,6 +174,7 @@ export class PregnancyLifecycleService {
   ): Promise<PregnancyLifecycleResponse> {
     const healthCenterId = this.requireManagedCenter(actor);
     const now = this.clock();
+    let cancellation: PregnancyCloseCancellationSummary | undefined;
 
     try {
       const outcome = await this.idempotency.runForStaff(
@@ -191,6 +193,7 @@ export class PregnancyLifecycleService {
             reason: input.reason,
             closedAt: now,
           });
+          cancellation = mutation.cancellation;
           return {
             resourceType: "PREGNANCY_LIFECYCLE_EVENT",
             resourceId: mutation.mutationId,
@@ -210,13 +213,21 @@ export class PregnancyLifecycleService {
         },
       );
       if (!outcome.replayed) {
+        if (cancellation === undefined) {
+          throw new Error("Pregnancy close cancellation summary is missing");
+        }
         await this.audit.record({
           actorType: "STAFF",
           actorId: actor.staffUserId,
           action: "PREGNANCY_CLOSED",
           resourceType: "PREGNANCY",
           resourceId: outcome.value.id,
-          metadata: { reason: input.reason },
+          metadata: {
+            reason: input.reason,
+            milestones_cancelled: cancellation.milestonesCancelled,
+            reminder_cycles_cancelled: cancellation.reminderCyclesCancelled,
+            wa_actions_expired: cancellation.waActionsExpired,
+          },
         });
       }
       return outcome.value;

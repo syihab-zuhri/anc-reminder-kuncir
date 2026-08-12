@@ -974,6 +974,45 @@ try {
     throw new Error("Pregnancy dating revision or replay returned an invalid snapshot");
   }
 
+  const pendingReminderCycleId = randomUUID();
+  const waReminderCycleId = randomUUID();
+  const completedReminderCycleId = randomUUID();
+  const waActionId = randomUUID();
+  await pool.query(
+    `INSERT INTO reminder_cycles (
+       id, milestone_id, cycle_anchor_at, status, idempotency_key, closed_at
+     ) VALUES
+       ($1, $4, '2026-08-01T00:00:00.000Z', 'PENDING', $5, NULL),
+       ($2, $4, '2026-08-04T00:00:00.000Z', 'WA_ACTION_REQUIRED', $6, NULL),
+       ($3, $4, '2026-08-07T00:00:00.000Z', 'PUSH_SUCCEEDED', $7, '2026-08-07T01:00:00.000Z')`,
+    [
+      pendingReminderCycleId,
+      waReminderCycleId,
+      completedReminderCycleId,
+      milestoneByCode.K5.id,
+      randomUUID(),
+      randomUUID(),
+      randomUUID(),
+    ],
+  );
+  await pool.query(
+    `INSERT INTO wa_fallback_actions (id, reminder_cycle_id, mother_id, status)
+     VALUES ($1, $2, $3, 'READY')`,
+    [waActionId, waReminderCycleId, first.mother.id],
+  );
+  const preCloseMilestoneState = await pool.query(
+    `SELECT id, visit_status
+       FROM pregnancy_milestones
+      WHERE pregnancy_id = $1`,
+    [first.pregnancy.id],
+  );
+  const preCloseStatusByMilestoneId = Object.fromEntries(
+    preCloseMilestoneState.rows.map((milestone) => [milestone.id, milestone.visit_status]),
+  );
+  const unfinishedMilestoneIds = preCloseMilestoneState.rows
+    .filter((milestone) => ["UPCOMING", "DUE", "OVERDUE"].includes(milestone.visit_status))
+    .map((milestone) => milestone.id);
+
   const closeRequest = {
     idempotency_key: randomUUID(),
     reason: "Synthetic administrative close",
@@ -1000,6 +1039,99 @@ try {
     closeReplay.closed_at !== closed.closed_at
   ) {
     throw new Error("Pregnancy close or replay returned an invalid immutable snapshot");
+  }
+  const closeCancellationState = await pool.query(
+    `SELECT id, visit_status
+       FROM pregnancy_milestones
+      WHERE pregnancy_id = $1`,
+    [first.pregnancy.id],
+  );
+  for (const milestone of closeCancellationState.rows) {
+    const previousStatus = preCloseStatusByMilestoneId[milestone.id];
+    const expectedStatus = ["UPCOMING", "DUE", "OVERDUE"].includes(previousStatus)
+      ? "CANCELLED"
+      : previousStatus;
+    if (milestone.visit_status !== expectedStatus) {
+      throw new Error(
+        `Pregnancy close changed milestone ${milestone.id} from ${previousStatus} to ${milestone.visit_status}; expected ${expectedStatus}`,
+      );
+    }
+  }
+  const reminderCancellationState = await pool.query(
+    `SELECT cycle.id, cycle.status, action.status AS wa_status
+       FROM reminder_cycles AS cycle
+       LEFT JOIN wa_fallback_actions AS action ON action.reminder_cycle_id = cycle.id
+      WHERE cycle.id = ANY($1::uuid[])
+      ORDER BY cycle.id`,
+    [[pendingReminderCycleId, waReminderCycleId, completedReminderCycleId]],
+  );
+  const reminderStatusById = Object.fromEntries(
+    reminderCancellationState.rows.map((cycle) => [
+      cycle.id,
+      { status: cycle.status, waStatus: cycle.wa_status },
+    ]),
+  );
+  if (
+    reminderStatusById[pendingReminderCycleId]?.status !== "CANCELLED" ||
+    reminderStatusById[waReminderCycleId]?.status !== "CANCELLED" ||
+    reminderStatusById[waReminderCycleId]?.waStatus !== "EXPIRED" ||
+    reminderStatusById[completedReminderCycleId]?.status !== "PUSH_SUCCEEDED"
+  ) {
+    throw new Error("Pregnancy close reminder cancellation did not preserve terminal state");
+  }
+  const cancellationHistory = await pool.query(
+    `SELECT target, COUNT(*)::int AS event_count
+       FROM pregnancy_close_cancellation_events
+      WHERE pregnancy_id = $1
+      GROUP BY target`,
+    [first.pregnancy.id],
+  );
+  const cancellationHistoryCounts = Object.fromEntries(
+    cancellationHistory.rows.map((event) => [event.target, event.event_count]),
+  );
+  if (
+    cancellationHistoryCounts.MILESTONE !== unfinishedMilestoneIds.length ||
+    cancellationHistoryCounts.REMINDER_CYCLE !== 2
+  ) {
+    throw new Error("Pregnancy close cancellation history is incomplete or duplicated by replay");
+  }
+  try {
+    await pool.query(
+      `INSERT INTO reminder_cycles (
+         id, milestone_id, cycle_anchor_at, status, idempotency_key
+       ) VALUES ($1, $2, '2026-08-10T00:00:00.000Z', 'PENDING', $3)`,
+      [randomUUID(), milestoneByCode.K5.id, randomUUID()],
+    );
+    throw new Error("Closed pregnancy accepted a new active reminder cycle");
+  } catch (error) {
+    if (error?.code !== "23514") throw error;
+  }
+  const closeAudit = await pool.query(
+    `SELECT metadata
+       FROM audit_events
+      WHERE action = 'PREGNANCY_CLOSED'
+        AND resource_id = $1
+        AND created_at >= $2`,
+    [first.pregnancy.id, smokeStartedAt],
+  );
+  if (
+    closeAudit.rowCount !== 1 ||
+    closeAudit.rows[0]?.metadata?.milestones_cancelled !== unfinishedMilestoneIds.length ||
+    closeAudit.rows[0]?.metadata?.reminder_cycles_cancelled !== 2 ||
+    closeAudit.rows[0]?.metadata?.wa_actions_expired !== 1
+  ) {
+    throw new Error("Pregnancy close audit cancellation summary is missing or duplicated");
+  }
+  try {
+    await pool.query(
+      `UPDATE pregnancy_close_cancellation_events
+          SET previous_status = 'MUTATED'
+        WHERE pregnancy_id = $1`,
+      [first.pregnancy.id],
+    );
+    throw new Error("Pregnancy close cancellation history accepted an update");
+  } catch (error) {
+    if (error?.code !== "55000") throw error;
   }
   const revisionReplayAfterClose = await readJson(
     await request(`/pregnancies/${first.pregnancy.id}`, {

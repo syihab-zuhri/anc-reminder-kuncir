@@ -72,7 +72,16 @@ clinical record, reminder, additional Web, or mobile requirements are implemente
 - final local workspace gate: formatting, lint, strict typecheck, **93 tests**, all production builds, and secret scan pass;
 - clean temporary PostgreSQL 17 migration through `000006` plus the full synthetic registry/private-access smoke pass.
 
-This evidence does not approve clinical ANC milestone values, NIK retention/deletion, production key rotation, or claim milestone/reminder cancellation on pregnancy close; those remain governed by their owners and explicit production gates/owning tasks.
+This 2026-08-10 evidence does not approve clinical ANC milestone values, NIK retention/deletion, or production key rotation. Pregnancy-close cancellation was not part of that earlier evidence and was subsequently completed by `TASK-P2-008` below.
+
+## Phase 2 Pregnancy Close Cancellation Evidence - 2026-08-12
+
+- `TASK-P2-008`: `API-PREG-003` now locks the pregnancy and atomically records its close, cancels unfinished milestones and unresolved reminder cycles, expires unresolved `wa.me` actions, and appends one immutable snapshot per cancelled resource;
+- confirmed/already-terminal milestone and reminder facts remain unchanged, exact idempotency replay does not duplicate cancellation history, and concurrent close attempts produce exactly one winner;
+- a database trigger locks/checks the parent pregnancy for every active reminder-cycle write, rejecting new cycles after close and serializing scheduler-vs-close races;
+- API/audit/database tests, fresh PostgreSQL migration through `000011`, rollback/reapply, full registry smoke, **146 tests**, all builds, and secret scan pass.
+
+This evidence does not complete the separate confirmation-vs-worker send boundary owned by `TASK-P4-014`.
 
 ## Remaining Production Approvals
 
