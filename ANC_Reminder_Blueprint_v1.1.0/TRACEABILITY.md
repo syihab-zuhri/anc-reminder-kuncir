@@ -26,7 +26,7 @@
 | FR-019 | FEAT-DASHBOARD | API-DASH-003 | read model | Bumil own | TASK-P3-005/010 | privacy E2E | Covered |
 | FR-020 | FEAT-DASHBOARD/NOTIF | API-DASH/REM | fallback | scoped | TASK-P2-009/P3-006 | TEST-NOTIF-006 | Covered |
 | FR-022 | cross-cutting | audit | audit_events | server | TASK-P1-004 | metadata policy + append-only DB test | Backend Verified |
-| FR-024 | FEAT-REGISTRY | close | pregnancy/reminders | Puskesmas | TASK-P2-008 | close test | Covered |
+| FR-024 | FEAT-REGISTRY | API-PREG-003 | pregnancy/milestones/reminders/cancellation ledger | Puskesmas | TASK-P2-008 | TEST-REG-004/011..013 + PostgreSQL smoke | Backend Verified |
 | FR-029 | FEAT-ANC | API-ANC/MILESTONE | plan/milestones | Puskesmas read/write cfg | TASK-P2-010 | contract/API/PostgreSQL milestone tests | Backend Verified |
 | FR-030 | FEAT-CHECKUP | API-VISIT-001 | confirmations | Bidan/Puskesmas | TASK-P2-012/P3-009 | TEST-VISIT-001/003/005..009 + PostgreSQL smoke | Backend Verified; UI Pending |
 | FR-031 | FEAT-CHECKUP | API-VISIT-003..006 | k1_k6_records + immutable revisions/events | Puskesmas | TASK-P2-013/P3-008 | TEST-VISIT-002 + TEST-RECORD-001..008 + PostgreSQL smoke | Backend Verified; UI Pending |

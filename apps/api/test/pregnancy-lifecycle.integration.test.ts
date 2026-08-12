@@ -19,6 +19,7 @@ import {
   PregnancyTargetUnavailableError,
   type ClosePregnancyInput,
   type CreatePregnancyInput,
+  type PregnancyCloseMutationResult,
   type PregnancyLifecycleAction,
   type PregnancyLifecycleRepository,
   type PregnancyMutationResult,
@@ -37,6 +38,12 @@ const otherCenterId = "30000000-0000-4000-8000-000000000002";
 const motherId = "50000000-0000-4000-8000-000000000001";
 const otherMotherId = "50000000-0000-4000-8000-000000000002";
 const pregnancyId = "60000000-0000-4000-8000-000000000001";
+const confirmedMilestoneId = "61000000-0000-4000-8000-000000000001";
+const upcomingMilestoneId = "61000000-0000-4000-8000-000000000002";
+const dueMilestoneId = "61000000-0000-4000-8000-000000000003";
+const overdueMilestoneId = "61000000-0000-4000-8000-000000000004";
+const cancelledMilestoneId = "61000000-0000-4000-8000-000000000005";
+const notApplicableMilestoneId = "61000000-0000-4000-8000-000000000006";
 const puskesmasId = "40000000-0000-4000-8000-000000000001";
 const bidanId = "40000000-0000-4000-8000-000000000002";
 const password = "AmanSekali2026";
@@ -62,6 +69,37 @@ describe("pregnancy lifecycle API", () => {
       status: "ACTIVE",
       closed_at: null,
     });
+    lifecycle.seedMilestone(confirmedMilestoneId, pregnancyId, "CONFIRMED");
+    lifecycle.seedMilestone(upcomingMilestoneId, pregnancyId, "UPCOMING");
+    lifecycle.seedMilestone(dueMilestoneId, pregnancyId, "DUE");
+    lifecycle.seedMilestone(overdueMilestoneId, pregnancyId, "OVERDUE");
+    lifecycle.seedMilestone(cancelledMilestoneId, pregnancyId, "CANCELLED");
+    lifecycle.seedMilestone(notApplicableMilestoneId, pregnancyId, "NOT_APPLICABLE");
+    lifecycle.seedReminderCycle(
+      "62000000-0000-4000-8000-000000000001",
+      upcomingMilestoneId,
+      "PENDING",
+    );
+    lifecycle.seedReminderCycle(
+      "62000000-0000-4000-8000-000000000002",
+      dueMilestoneId,
+      "WA_ACTION_REQUIRED",
+    );
+    lifecycle.seedReminderCycle(
+      "62000000-0000-4000-8000-000000000003",
+      confirmedMilestoneId,
+      "PUSH_SUCCEEDED",
+    );
+    lifecycle.seedReminderCycle(
+      "62000000-0000-4000-8000-000000000004",
+      cancelledMilestoneId,
+      "CANCELLED",
+    );
+    lifecycle.seedWaAction(
+      "63000000-0000-4000-8000-000000000001",
+      "62000000-0000-4000-8000-000000000002",
+      "READY",
+    );
 
     const passwordHash = await new PasswordHasher().hash(password);
     for (const [id, role, loginIdentifier] of [
@@ -146,6 +184,22 @@ describe("pregnancy lifecycle API", () => {
       .send(closeRequest)
       .expect(200);
     expect(closeReplay.body).toEqual(closedResponse.body);
+    expect([...lifecycle.milestones.values()].map((milestone) => milestone.status)).toEqual([
+      "CONFIRMED",
+      "CANCELLED",
+      "CANCELLED",
+      "CANCELLED",
+      "CANCELLED",
+      "NOT_APPLICABLE",
+    ]);
+    expect([...lifecycle.reminderCycles.values()].map((cycle) => cycle.status)).toEqual([
+      "CANCELLED",
+      "CANCELLED",
+      "PUSH_SUCCEEDED",
+      "CANCELLED",
+    ]);
+    expect([...lifecycle.waActions.values()].map((action) => action.status)).toEqual(["EXPIRED"]);
+    expect(lifecycle.cancellationEvents).toHaveLength(5);
 
     const revisionReplayAfterClose = await request(server())
       .patch(`/api/v1/pregnancies/${pregnancyId}`)
@@ -192,6 +246,36 @@ describe("pregnancy lifecycle API", () => {
       "PREGNANCY_CLOSED",
       "PREGNANCY_CREATED",
     ]);
+    expect(domainAudit[1]?.metadata).toMatchObject({
+      milestones_cancelled: 3,
+      reminder_cycles_cancelled: 2,
+      wa_actions_expired: 1,
+    });
+  });
+
+  it("serializes concurrent close attempts without duplicate cancellation history", async () => {
+    const token = await login("puskesmas");
+    const responses = await Promise.all([
+      request(server())
+        .post(`/api/v1/pregnancies/${pregnancyId}/close`)
+        .set("authorization", `Bearer ${token}`)
+        .send({
+          idempotency_key: "70000000-0000-4000-8000-000000000010",
+          reason: "Penutupan bersamaan pertama",
+        }),
+      request(server())
+        .post(`/api/v1/pregnancies/${pregnancyId}/close`)
+        .set("authorization", `Bearer ${token}`)
+        .send({
+          idempotency_key: "70000000-0000-4000-8000-000000000011",
+          reason: "Penutupan bersamaan kedua",
+        }),
+    ]);
+
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+    expect(lifecycle.lifecycleEvents.filter((event) => event.action === "CLOSED")).toHaveLength(1);
+    expect(lifecycle.cancellationEvents).toHaveLength(5);
+    expect(audit.events.filter((event) => event.action === "PREGNANCY_CLOSED")).toHaveLength(1);
   });
 
   it("fails closed for Bidan, cross-center targets, closed mutations, and an unchanged date", async () => {
@@ -275,11 +359,52 @@ interface StoredLifecycleEvent {
   readonly response: PregnancyLifecycleResponse;
 }
 
+type FakeMilestoneStatus =
+  "UPCOMING" | "DUE" | "OVERDUE" | "CONFIRMED" | "CANCELLED" | "NOT_APPLICABLE";
+
+interface FakeMilestone {
+  readonly id: string;
+  readonly pregnancyId: string;
+  status: FakeMilestoneStatus;
+}
+
+type FakeReminderCycleStatus =
+  | "PENDING"
+  | "PUSH_ATTEMPTING"
+  | "PUSH_SUCCEEDED"
+  | "WA_ACTION_REQUIRED"
+  | "MANUAL_FOLLOWUP"
+  | "ESCALATED"
+  | "CANCELLED";
+
+interface FakeReminderCycle {
+  readonly id: string;
+  readonly milestoneId: string;
+  status: FakeReminderCycleStatus;
+}
+
+interface FakeWaAction {
+  readonly id: string;
+  readonly reminderCycleId: string;
+  status: "READY" | "LINK_GENERATED" | "LINK_OPENED" | "EXPIRED";
+}
+
+interface FakeCancellationEvent {
+  readonly lifecycleEventId: string;
+  readonly target: "MILESTONE" | "REMINDER_CYCLE";
+  readonly resourceId: string;
+  readonly previousStatus: string;
+}
+
 class FakePregnancyLifecycleRepository implements PregnancyLifecycleRepository {
   public readonly mothers = new Map<string, string>();
   public readonly pregnancies = new Map<string, PregnancyLifecycleResponse>();
   public readonly revisions: StoredRevision[] = [];
   public readonly lifecycleEvents: StoredLifecycleEvent[] = [];
+  public readonly milestones = new Map<string, FakeMilestone>();
+  public readonly reminderCycles = new Map<string, FakeReminderCycle>();
+  public readonly waActions = new Map<string, FakeWaAction>();
+  public readonly cancellationEvents: FakeCancellationEvent[] = [];
 
   public seedMother(id: string, healthCenterId: string): void {
     this.mothers.set(id, healthCenterId);
@@ -287,6 +412,18 @@ class FakePregnancyLifecycleRepository implements PregnancyLifecycleRepository {
 
   public seedPregnancy(pregnancy: PregnancyLifecycleResponse): void {
     this.pregnancies.set(pregnancy.id, pregnancy);
+  }
+
+  public seedMilestone(id: string, targetPregnancyId: string, status: FakeMilestoneStatus): void {
+    this.milestones.set(id, { id, pregnancyId: targetPregnancyId, status });
+  }
+
+  public seedReminderCycle(id: string, milestoneId: string, status: FakeReminderCycleStatus): void {
+    this.reminderCycles.set(id, { id, milestoneId, status });
+  }
+
+  public seedWaAction(id: string, reminderCycleId: string, status: FakeWaAction["status"]): void {
+    this.waActions.set(id, { id, reminderCycleId, status });
   }
 
   public activePregnanciesFor(targetMotherId: string): readonly PregnancyLifecycleResponse[] {
@@ -342,7 +479,7 @@ class FakePregnancyLifecycleRepository implements PregnancyLifecycleRepository {
   public async close(
     client: TransactionClient,
     input: ClosePregnancyInput,
-  ): Promise<PregnancyMutationResult> {
+  ): Promise<PregnancyCloseMutationResult> {
     void client;
     const existing = this.requirePregnancy(input.pregnancyId, input.healthCenterId);
     if (existing.status !== "ACTIVE") throw new PregnancyNotActiveError();
@@ -353,7 +490,64 @@ class FakePregnancyLifecycleRepository implements PregnancyLifecycleRepository {
     };
     this.pregnancies.set(response.id, response);
     this.lifecycleEvents.push({ id: input.lifecycleEventId, action: "CLOSED", response });
-    return { mutationId: input.lifecycleEventId, pregnancy: response };
+
+    let reminderCyclesCancelled = 0;
+    for (const cycle of this.reminderCycles.values()) {
+      const milestone = this.milestones.get(cycle.milestoneId);
+      if (
+        milestone?.pregnancyId === input.pregnancyId &&
+        [
+          "PENDING",
+          "PUSH_ATTEMPTING",
+          "WA_ACTION_REQUIRED",
+          "MANUAL_FOLLOWUP",
+          "ESCALATED",
+        ].includes(cycle.status)
+      ) {
+        const previousStatus = cycle.status;
+        cycle.status = "CANCELLED";
+        reminderCyclesCancelled += 1;
+        this.cancellationEvents.push({
+          lifecycleEventId: input.lifecycleEventId,
+          target: "REMINDER_CYCLE",
+          resourceId: cycle.id,
+          previousStatus,
+        });
+      }
+    }
+
+    let waActionsExpired = 0;
+    for (const action of this.waActions.values()) {
+      const cycle = this.reminderCycles.get(action.reminderCycleId);
+      if (cycle?.status === "CANCELLED" && action.status !== "EXPIRED") {
+        action.status = "EXPIRED";
+        waActionsExpired += 1;
+      }
+    }
+
+    let milestonesCancelled = 0;
+    for (const milestone of this.milestones.values()) {
+      if (
+        milestone.pregnancyId === input.pregnancyId &&
+        ["UPCOMING", "DUE", "OVERDUE"].includes(milestone.status)
+      ) {
+        const previousStatus = milestone.status;
+        milestone.status = "CANCELLED";
+        milestonesCancelled += 1;
+        this.cancellationEvents.push({
+          lifecycleEventId: input.lifecycleEventId,
+          target: "MILESTONE",
+          resourceId: milestone.id,
+          previousStatus,
+        });
+      }
+    }
+
+    return {
+      mutationId: input.lifecycleEventId,
+      pregnancy: response,
+      cancellation: { milestonesCancelled, reminderCyclesCancelled, waActionsExpired },
+    };
   }
 
   public async findLifecycleMutation(

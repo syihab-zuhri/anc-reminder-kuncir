@@ -52,7 +52,7 @@ Form registrasi menampilkan lima field wajib: **Nama**, **NIK**, **Alamat**, **N
 `API-MOTHER-*`, `API-PREG-*`, `API-ASSIGN-*`.
 
 ## 12. Data Model References
-`mothers`, `pregnancies`, `consent_records`, `staff_assignments`. `mothers` menyimpan nama/NIK/alamat/nomor telepon; `pregnancies` menyimpan tanggal awal kehamilan/dating input.
+`mothers`, `pregnancies`, `pregnancy_milestones`, `pregnancy_lifecycle_events`, `pregnancy_close_cancellation_events`, `reminder_cycles`, `wa_fallback_actions`, `consent_records`, `staff_assignments`. `mothers` menyimpan nama/NIK/alamat/nomor telepon; `pregnancies` menyimpan tanggal awal kehamilan/dating input.
 
 ## 13. Notifications & Side Effects
 Creates access credential and milestone instances after transaction.
@@ -75,9 +75,12 @@ Requires active milestone rule version.
 ## 19. Open Questions
 Retention/legal policy remains external approval.
 
-## 20. Implementation Status - 2026-08-10
+## 20. Implementation Status - 2026-08-12
 
 `TASK-P2-001` registration and `TASK-P2-002` pregnancy lifecycle are implemented. Dating changes retain
 append-only previous/revised values and an operational reason. Create/revise/close are Puskesmas-only,
 same-center scoped, idempotent, and audited. Closing changes the pregnancy state and releases the
-one-active-pregnancy constraint; atomic cancellation of future milestone/reminder work remains `TASK-P2-008`.
+one-active-pregnancy constraint. `TASK-P2-008` now also locks and cancels every unfinished milestone and
+unresolved reminder cycle in that transaction, expires unresolved `wa.me` actions, writes append-only
+cancellation snapshots, and prevents any new active reminder cycle after close. Terminal historical facts remain
+unchanged.

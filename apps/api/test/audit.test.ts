@@ -13,10 +13,17 @@ describe("append-only audit metadata policy", () => {
       action: "SESSION_REVOKED",
       resourceType: "STAFF_SESSION",
       resourceId: crypto.randomUUID(),
-      metadata: { reason: "Rotasi petugas untuk NIK 3201010101010001", role: "PUSKESMAS" },
+      metadata: {
+        reason: "Rotasi petugas untuk NIK 3201010101010001",
+        role: "PUSKESMAS",
+        milestones_cancelled: 3,
+        reminder_cycles_cancelled: 2,
+        wa_actions_expired: 1,
+      },
     });
     expect(repository.events).toHaveLength(1);
     expect(repository.events[0]?.metadata["reason"]).toBe("Rotasi petugas untuk NIK [REDACTED]");
+    expect(repository.events[0]?.metadata["milestones_cancelled"]).toBe(3);
 
     await expect(
       service.record({

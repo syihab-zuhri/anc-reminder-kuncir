@@ -152,6 +152,17 @@ Append-only lifecycle snapshots used for audit and exact idempotency replay.
 - `reason nullable`, `occurred_at timestamptz`
 - state check requires `CREATED/ACTIVE` without reason or `CLOSED/CLOSED` with reason
 
+### `pregnancy_close_cancellation_events`
+Append-only snapshots written in the same transaction as a `CLOSED` lifecycle event.
+- `id bigint identity PK`
+- `lifecycle_event_id`, `pregnancy_id`, `milestone_id` composite integrity FKs
+- `reminder_cycle_id nullable` with same-milestone composite FK
+- `target enum(MILESTONE,REMINDER_CYCLE)`
+- `previous_status text`, `cancelled_at timestamptz`
+- unique target per close event and resource
+
+Only unfinished milestone states (`UPCOMING/DUE/OVERDUE`) and unresolved reminder-cycle states can enter this ledger. Its rows reject update/delete. Terminal facts are retained in their original tables.
+
 ### `anc_plan_versions`
 - `id uuid PK`
 - `version_no int`
@@ -328,6 +339,8 @@ One logical reminder decision per milestone/window.
 - `created_at`, `closed_at nullable`
 
 Suggested unique logical key `(milestone_id, cycle_anchor_at)`.
+
+Every non-`CANCELLED` insert/update locks and checks the parent pregnancy. A closed pregnancy therefore cannot acquire a new active reminder cycle, including under a scheduler-vs-close race.
 
 ### `push_attempts`
 - `id uuid PK`

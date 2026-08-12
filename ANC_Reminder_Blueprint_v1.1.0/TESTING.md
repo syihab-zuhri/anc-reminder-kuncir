@@ -36,6 +36,9 @@ Local synthetic data → CI ephemeral DB → staging with synthetic/pilot-approv
 | TEST-REG-008 | Access code is displayed once, stored only as salted scrypt verifier plus keyed-HMAC lookup, and absent on idempotency replay | Integration/DB |
 | TEST-REG-009 | Reissue/revoke preserves one active credential, invalidates sessions, and retains append-only history | Integration/Concurrency |
 | TEST-REG-010 | Bidan, cross-center, and inactive-pregnancy issuance fail closed | Security |
+| TEST-REG-011 | Close atomically cancels every unfinished milestone and unresolved reminder cycle while preserving terminal states | API/PostgreSQL |
+| TEST-REG-012 | Exact replay and concurrent double-close produce one lifecycle event, one cancellation set, and one audit | Idempotency/Concurrency |
+| TEST-REG-013 | Cancellation history rejects mutation; active reminder writes after close are rejected by the database guard | PostgreSQL/Security |
 | TEST-MACCESS-001 | Wrong name/code, malformed/revoked credential, inactive center, and inactive pregnancy return the same generic 401 | Security integration |
 | TEST-MACCESS-002 | Valid name/code creates an HMAC-only opaque session and `/mother/me` exposes minimum own-only identity data | Integration/DB |
 | TEST-MACCESS-003 | Mother bearer is denied at staff mutation boundaries; logout/reissue/revoke invalidates it immediately | Security E2E |
