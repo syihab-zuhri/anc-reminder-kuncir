@@ -36,4 +36,14 @@ describe("ANC facility policy", () => {
     expect(isFacilityTypeAllowed(rule, "MIDWIFE_PRACTICE")).toBe(true);
     expect(isFacilityTypeAllowed(rule, "POSYANDU")).toBe(false);
   });
+
+  it("permits facility override when explicit clinical owner grant is provided (TASK-P5-003)", () => {
+    const rule = {
+      required_facility_policy: "PUSKESMAS_REQUIRED" as const,
+      allowed_facility_types: ["PUSKESMAS"] as const,
+    };
+    expect(isFacilityTypeAllowed(rule, "MIDWIFE_PRACTICE", false)).toBe(false);
+    expect(isFacilityTypeAllowed(rule, "MIDWIFE_PRACTICE", true)).toBe(true);
+    expect(() => assertFacilityTypeAllowed(rule, "MIDWIFE_PRACTICE", true)).not.toThrow();
+  });
 });

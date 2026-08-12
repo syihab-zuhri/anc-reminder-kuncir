@@ -11,7 +11,9 @@ export interface FacilityRuleSnapshot {
 export function isFacilityTypeAllowed(
   rule: FacilityRuleSnapshot,
   facilityType: FacilityType,
+  hasClinicalOwnerOverride = false,
 ): boolean {
+  if (hasClinicalOwnerOverride) return true;
   if (!rule.allowed_facility_types.includes(facilityType)) return false;
   if (rule.required_facility_policy === "PUSKESMAS_REQUIRED") {
     return facilityType === "PUSKESMAS";
@@ -25,8 +27,9 @@ export function isFacilityTypeAllowed(
 export function assertFacilityTypeAllowed(
   rule: FacilityRuleSnapshot,
   facilityType: FacilityType,
+  hasClinicalOwnerOverride = false,
 ): void {
-  if (isFacilityTypeAllowed(rule, facilityType)) return;
+  if (isFacilityTypeAllowed(rule, facilityType, hasClinicalOwnerOverride)) return;
   throw new ApiException({
     status: HttpStatus.UNPROCESSABLE_ENTITY,
     code: "FACILITY_NOT_ALLOWED_FOR_MILESTONE",

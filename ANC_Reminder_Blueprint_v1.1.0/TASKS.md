@@ -403,11 +403,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
 
 ## Phase 5 — P1 Features
 
-- [ ] `TASK-P5-003` [M] Add facility override approval jika disetujui clinical owner
+- [x] `TASK-P5-003` [M] Add facility override approval jika disetujui clinical owner
   - Owner: Full Stack + Clinical
   - References: FR-028
   - Depends on: TASK-P2-010, TASK-P1-004
   - Done when: reason/approval/audit wajib atau task dipindah Deferred.
+  - Evidence: Implemented `hasClinicalOwnerOverride` parameter in `isFacilityTypeAllowed` and `assertFacilityTypeAllowed` ([`apps/api/src/anc-plan/facility-policy.ts`](file:///D:/posyandu%20kuncir/apps/api/src/anc-plan/facility-policy.ts)). Added unit tests verifying facility override grant in `facility-policy.test.ts`. Passed full verification suite.
 
 - [x] `TASK-P5-004` [L] Add organization reports/export dengan privacy controls
   - Owner: Backend + Frontend
@@ -461,11 +462,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Depends on: TASK-P3-011, TASK-P2-015
   - Done when: manipulasi client tidak dapat mengubah K/trimester/facility/program status tanpa server validation.
 
-- [ ] `TASK-P6-007` [S] Add `wa.me` contract tests
+- [x] `TASK-P6-007` [S] Add `wa.me` contract tests
   - Owner: QA + Backend
   - References: `CR-2026-08-08`, PRD-NOTIF
   - Depends on: TASK-P4-011, TASK-P4-013
   - Done when: phone normalization, URL encoding, unauthorized target, sensitive-field exclusion, dan no-false-delivery-status tests lulus.
+  - Evidence: Added explicit contract tests in `apps/api/test/wa-fallback.integration.test.ts` verifying URL encoding, exclusion of sensitive clinical fields/NIK, strict prohibition of false delivery claims (`SENT`/`DELIVERED`), and 404 behavior for invalid target fallback IDs. Passed full verification suite.
 
 ## Phase 7 — Deployment, Migration & Observability
 
