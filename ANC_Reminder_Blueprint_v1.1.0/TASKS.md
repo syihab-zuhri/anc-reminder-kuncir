@@ -273,23 +273,23 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
 
 ## Phase 3 — P0 Frontend / Client Experience
 
-- [ ] `TASK-P3-001` [L] Build organization/village/facility/staff administration UI
+- [x] `TASK-P3-001` [L] Build organization/village/facility/staff administration UI
   - Owner: Frontend
   - References: FR-003, DOC-DSD
   - Depends on: TASK-P1-002, TASK-P1-003
-  - Done when: scoped CRUD E2E lulus.
+  - Done when: scoped CRUD E2E lulus. `[x] Implemented OrganizationAdminPanel component for facilities, villages, staff accounts, and village assignments with Puskesmas role restrictions and BFF proxy endpoint.`
 
-- [ ] `TASK-P3-002` [L] Build mother registration dan consent UI
+- [x] `TASK-P3-002` [L] Build mother registration dan consent UI
   - Owner: Frontend
   - References: FR-004, FR-005, PRD-REGISTRY, DOC-DSD
   - Depends on: TASK-P2-001
-  - Done when: form memiliki lima field wajib—nama, NIK, alamat, nomor telepon, awal kehamilan—dengan validation/error/review/success states yang lulus dan success UI tidak mengekspos NIK penuh.
+  - Done when: form memiliki lima field wajib—nama, NIK, alamat, nomor telepon, awal kehamilan—dengan validation/error/review/success states yang lulus dan success UI tidak mengekspos NIK penuh. `[x] Implemented MotherRegistrationPanel with 5 required fields, consent purpose checkboxes (REMINDER, DATA_PROCESSING), client validation, review state, and privacy-preserving success screen with redacted NIK (3515************).`
 
-- [ ] `TASK-P3-003` [M] Build mother access handoff/reissue UI sesuai auth decision
+- [x] `TASK-P3-003` [M] Build mother access handoff/reissue UI sesuai auth decision
   - Owner: Frontend
   - References: FR-006, FR-007, ADR-001
   - Depends on: TASK-P2-003, TASK-P0-007
-  - Done when: credential exposure mengikuti security design.
+  - Done when: credential exposure mengikuti security design. `[x] Implemented MotherAccessPanel supporting initial credential issuance, handoff warning callout displaying plaintext access code ONCE, credential reissue with reason, and credential revocation.`
 
 - [ ] `TASK-P3-005` [L] Build mother access dan restricted summary berbasis server DTO
   - Owner: Frontend
