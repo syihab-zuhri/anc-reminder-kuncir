@@ -155,9 +155,7 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
     const rows = hasMore ? result.rows.slice(0, limit) : result.rows;
     const asOfDate = dateOnlyInTimezone(now, timezone);
 
-    const items: MotherSummary[] = rows.map((row) =>
-      mapMotherRowToSummary(row, asOfDate),
-    );
+    const items: MotherSummary[] = rows.map((row) => mapMotherRowToSummary(row, asOfDate));
 
     let nextCursor: string | null = null;
     if (hasMore && rows.length > 0) {
@@ -321,10 +319,7 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
     let nextCursor: string | null = null;
     if (hasMore && rows.length > 0) {
       const last = rows.at(-1)!;
-      nextCursor = encodeMilestoneCursor(
-        last.expected_due_date,
-        last.milestone_id,
-      );
+      nextCursor = encodeMilestoneCursor(last.expected_due_date, last.milestone_id);
     }
 
     return {
@@ -335,20 +330,14 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
   }
 }
 
-function mapMotherRowToSummary(
-  row: MotherQueryResultRow,
-  asOfDate: string,
-): MotherSummary {
+function mapMotherRowToSummary(row: MotherQueryResultRow, asOfDate: string): MotherSummary {
   let activePregnancy = null;
   if (
     row.active_pregnancy_id !== null &&
     row.active_pregnancy_dating_date !== null &&
     row.active_pregnancy_status !== null
   ) {
-    const totalDays = calendarDayDifference(
-      row.active_pregnancy_dating_date,
-      asOfDate,
-    );
+    const totalDays = calendarDayDifference(row.active_pregnancy_dating_date, asOfDate);
     const completedWeeks = Math.floor(Math.max(0, totalDays) / 7);
     const completedDays = Math.max(0, totalDays) % 7;
     activePregnancy = {
@@ -383,8 +372,7 @@ function mapMilestoneRowToItem(
   const completedWeeks = Math.floor(Math.max(0, totalDays) / 7);
   const completedDays = Math.max(0, totalDays) % 7;
 
-  const dueAtDateOnly =
-    row.due_at === null ? null : dateOnlyInTimezone(row.due_at, timezone);
+  const dueAtDateOnly = row.due_at === null ? null : dateOnlyInTimezone(row.due_at, timezone);
 
   return {
     milestone_id: row.milestone_id,
@@ -421,9 +409,9 @@ function dateOnlyToEpoch(date: string): number {
 }
 
 function encodeMotherCursor(createdAt: Date, id: string): string {
-  return Buffer.from(
-    JSON.stringify({ createdAt: createdAt.toISOString(), id }),
-  ).toString("base64url");
+  return Buffer.from(JSON.stringify({ createdAt: createdAt.toISOString(), id })).toString(
+    "base64url",
+  );
 }
 
 function decodeMotherCursor(

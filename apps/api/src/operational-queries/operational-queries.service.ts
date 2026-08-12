@@ -25,25 +25,14 @@ export class OperationalQueriesService {
     private readonly policy: AuthorizationPolicy,
   ) {}
 
-  public async getMothers(
-    actor: StaffActor,
-    query: MotherListQuery,
-  ): Promise<MotherListResponse> {
+  public async getMothers(actor: StaffActor, query: MotherListQuery): Promise<MotherListResponse> {
     this.policy.assertCapability(actor, "MOTHER_BASIC_READ");
     if (actor.healthCenterId === null) throw forbidden();
 
-    return this.repository.findMothers(
-      actor,
-      query,
-      this.clock(),
-      this.config.primaryTimezone,
-    );
+    return this.repository.findMothers(actor, query, this.clock(), this.config.primaryTimezone);
   }
 
-  public async getMotherById(
-    actor: StaffActor,
-    motherId: string,
-  ): Promise<MotherDetailResponse> {
+  public async getMotherById(actor: StaffActor, motherId: string): Promise<MotherDetailResponse> {
     this.policy.assertCapability(actor, "MOTHER_BASIC_READ");
     if (actor.healthCenterId === null) throw forbidden();
 
