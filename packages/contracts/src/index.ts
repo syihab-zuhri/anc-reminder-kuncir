@@ -13,3 +13,4 @@ export * from "./registry.js";
 export * from "./request-id.js";
 export * from "./visit-confirmation.js";
 export * from "./wa-fallback.js";
+export * from "./reports.js";

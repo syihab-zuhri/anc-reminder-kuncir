@@ -17,6 +17,7 @@
 - `TASK-P4-011` Server-side `wa.me` Link Generator (`apps/api`): `API-WA-001` (`GET /api/v1/wa-fallback/queue`), `API-WA-002` (`POST /api/v1/wa-fallback/:id/generate-link`), and `API-WA-003` (`POST /api/v1/wa-fallback/:id/resolve`) with explicit security disclaimer ("Link wa.me ini adalah aksi manual Bidan dan tidak menjamin status pengiriman/penerimaan pesan di WhatsApp").
 - `TASK-P4-013` Web/WebView WhatsApp Fallback Handler (`apps/web`): interactive Antrean Tindak Lanjut WhatsApp in `RoleDashboardShell` allowing Bidan and Puskesmas to open server-generated `wa.me` links safely and mark items as resolved (`RESOLVED`).
 - `TASK-P4-014` Atomic Reminder Suppression on Confirmation & Close (`apps/api`): automatically closes active `reminder_cycles` (`status = 'CLOSED'`, `closed_at = CURRENT_TIMESTAMP`) upon milestone visit confirmation (`CONFIRMED`).
+- `TASK-P5-004` Organization Summary Reports API (`apps/api`): `API-REPORT-001` (`GET /api/v1/reports/summary`) generating aggregate counts for registered mothers, active pregnancies, confirmed visits (K1–K8), and validated records broken down by village with strict Super Admin default isolation.
 
 ## [2026-08-12] Phase 3 Complete Operational & Patient Experience
 
