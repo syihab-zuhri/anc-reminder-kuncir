@@ -198,6 +198,14 @@ export class PostgresVisitConfirmationRepository implements VisitConfirmationRep
       ],
     );
 
+    // TASK-P4-014: Suppress active reminder cycles atomically upon confirmation
+    await client.query(
+      `UPDATE reminder_cycles
+          SET status = 'CLOSED', closed_at = CURRENT_TIMESTAMP
+        WHERE milestone_id = $1 AND status = 'PENDING'`,
+      [target.milestone_id],
+    );
+
     return {
       created: true,
       confirmation: {
