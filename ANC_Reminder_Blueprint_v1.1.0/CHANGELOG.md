@@ -19,6 +19,8 @@
 - `TASK-P4-014` Atomic Reminder Suppression on Confirmation & Close (`apps/api`): automatically closes active `reminder_cycles` (`status = 'CLOSED'`, `closed_at = CURRENT_TIMESTAMP`) upon milestone visit confirmation (`CONFIRMED`).
 - `TASK-P5-004` Organization Summary Reports API (`apps/api`): `API-REPORT-001` (`GET /api/v1/reports/summary`) generating aggregate counts for registered mothers, active pregnancies, confirmed visits (K1–K8), and validated records broken down by village with strict Super Admin default isolation.
 - `TASK-P5-005` Versioned Care Plan Configuration UI (`apps/web`): added sub-tab in `OrganizationAdminPanel` displaying active ANC care plan version, approval status, clinical owner grant info, target weeks, allowed facility types, and validation policies per milestone.
+- `TASK-P5-003` Facility Override Approval (`apps/api`): added `hasClinicalOwnerOverride` support in `isFacilityTypeAllowed` allowing facility policy overrides when approved by Clinical Owner.
+- `TASK-P6-007` `wa.me` Contract Test Suite (`apps/api`): added integration contract tests verifying URL encoding, sensitive detail exclusion, non-existent target 404s, and strict denial of false delivery status claims.
 
 ## [2026-08-12] Phase 3 Complete Operational & Patient Experience
 

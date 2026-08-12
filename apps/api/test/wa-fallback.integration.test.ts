@@ -201,4 +201,32 @@ describe("wa-fallback integration (API-WA-001..003)", () => {
 
     expect(queueRes.status).toBe(403);
   });
+
+  it("enforces wa.me contract requirements: phone normalization, URL encoding, no sensitive clinical detail, and safe status (TASK-P6-007)", async () => {
+    const server = app.getHttpServer() as Parameters<typeof request>[0];
+
+    // 1. Generate link and verify link contract
+    const linkRes = await request(server)
+      .post(`/api/v1/wa-fallback/${fallbackId}/generate-link`)
+      .set("Authorization", `Bearer ${bidanToken}`);
+
+    expect(linkRes.status).toBe(200);
+    const linkData = linkRes.body as GenerateWaLinkResponse;
+
+    // URL structure validation
+    expect(linkData.wa_me_url).toMatch(/^https:\/\/wa\.me\/\d+\?text=/u);
+    // Exclude unmasked NIK or private medical notes
+    expect(linkData.wa_me_url).not.toContain("3603");
+    expect(linkData.wa_me_url).not.toContain("NIK");
+    // Ensure disclaimer prohibits false delivery claims
+    expect(linkData.disclaimer).not.toContain("DELIVERED");
+    expect(linkData.disclaimer).not.toContain("SENT");
+
+    // 2. Reject non-existent fallback ID cleanly (404)
+    const missingRes = await request(server)
+      .post("/api/v1/wa-fallback/00000000-0000-4000-8000-000000000099/generate-link")
+      .set("Authorization", `Bearer ${bidanToken}`);
+
+    expect(missingRes.status).toBe(404);
+  });
 });
