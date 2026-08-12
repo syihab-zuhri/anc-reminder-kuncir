@@ -224,11 +224,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Done when: future milestone/reminder disuppress konsisten setelah pregnancy close.
   - Evidence: `API-PREG-003` mengunci pregnancy lalu dalam satu transaksi menyimpan close snapshot, membatalkan hanya milestone `UPCOMING/DUE/OVERDUE` dan reminder cycle unresolved, meng-expire aksi `wa.me` unresolved, menutup pregnancy, serta menulis ledger pembatalan append-only. State terminal dipertahankan; exact replay dan double-close concurrent tidak menggandakan history/audit. Trigger database mengunci parent pregnancy dan menolak reminder aktif baru setelah close. API/database tests, fresh migration, rollback→reapply, serta PostgreSQL registry smoke lulus.
 
-- [ ] `TASK-P2-009` [M] Implement scoped overdue/pending/confirmation operational queries
+- [x] `TASK-P2-009` [M] Implement scoped overdue/pending/confirmation operational queries
   - Owner: Backend
   - References: FR-020, DOC-PERMISSION
   - Depends on: TASK-P2-006, TASK-P1-003, TASK-P2-012
   - Done when: pagination/scope/status/performance tests lulus.
+  - Evidence: `API-MOTHER-002` (`GET /mothers`), `API-MOTHER-003` (`GET /mothers/:id`), dan operational milestones list (`GET /operational/milestones`) telah diimplementasikan dengan otorisasi berbasis role/scope (Puskesmas aggregate center scope, Bidan assigned area/mother scope, Super Admin default deny). Paginasi cursor (`cursor`, `limit`), filter pencarian/desa/status kehamilan/status milestone/due date, penentuan usia kehamilan & trimester server-side, contract tests, unit/integration test suite (7 tests), typecheck, dan verification run lulus.
 
 - [x] `TASK-P2-010` [L] Implement **server-side K1–K8 milestone engine** dan configurable facility rules
   - Owner: Backend + Clinical Reviewer
