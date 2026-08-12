@@ -48,6 +48,12 @@ export interface PregnancyMilestoneSnapshot {
   readonly milestones: readonly PregnancyMilestoneSnapshotItem[];
 }
 
+export interface GestationalState {
+  readonly completedWeeks: number;
+  readonly completedDays: number;
+  readonly trimesterLabel: string;
+}
+
 export class InvalidPregnancyDatingStateError extends Error {
   public constructor() {
     super("Pregnancy dating date is later than the requested calculation date");
@@ -60,6 +66,26 @@ export class UnsupportedPregnancyDatingBasisError extends Error {
     super("Pregnancy dating basis does not have approved calculation semantics");
     this.name = "UnsupportedPregnancyDatingBasisError";
   }
+}
+
+export function deriveGestationalState(datingDate: Date, asOf: Date): GestationalState {
+  const diffTime = Math.max(0, asOf.getTime() - datingDate.getTime());
+  const totalDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const completedWeeks = Math.floor(totalDays / 7);
+  const completedDays = totalDays % 7;
+
+  let trimesterLabel = "Trimester 1";
+  if (completedWeeks >= 28) {
+    trimesterLabel = "Trimester 3";
+  } else if (completedWeeks >= 14) {
+    trimesterLabel = "Trimester 2";
+  }
+
+  return {
+    completedWeeks,
+    completedDays,
+    trimesterLabel,
+  };
 }
 
 export function derivePregnancyMilestoneState(

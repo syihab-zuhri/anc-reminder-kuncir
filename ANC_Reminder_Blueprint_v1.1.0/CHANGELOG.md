@@ -8,6 +8,16 @@
 > **Last Updated:** 2026-08-12  
 > **Depends On:** All project documents
 
+## [2026-08-12] Phase 2 Server-Composed Dashboard Endpoints
+
+### Added
+
+- `API-DASH-001` (`GET /dashboard/puskesmas`), `API-DASH-002` (`GET /dashboard/bidan`), and `API-DASH-003` (`GET /mother/me/dashboard`, `GET /dashboard/bumil`) endpoints.
+- Puskesmas aggregate dashboard summary and priority action queue.
+- Bidan assigned-area summary, assigned villages list, and visit confirmation queue.
+- Bumil personal dashboard with mother info, active pregnancy gestational progress, next milestone recommendation, and K1–K8 milestone timeline.
+- Role isolation, private cache-control headers, Zod DTO contracts, and integration test suite.
+
 ## [2026-08-12] Phase 2 Scoped Operational Queries
 
 ### Added
