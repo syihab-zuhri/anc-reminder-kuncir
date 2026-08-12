@@ -234,14 +234,25 @@ Append-only confirmation/correction history.
 Puskesmas-managed program details only.
 - `id uuid PK`
 - `milestone_id uuid FK unique`
+- `milestone_code enum(K1..K6)` with composite FK to milestone identity
 - `record_payload jsonb` — schema/version controlled; sensitive
 - `schema_version text`
 - `status enum(INCOMPLETE,VALIDATED)`
 - `validated_at timestamptz nullable`
 - `validated_by uuid nullable`
-- `updated_at`
+- `created_at`, `updated_at`
+- state check requires `INCOMPLETE` with no validator/time or `VALIDATED` with both values
 
 > 💡 Reasoning: MVP can use versioned JSON payload for program components while rule/component schema is still being clinically finalized. If stable/high-query fields emerge, normalize them in a migration.
+
+### `k1_k6_record_revisions`
+Append-only sensitive snapshot for every record save.
+- `id uuid PK`, `record_id uuid FK`, `milestone_id uuid FK`
+- `revision_no integer` unique per record
+- `actor_staff_id uuid FK nullable` only for migrated legacy history; API writes always identify Puskesmas actor
+- `schema_version text`, `record_payload jsonb`, `occurred_at timestamptz`
+- composite FKs prevent revision/record/milestone mixing
+- append-only trigger rejects update/delete; payload must never enter generic audit metadata/logs
 
 ### `record_validation_events`
 - `id uuid PK`
@@ -250,6 +261,9 @@ Puskesmas-managed program details only.
 - `actor_staff_id uuid FK`
 - `reason text nullable`
 - `created_at`
+- `revision_id uuid FK nullable` for legacy history; required for API-created events
+- immutable snapshot: `resulting_status`, `validated_at_snapshot`, `validated_by_snapshot`
+- API `VALIDATE` snapshots require validator/time; `REOPEN` snapshots require both null
 
 ### `mother_access_credentials`
 - `id uuid PK`

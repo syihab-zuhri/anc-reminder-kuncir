@@ -56,6 +56,8 @@ Bidan: explicit assignment/area scope. Puskesmas: Puskesmas organization/facilit
 
 `API-VISIT-001` enforces this scope inside the same transaction that locks and confirms the milestone. Bidan replay access is re-evaluated against the current active assignment and K2/K3/K6/K7 code boundary; Puskesmas remains limited to the same health center. Facility IDs must also resolve to an active facility in that center.
 
+`API-VISIT-003..006` require `CLINICAL_RECORD_WRITE`, which is granted only to Puskesmas. The repository independently enforces the same health center and K1–K6 at each read/mutation/replay. Bidan receives no detail payload even for an assigned mother, and generic audit events contain only record identity/action—not clinical payload.
+
 ## 5. Row-Level Rules
 
 - Every pregnancy/milestone/record/fallback query must resolve actor scope first.

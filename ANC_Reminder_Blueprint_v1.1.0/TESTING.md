@@ -54,7 +54,7 @@ Local synthetic data → CI ephemeral DB → staging with synthetic/pilot-approv
 | TEST-SCHEDULE-004 | Closed pregnancy and terminal milestone states reject schedule mutation | API/security |
 | TEST-SCHEDULE-005 | Idempotency replay returns the immutable original event without duplicate event/audit | API/DB |
 | TEST-VISIT-001 | Assigned Bidan confirms K3 with only date/facility/idempotency input; validation status remains independent | Contract/API/PostgreSQL |
-| TEST-VISIT-002 | Bidan cannot edit K1–K6 detail | Security |
+| TEST-VISIT-002 | Only same-center Puskesmas can read/write/validate/reopen K1–K6 detail; Bidan/Bumil/Super Admin and K7/K8 fail closed | Security/API |
 | TEST-VISIT-003 | Bidan is denied K1/K4/K5/K8 or out-of-scope mothers; Puskesmas inherits confirmation for K1–K8 | Permission/API |
 | TEST-VISIT-004 | Confirmation suppresses reminder atomically | Concurrency |
 | TEST-VISIT-005 | Exact replay and same-fact logical duplicate return the initial confirmation without duplicate history/audit | API/DB |
@@ -62,6 +62,14 @@ Local synthetic data → CI ephemeral DB → staging with synthetic/pilot-approv
 | TEST-VISIT-007 | Closed pregnancy, terminal milestone, future/pre-pregnancy date, inactive/cross-center/disallowed facility fail closed | API/security |
 | TEST-VISIT-008 | Two concurrent identical confirmations create one history/audit and return one immutable identity | Concurrency/PostgreSQL |
 | TEST-VISIT-009 | Confirmation history rejects update/delete and confirmed timeline is immediately not reminder-eligible | PostgreSQL/API |
+| TEST-RECORD-001 | First save and later saves produce bounded versioned append-only revisions without hardcoded unapproved fields | Contract/API/DB |
+| TEST-RECORD-002 | Exact replay returns immutable save response without duplicate revision/audit | API/DB |
+| TEST-RECORD-003 | Two writers using one expected revision produce exactly one success and one revision conflict | Concurrency/PostgreSQL |
+| TEST-RECORD-004 | Validation requires confirmed visit, exact revision, and explicit Puskesmas attestation; record/milestone states stay synchronized | API/DB |
+| TEST-RECORD-005 | Validated record rejects edit until reasoned reopen; reopen preserves validated revision and next edit creates a new revision | API/DB |
+| TEST-RECORD-006 | Logical duplicate validate/reopen does not duplicate immutable event/audit | API/DB |
+| TEST-RECORD-007 | Closed pregnancy, terminal milestone, missing record, unsafe/empty/oversized payload fail closed | Contract/API/security |
+| TEST-RECORD-008 | Revision and validation-event updates/deletes are rejected; generic audit contains no clinical payload | PostgreSQL/security |
 | TEST-NOTIF-001 | One logical reminder per 3-day window | Clock/concurrency |
 | TEST-NOTIF-002 | Push retryable failures retry under policy | Integration |
 | TEST-NOTIF-003 | Terminal/no-device creates single WA fallback | Integration |

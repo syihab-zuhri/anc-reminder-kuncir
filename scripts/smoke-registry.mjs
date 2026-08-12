@@ -682,6 +682,263 @@ try {
     }
   }
 
+  await expectStatus(
+    await request(`/milestones/${milestoneByCode.K3.id}/record`, {
+      headers: { authorization: bidanAuthorization },
+    }),
+    403,
+    "Bidan clinical-record read rejection",
+  );
+  await expectStatus(
+    await request(`/milestones/${milestoneByCode.K7.id}/record`, {
+      headers: { authorization },
+    }),
+    403,
+    "K7 clinical-record boundary rejection",
+  );
+
+  const sensitiveSyntheticMarker = "SENSITIVE_SYNTHETIC_RECORD_MARKER";
+  const initialRecordRequest = {
+    idempotency_key: randomUUID(),
+    expected_revision_id: null,
+    schema_version: "synthetic.k3.v1",
+    record_payload: {
+      synthetic_component: { state: "RECORDED", marker: sensitiveSyntheticMarker },
+    },
+  };
+  const initialRecord = await readJson(
+    await request(`/milestones/${milestoneByCode.K3.id}/record`, {
+      method: "PUT",
+      headers: { authorization },
+      body: JSON.stringify(initialRecordRequest),
+    }),
+    "Puskesmas K3 detail save",
+  );
+  const initialRecordReplay = await readJson(
+    await request(`/milestones/${milestoneByCode.K3.id}/record`, {
+      method: "PUT",
+      headers: { authorization },
+      body: JSON.stringify(initialRecordRequest),
+    }),
+    "Puskesmas K3 detail replay",
+  );
+  const initialRecordRead = await readJson(
+    await request(`/milestones/${milestoneByCode.K3.id}/record`, {
+      headers: { authorization },
+    }),
+    "Puskesmas K3 detail read",
+  );
+  if (
+    initialRecord.code !== "K3" ||
+    initialRecord.revision_no !== 1 ||
+    initialRecord.record_validation_status !== "INCOMPLETE" ||
+    initialRecordReplay.revision_id !== initialRecord.revision_id ||
+    initialRecordRead.revision_id !== initialRecord.revision_id
+  ) {
+    throw new Error("K3 detail initial save/replay/read violated revision invariants");
+  }
+
+  const concurrentRecordResponses = await Promise.all(
+    ["LEFT", "RIGHT"].map((value) =>
+      request(`/milestones/${milestoneByCode.K3.id}/record`, {
+        method: "PUT",
+        headers: { authorization },
+        body: JSON.stringify({
+          idempotency_key: randomUUID(),
+          expected_revision_id: initialRecord.revision_id,
+          schema_version: "synthetic.k3.v1",
+          record_payload: { synthetic_component: { state: "RECORDED", value } },
+        }),
+      }),
+    ),
+  );
+  if (
+    concurrentRecordResponses
+      .map((response) => response.status)
+      .sort((left, right) => left - right)
+      .join(",") !== "200,409"
+  ) {
+    throw new Error("Concurrent K3 detail writers did not produce one winner and one conflict");
+  }
+  const concurrentRecordBodies = await Promise.all(
+    concurrentRecordResponses.map((response) => response.json()),
+  );
+  const revisedRecord = concurrentRecordBodies.find((body) => body.revision_no === 2);
+  const revisionConflict = concurrentRecordBodies.find((body) => body.error !== undefined);
+  if (
+    revisedRecord?.record_validation_status !== "INCOMPLETE" ||
+    revisionConflict?.error?.code !== "CLINICAL_RECORD_REVISION_CHANGED"
+  ) {
+    throw new Error("Concurrent K3 detail writers returned incorrect revision semantics");
+  }
+
+  const validationRequest = {
+    idempotency_key: randomUUID(),
+    expected_revision_id: revisedRecord.revision_id,
+    attestation: "DETAIL_REVIEWED_COMPLETE",
+  };
+  const validatedRecord = await readJson(
+    await request(`/milestones/${milestoneByCode.K3.id}/record/validate`, {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify(validationRequest),
+    }),
+    "Puskesmas K3 detail validation",
+  );
+  const validatedReplay = await readJson(
+    await request(`/milestones/${milestoneByCode.K3.id}/record/validate`, {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify(validationRequest),
+    }),
+    "Puskesmas K3 detail validation replay",
+  );
+  const validatedLogicalDuplicate = await readJson(
+    await request(`/milestones/${milestoneByCode.K3.id}/record/validate`, {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify({ ...validationRequest, idempotency_key: randomUUID() }),
+    }),
+    "Puskesmas K3 detail validation logical duplicate",
+  );
+  if (
+    validatedRecord.record_validation_status !== "VALIDATED" ||
+    validatedRecord.validated_by_staff_id !== puskesmasActor.rows[0]?.id ||
+    validatedReplay.revision_id !== revisedRecord.revision_id ||
+    validatedLogicalDuplicate.revision_id !== revisedRecord.revision_id
+  ) {
+    throw new Error("K3 validation did not persist or deduplicate the validation state");
+  }
+  const editWhileValidated = await readErrorShape(
+    await request(`/milestones/${milestoneByCode.K3.id}/record`, {
+      method: "PUT",
+      headers: { authorization },
+      body: JSON.stringify({
+        idempotency_key: randomUUID(),
+        expected_revision_id: revisedRecord.revision_id,
+        schema_version: "synthetic.k3.v1",
+        record_payload: { synthetic_component: { state: "EDIT_WITHOUT_REOPEN" } },
+      }),
+    }),
+    409,
+    "Validated detail edit rejection",
+  );
+  if (editWhileValidated.code !== "CLINICAL_RECORD_REOPEN_REQUIRED") {
+    throw new Error("Validated detail edit returned the wrong error");
+  }
+
+  const reopenRequest = {
+    idempotency_key: randomUUID(),
+    expected_revision_id: revisedRecord.revision_id,
+    reason: "Synthetic detail correction required",
+  };
+  const reopenedRecord = await readJson(
+    await request(`/milestones/${milestoneByCode.K3.id}/record/reopen`, {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify(reopenRequest),
+    }),
+    "Puskesmas K3 detail reopen",
+  );
+  const reopenedLogicalDuplicate = await readJson(
+    await request(`/milestones/${milestoneByCode.K3.id}/record/reopen`, {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify({ ...reopenRequest, idempotency_key: randomUUID() }),
+    }),
+    "Puskesmas K3 detail reopen logical duplicate",
+  );
+  if (
+    reopenedRecord.record_validation_status !== "INCOMPLETE" ||
+    reopenedLogicalDuplicate.revision_id !== revisedRecord.revision_id
+  ) {
+    throw new Error("K3 detail reopen did not persist or deduplicate correctly");
+  }
+  const finalRecord = await readJson(
+    await request(`/milestones/${milestoneByCode.K3.id}/record`, {
+      method: "PUT",
+      headers: { authorization },
+      body: JSON.stringify({
+        idempotency_key: randomUUID(),
+        expected_revision_id: revisedRecord.revision_id,
+        schema_version: "synthetic.k3.v1",
+        record_payload: { synthetic_component: { state: "REVISED_AFTER_REOPEN" } },
+      }),
+    }),
+    "Puskesmas K3 detail revision after reopen",
+  );
+  if (finalRecord.revision_no !== 3 || finalRecord.record_validation_status !== "INCOMPLETE") {
+    throw new Error("K3 detail revision after reopen returned an invalid snapshot");
+  }
+
+  const recordState = await pool.query(
+    `SELECT record.status,
+            milestone.record_validation_status,
+            COUNT(DISTINCT revision.id)::int AS revision_count,
+            COUNT(DISTINCT event.id)::int AS validation_event_count
+       FROM k1_k6_records AS record
+       JOIN pregnancy_milestones AS milestone ON milestone.id = record.milestone_id
+       LEFT JOIN k1_k6_record_revisions AS revision ON revision.record_id = record.id
+       LEFT JOIN record_validation_events AS event ON event.record_id = record.id
+      WHERE record.id = $1
+      GROUP BY record.id, record.status, milestone.record_validation_status`,
+    [finalRecord.record_id],
+  );
+  if (
+    recordState.rows[0]?.status !== "INCOMPLETE" ||
+    recordState.rows[0]?.record_validation_status !== "INCOMPLETE" ||
+    recordState.rows[0]?.revision_count !== 3 ||
+    recordState.rows[0]?.validation_event_count !== 2
+  ) {
+    throw new Error("K3 detail persistence violated revision/validation state invariants");
+  }
+  const recordAudit = await pool.query(
+    `SELECT action, COUNT(*)::int AS event_count
+       FROM audit_events
+      WHERE created_at >= $1
+        AND resource_id = $2
+        AND action IN ('K1_K6_RECORD_SAVED', 'RECORD_VALIDATED', 'RECORD_REOPENED')
+      GROUP BY action`,
+    [smokeStartedAt, finalRecord.record_id],
+  );
+  const recordAuditCounts = Object.fromEntries(
+    recordAudit.rows.map((event) => [event.action, event.event_count]),
+  );
+  if (
+    recordAuditCounts.K1_K6_RECORD_SAVED !== 3 ||
+    recordAuditCounts.RECORD_VALIDATED !== 1 ||
+    recordAuditCounts.RECORD_REOPENED !== 1
+  ) {
+    throw new Error("Clinical-record audit was missing or duplicated by replay/concurrency");
+  }
+  const sensitiveAuditLeak = await pool.query(
+    `SELECT COUNT(*)::int AS leak_count
+       FROM audit_events
+      WHERE metadata::text LIKE $1`,
+    [`%${sensitiveSyntheticMarker}%`],
+  );
+  if (sensitiveAuditLeak.rows[0]?.leak_count !== 0) {
+    throw new Error("Sensitive clinical record payload leaked into generic audit metadata");
+  }
+  for (const [table, id] of [
+    ["k1_k6_record_revisions", finalRecord.revision_id],
+    ["record_validation_events", null],
+  ]) {
+    try {
+      if (id === null) {
+        await pool.query(
+          "UPDATE record_validation_events SET reason = 'MUTATED' WHERE record_id = $1",
+          [finalRecord.record_id],
+        );
+      } else {
+        await pool.query(`UPDATE ${table} SET schema_version = 'mutated' WHERE id = $1`, [id]);
+      }
+      throw new Error(`Append-only ${table} accepted an update`);
+    } catch (error) {
+      if (error?.code !== "55000") throw error;
+    }
+  }
+
   const duplicateWhileActive = await request(`/mothers/${first.mother.id}/pregnancies`, {
     method: "POST",
     headers: { authorization },
@@ -1239,7 +1496,7 @@ try {
   }
 
   process.stdout.write(
-    "Registry smoke passed: protected registration, pregnancy lifecycle, concurrent K1-K8 scheduling/confirmation, hashed credential rotation, private mother sessions, and durable throttling.\n",
+    "Registry smoke passed: protected registration, pregnancy lifecycle, concurrent K1-K8 scheduling/confirmation, versioned K1-K6 validation, hashed credential rotation, private mother sessions, and durable throttling.\n",
   );
 } finally {
   process.env.SMOKE_STAFF_PASSWORD = "";

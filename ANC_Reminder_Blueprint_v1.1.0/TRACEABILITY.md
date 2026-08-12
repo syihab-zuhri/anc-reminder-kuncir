@@ -29,7 +29,7 @@
 | FR-024 | FEAT-REGISTRY | close | pregnancy/reminders | Puskesmas | TASK-P2-008 | close test | Covered |
 | FR-029 | FEAT-ANC | API-ANC/MILESTONE | plan/milestones | Puskesmas read/write cfg | TASK-P2-010 | contract/API/PostgreSQL milestone tests | Backend Verified |
 | FR-030 | FEAT-CHECKUP | API-VISIT-001 | confirmations | Bidan/Puskesmas | TASK-P2-012/P3-009 | TEST-VISIT-001/003/005..009 + PostgreSQL smoke | Backend Verified; UI Pending |
-| FR-031 | FEAT-CHECKUP | API-VISIT-003..006 | k1_k6_records | Puskesmas | TASK-P2-013/P3-008 | TEST-VISIT-002/003 | Covered |
+| FR-031 | FEAT-CHECKUP | API-VISIT-003..006 | k1_k6_records + immutable revisions/events | Puskesmas | TASK-P2-013/P3-008 | TEST-VISIT-002 + TEST-RECORD-001..008 + PostgreSQL smoke | Backend Verified; UI Pending |
 | FR-032 | FEAT-ANC | confirm validation | rules/facilities | server | TASK-P2-010 | structural facility-policy tests | Backend Verified |
 | FR-033 | FEAT-NOTIF | API-MILESTONE-001/002 + internal scheduler | milestones | server | TASK-P2-011/P4-002 | timezone/window/terminal/clock tests + PostgreSQL smoke | Backend Derivation Verified; Worker Pending |
 | FR-034 | FEAT-NOTIF | worker | reminder_cycles | worker | TASK-P4-002 | TEST-NOTIF-001 | Covered |
