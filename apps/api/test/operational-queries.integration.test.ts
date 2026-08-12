@@ -69,7 +69,8 @@ class FakeOperationalQueriesRepository implements OperationalQueriesRepository {
       const search = query.search.toLowerCase();
       filtered = filtered.filter(
         (m) =>
-          m.full_name.toLowerCase().includes(search) || m.phone_masked.toLowerCase().includes(search),
+          m.full_name.toLowerCase().includes(search) ||
+          m.phone_masked.toLowerCase().includes(search),
       );
     }
 
@@ -78,9 +79,7 @@ class FakeOperationalQueriesRepository implements OperationalQueriesRepository {
     }
 
     if (query.pregnancy_status) {
-      filtered = filtered.filter(
-        (m) => m.active_pregnancy?.status === query.pregnancy_status,
-      );
+      filtered = filtered.filter((m) => m.active_pregnancy?.status === query.pregnancy_status);
     }
 
     const limit = query.limit ?? 20;
@@ -109,7 +108,11 @@ class FakeOperationalQueriesRepository implements OperationalQueriesRepository {
     );
     if (!mother) return null;
 
-    if (actor.role === "BIDAN" && mother.village_id !== villageKuncirId && mother.id !== mother1Id) {
+    if (
+      actor.role === "BIDAN" &&
+      mother.village_id !== villageKuncirId &&
+      mother.id !== mother1Id
+    ) {
       return null;
     }
 
@@ -173,6 +176,11 @@ class FakeOperationalQueriesRepository implements OperationalQueriesRepository {
 describe("Operational queries API", () => {
   let app: INestApplication | undefined;
   let queriesRepo: FakeOperationalQueriesRepository;
+
+  function server(): Parameters<typeof request>[0] {
+    if (!app) throw new Error("Application not initialized");
+    return app.getHttpServer() as Parameters<typeof request>[0];
+  }
 
   beforeEach(async () => {
     const passwordHasher = new PasswordHasher();
@@ -320,8 +328,7 @@ describe("Operational queries API", () => {
   });
 
   async function login(identifier: string): Promise<string> {
-    const server = app!.getHttpServer();
-    const response = await request(server)
+    const response = await request(server())
       .post("/api/v1/staff/auth/login")
       .send({ login_identifier: identifier, password })
       .expect(200);
@@ -333,7 +340,7 @@ describe("Operational queries API", () => {
   it("allows Puskesmas to query all mothers in health center", async () => {
     const token = await login("puskesmas.kuncir");
 
-    const response = await request(app!.getHttpServer())
+    const response = await request(server())
       .get("/api/v1/mothers")
       .set("authorization", `Bearer ${token}`)
       .expect(200);
@@ -350,7 +357,7 @@ describe("Operational queries API", () => {
   it("limits Bidan to assigned area mothers", async () => {
     const token = await login("bidan.kuncir");
 
-    const response = await request(app!.getHttpServer())
+    const response = await request(server())
       .get("/api/v1/mothers")
       .set("authorization", `Bearer ${token}`)
       .expect(200);
@@ -364,7 +371,7 @@ describe("Operational queries API", () => {
     const token = await login("puskesmas.kuncir");
 
     // Search filter
-    const searchRes = await request(app!.getHttpServer())
+    const searchRes = await request(server())
       .get("/api/v1/mothers")
       .set("authorization", `Bearer ${token}`)
       .query({ search: "Budi" })
@@ -374,7 +381,7 @@ describe("Operational queries API", () => {
     expect(searchParsed.items[0]?.full_name).toBe("Budi Ani");
 
     // Village filter
-    const villageRes = await request(app!.getHttpServer())
+    const villageRes = await request(server())
       .get("/api/v1/mothers")
       .set("authorization", `Bearer ${token}`)
       .query({ village_id: villageSukaId })
@@ -383,7 +390,7 @@ describe("Operational queries API", () => {
     expect(villageParsed.items).toHaveLength(2);
 
     // Active pregnancy filter
-    const activeRes = await request(app!.getHttpServer())
+    const activeRes = await request(server())
       .get("/api/v1/mothers")
       .set("authorization", `Bearer ${token}`)
       .query({ pregnancy_status: "ACTIVE" })
@@ -395,7 +402,7 @@ describe("Operational queries API", () => {
   it("returns single mother detail for scoped staff", async () => {
     const token = await login("puskesmas.kuncir");
 
-    const response = await request(app!.getHttpServer())
+    const response = await request(server())
       .get(`/api/v1/mothers/${mother1Id}`)
       .set("authorization", `Bearer ${token}`)
       .expect(200);
@@ -406,7 +413,7 @@ describe("Operational queries API", () => {
   it("returns 404 for Bidan querying unassigned mother without leaking existence", async () => {
     const token = await login("bidan.kuncir");
 
-    await request(app!.getHttpServer())
+    await request(server())
       .get(`/api/v1/mothers/${mother2Id}`)
       .set("authorization", `Bearer ${token}`)
       .expect(404);
@@ -415,7 +422,7 @@ describe("Operational queries API", () => {
   it("returns scoped operational milestones list with status and milestone filters", async () => {
     const token = await login("puskesmas.kuncir");
 
-    const response = await request(app!.getHttpServer())
+    const response = await request(server())
       .get("/api/v1/operational/milestones")
       .set("authorization", `Bearer ${token}`)
       .query({ status: "DUE" })
@@ -430,15 +437,15 @@ describe("Operational queries API", () => {
   it("denies Super Admin access to routine health queries", async () => {
     const token = await login("admin.super");
 
-    await request(app!.getHttpServer())
+    await request(server())
       .get("/api/v1/mothers")
       .set("authorization", `Bearer ${token}`)
       .expect(403);
-    await request(app!.getHttpServer())
+    await request(server())
       .get(`/api/v1/mothers/${mother1Id}`)
       .set("authorization", `Bearer ${token}`)
       .expect(403);
-    await request(app!.getHttpServer())
+    await request(server())
       .get("/api/v1/operational/milestones")
       .set("authorization", `Bearer ${token}`)
       .expect(403);
