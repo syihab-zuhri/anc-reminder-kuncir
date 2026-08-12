@@ -336,3 +336,355 @@
   background: #f8d7da;
   border-left: 5px solid #dc3545;
 }
+
+/* Phase 3 Dashboard, Table, and Portal Styles */
+
+.dashboard-content-grid {
+  display: grid;
+  gap: 2rem;
+}
+
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1rem;
+}
+
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.25rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.metric-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metric-value {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.text-due {
+  color: #d97706;
+}
+
+.text-overdue {
+  color: var(--vermillion);
+}
+
+.text-pending {
+  color: #2563eb;
+}
+
+.queue-section h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.staff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  text-align: left;
+}
+
+.staff-table th {
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--paper);
+  border-bottom: 2px solid var(--line);
+}
+
+.staff-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.badge-code {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  font-family: monospace;
+  font-weight: 800;
+  font-size: 0.8rem;
+  background: var(--ink);
+  color: var(--paper-raised);
+}
+
+.badge-status {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-due {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.status-overdue {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.status-confirmed {
+  color: #065f46;
+  background: #d1fae5;
+}
+
+.status-upcoming {
+  color: #1e40af;
+  background: #dbeafe;
+}
+
+.status-active {
+  color: #065f46;
+  background: #d1fae5;
+}
+
+.badge-action {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.village-chips {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.village-chips h4 {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.chip {
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.chip-active {
+  background: var(--ink);
+  color: var(--paper-raised);
+}
+
+.operational-search-section {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.search-form {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  max-width: 36rem;
+}
+
+.search-form input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.search-results-table {
+  margin-top: 1.25rem;
+}
+
+.empty-notice {
+  font-size: 0.88rem;
+  color: var(--ink-muted);
+  font-style: italic;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* Bumil Patient Portal Styles */
+.bumil-portal-wrap {
+  display: grid;
+  gap: 2rem;
+}
+
+.bumil-hero-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.75rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.bumil-profile-info h3 {
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.bumil-profile-info p {
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+}
+
+.gestational-badge-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
+}
+
+.trimester-badge {
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  background: var(--ink);
+  color: var(--paper-raised);
+}
+
+.gestational-age {
+  text-align: right;
+}
+
+.gestational-age strong {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.gestational-age small {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.next-milestone-banner {
+  padding: 1.5rem;
+  background: #eff6ff;
+  border: 2px solid #3b82f6;
+  color: #1e3a8a;
+}
+
+.banner-kicker {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #1d4ed8;
+}
+
+.banner-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.banner-body h4 {
+  font-size: 1.4rem;
+  font-weight: 900;
+}
+
+.banner-due {
+  text-align: right;
+}
+
+.due-label {
+  display: block;
+  font-size: 0.8rem;
+}
+
+.due-date {
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.milestone-timeline-section h3 {
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.section-help {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  margin-bottom: 1.25rem;
+}
+
+.timeline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+.timeline-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.timeline-code {
+  font-size: 1.5rem;
+  font-weight: 900;
+  font-family: monospace;
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ink);
+  color: var(--paper-raised);
+}
+
+.timeline-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.timeline-date {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.thin-client-footer {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+  line-height: 1.5;
+}

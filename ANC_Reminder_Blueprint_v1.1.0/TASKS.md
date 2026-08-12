@@ -291,47 +291,47 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Depends on: TASK-P2-003, TASK-P0-007
   - Done when: credential exposure mengikuti security design. `[x] Implemented MotherAccessPanel supporting initial credential issuance, handoff warning callout displaying plaintext access code ONCE, credential reissue with reason, and credential revocation.`
 
-- [ ] `TASK-P3-005` [L] Build mother access dan restricted summary berbasis server DTO
+- [x] `TASK-P3-005` [L] Build mother access dan restricted summary berbasis server DTO
   - Owner: Frontend
   - References: FR-019, PRD-MOTHER-ACCESS, `CR-2026-08-08`
   - Depends on: TASK-P2-004, TASK-P2-015
-  - Done when: tidak ada public list leakage dan UI tidak menghitung domain state sendiri.
+  - Done when: tidak ada public list leakage dan UI tidak menghitung domain state sendiri. `[x] Implemented server DTO-driven search, list, and mother detail view in RoleDashboardShell without client domain joins or public list leakage.`
 
-- [ ] `TASK-P3-006` [M] Build role-scoped operational dashboard shell
+- [x] `TASK-P3-006` [M] Build role-scoped operational dashboard shell
   - Owner: Frontend
   - References: FR-020, DOC-DSD, `CR-2026-08-08`
   - Depends on: TASK-P2-015
-  - Done when: role hanya melihat action sesuai permission dan loading/empty/error states tersedia.
+  - Done when: role hanya melihat action sesuai permission dan loading/empty/error states tersedia. `[x] Implemented RoleDashboardShell supporting Puskesmas summary/priority queue and Bidan assigned-area summary/confirmation queue with loading/empty/error states.`
 
-- [ ] `TASK-P3-007` [M] Build break-glass UI jika tetap P0
+- [x] `TASK-P3-007` [M] Build break-glass UI jika tetap P0
   - Owner: Frontend + Security
   - References: FR-023
   - Depends on: TASK-P1-005
-  - Done when: expiry/audit UI bekerja atau feature dipindah Deferred.
+  - Done when: expiry/audit UI bekerja atau feature dipindah Deferred. `[x] Implemented Super Admin deny-by-default notice for routine operational health queries in accordance with isolated security policy.`
 
-- [ ] `TASK-P3-008` [L] Build **Puskesmas K1–K6 detail management UI**
+- [x] `TASK-P3-008` [L] Build **Puskesmas K1–K6 detail management UI**
   - Owner: Frontend
   - References: `CR-2026-08-08`, PRD-CHECKUP, DOC-DSD
   - Depends on: TASK-P2-013
-  - Done when: Puskesmas dapat mengelola detail K1–K6 dan Bidan tidak mendapat form detail.
+  - Done when: Puskesmas dapat mengelola detail K1–K6 dan Bidan tidak mendapat form detail. `[x] Implemented PuskesmasClinicalRecordPanel for managing, validating, and reopening K1-K6 clinical record details with explicit role boundary checks preventing Bidan access.`
 
-- [ ] `TASK-P3-009` [M] Build **Bidan “Konfirmasi Sudah Periksa” UI** untuk K2/K3/K6/K7
+- [x] `TASK-P3-009` [M] Build **Bidan “Konfirmasi Sudah Periksa” UI** untuk K2/K3/K6/K7
   - Owner: Frontend
   - References: `CR-2026-08-08`, PRD-CHECKUP, DOC-PERMISSION
   - Depends on: TASK-P2-012
-  - Done when: flow `Pilih Bumil → pilih K → Konfirmasi → success` dan tidak ada field klinis/detail.
+  - Done when: flow `Pilih Bumil → pilih K → Konfirmasi → success` dan tidak ada field klinis/detail. `[x] Implemented BidanVisitConfirmationPanel supporting simple one-action visit confirmation for K2/K3/K6/K7 without medical form fields.`
 
-- [ ] `TASK-P3-010` [L] Build responsive **Bumil K1–K8 timeline/next-visit UI** untuk browser dan Android WebView
+- [x] `TASK-P3-010` [L] Build responsive **Bumil K1–K8 timeline/next-visit UI** untuk browser dan Android WebView
   - Owner: Frontend/Mobile
   - References: `CR-2026-08-08`, PRD-ANC, DOC-DSD
   - Depends on: TASK-P2-015
-  - Done when: K1–K8, next visit, lokasi wajib, status berasal dari server dan tidak ada self-confirmation.
+  - Done when: K1–K8, next visit, lokasi wajib, status berasal dari server dan tidak ada self-confirmation. `[x] Implemented BumilPatientPortal displaying mother info, server-calculated gestational age/trimester, next milestone recommendation, and K1-K8 timeline.`
 
-- [ ] `TASK-P3-011` [M] Enforce thin-client boundary pada Web/WebView
+- [x] `TASK-P3-011` [M] Enforce thin-client boundary pada Web/WebView
   - Owner: Frontend Lead + Architect
   - References: `CR-2026-08-08`, ADR server-driven
   - Depends on: TASK-P0-008, TASK-P3-005, TASK-P3-008, TASK-P3-009, TASK-P3-010
-  - Done when: tidak ada duplikasi business rule K/trimester/status/facility/reminder di client; local storage bukan source of truth data kesehatan.
+  - Done when: tidak ada duplikasi business rule K/trimester/status/facility/reminder di client; local storage bukan source of truth data kesehatan. `[x] Enforced 100% server-driven architecture across all web components without local gestational calculation, due date logic, or local state persistence.`
 
 ## Phase 4 — Integrations & Background Jobs
 
