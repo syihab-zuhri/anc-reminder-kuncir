@@ -49,12 +49,7 @@ class FakeOperationalQueriesRepository implements OperationalQueriesRepository {
   public mothers: MotherSummary[] = [];
   public milestones: OperationalMilestoneItem[] = [];
 
-  public async findMothers(
-    actor: StaffActor,
-    query: MotherListQuery,
-    _now: Date,
-    _timezone: string,
-  ): Promise<MotherListResponse> {
+  public async findMothers(actor: StaffActor, query: MotherListQuery): Promise<MotherListResponse> {
     if (actor.healthCenterId === null || actor.role === "SUPER_ADMIN") {
       return { items: [], next_cursor: null, has_more: false };
     }
@@ -96,8 +91,6 @@ class FakeOperationalQueriesRepository implements OperationalQueriesRepository {
   public async findMotherById(
     actor: StaffActor,
     motherId: string,
-    _now: Date,
-    _timezone: string,
   ): Promise<MotherDetailResponse | null> {
     if (actor.healthCenterId === null || actor.role === "SUPER_ADMIN") {
       return null;
@@ -122,8 +115,6 @@ class FakeOperationalQueriesRepository implements OperationalQueriesRepository {
   public async findOperationalMilestones(
     actor: StaffActor,
     query: OperationalMilestonesQuery,
-    _now: Date,
-    _timezone: string,
   ): Promise<OperationalMilestonesResponse> {
     if (actor.healthCenterId === null || actor.role === "SUPER_ADMIN") {
       return { items: [], next_cursor: null, has_more: false };
