@@ -9,6 +9,7 @@ export * from "./mother-access.js";
 export * from "./milestone-schedule.js";
 export * from "./operational-query.js";
 export * from "./organization.js";
+export * from "./program-status.js";
 export * from "./registry.js";
 export * from "./request-id.js";
 export * from "./visit-confirmation.js";

@@ -32,6 +32,7 @@ import {
   type ClinicalRecordMutationResult,
   type ClinicalRecordRepository,
 } from "./clinical-record.repository.js";
+import { ProgramStatusService } from "../program-status/program-status.service.js";
 
 @Injectable()
 export class ClinicalRecordService {
@@ -42,6 +43,7 @@ export class ClinicalRecordService {
     @Inject(IDEMPOTENCY_SERVICE) private readonly idempotency: IdempotencyService,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly policy: AuthorizationPolicy,
+    private readonly programStatus: ProgramStatusService,
   ) {}
 
   public async get(actor: StaffActor, milestoneId: string): Promise<ClinicalRecordResponse> {
@@ -104,6 +106,7 @@ export class ClinicalRecordService {
       );
       if (!outcome.replayed && outcome.value.created) {
         await this.recordAudit(actor, "K1_K6_RECORD_SAVED", outcome.value.record, occurredAt);
+        await this.programStatus.evaluateSystemForMilestone(outcome.value.record.milestone_id);
       }
       return outcome.value.record;
     } catch (error) {
@@ -197,6 +200,7 @@ export class ClinicalRecordService {
       );
       if (!outcome.replayed && outcome.value.created) {
         await this.recordAudit(actor, input.action, outcome.value.record, occurredAt);
+        await this.programStatus.evaluateSystemForMilestone(outcome.value.record.milestone_id);
       }
       return outcome.value.record;
     } catch (error) {

@@ -5,7 +5,7 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** Engineering Lead  
-> **Last Updated:** 2026-08-12  
+> **Last Updated:** 2026-08-13  
 > **Depends On:** DOC-SRS, PRD documents, DOC-PERMISSION, DOC-ERD, DOC-API, DOC-ARCH, DOC-SECURITY, DOC-DSD, DOC-TESTING
 
 ## 1. Change Request Context
@@ -259,11 +259,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Done when: hanya Puskesmas berwenang mengelola detail K1–K6 dan set `VALIDATED`; Bidan tidak dapat menulis field detail.
   - Evidence: `API-VISIT-003..006` tersedia untuk Puskesmas satu health center; K7/K8, Bidan, Bumil, Super Admin, cross-center, closed pregnancy, dan terminal milestone gagal tertutup. Payload JSON non-empty dibatasi 64 KiB/depth/complexity/unsafe keys, diberi opaque `schema_version`, dan setiap save membuat revisi append-only dengan optimistic concurrency. Validasi memerlukan visit `CONFIRMED`, exact revision, dan attestasi eksplisit; edit setelah validasi memerlukan reopen beralasan. Current record/milestone state, immutable validation snapshot, idempotency, audit tanpa payload, concurrency tests, migration `up → down → up`, dan PostgreSQL smoke lulus. Komponen klinis tidak di-hardcode sampai approval final tersedia.
 
-- [ ] `TASK-P2-014` [M] Implement configurable evaluator untuk **Pencatatan Sigizi Kesga / Bumil Memenuhi Hak Janin**
+- [x] `TASK-P2-014` [M] Implement configurable evaluator untuk **Pencatatan Sigizi Kesga / Bumil Memenuhi Hak Janin**
   - Owner: Backend + Clinical Owner
   - References: `CR-2026-08-08`, PRD-ANC
   - Depends on: TASK-P2-013
   - Done when: label hanya muncul jika rule kelengkapan yang disetujui terpenuhi; K6 saja tidak mengubah status tanpa rule.
+  - Evidence: modul `apps/api/src/program-status/` mengimplementasikan versioned program rules (`program_rule_versions` DRAFT→APPROVED→ACTIVE dengan clinical-owner gate, advisory-lock allocation, transition guard, dan draft-only requirement mutation pada migration `000012`) serta evaluator murni `evaluateProgramEvidence` yang menilai requirement `MILESTONE_VALIDATED`/`FIELD_PRESENT` terhadap evidence K1–K6. `API-PROGRAM-001` (`GET /pregnancies/:id/program-status`, live read-only), `API-PROGRAM-002` (`POST .../recalculate`, idempotent, Puskesmas-only), dan `API-PROGRAM-003` (`GET .../history`, append-only assessments dengan `rule_version` snapshot) tersedia; hook SYSTEM menilai ulang setelah save/validate/reopen K1–K6. Tanpa rule ACTIVE respons `NOT_EVALUATED` + operational notice; K6 saja tanpa K4 validation tidak menghasilkan `MET` (AC-PROG-001), evidence lengkap menghasilkan `COMPLETE/MET` (AC-PROG-002), history tidak ditulis ulang saat rule berganti versi (AC-PROG-003), dan Bumil/Bidan/Super Admin/cross-center ditolak (AC-PROG-004). Audit `PROGRAM_RULE_ACTIVATED`, `PROGRAM_ASSESSMENT_RECALCULATED`, dan `PROGRAM_STATUS_CHANGED` tercatat. 25 test baru (6 evaluator + 19 integrasi) lulus; nilai rule produksi tetap menunggu `OPEN-CLIN-002`.
 
 - [x] `TASK-P2-015` [M] Implement server-composed dashboard/view-model endpoints untuk Puskesmas, Bidan, dan Bumil
   - Owner: Backend

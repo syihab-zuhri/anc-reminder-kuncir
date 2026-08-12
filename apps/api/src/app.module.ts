@@ -32,6 +32,7 @@ import {
   DASHBOARD_REPOSITORY,
   WA_FALLBACK_REPOSITORY,
   REPORTS_REPOSITORY,
+  PROGRAM_STATUS_REPOSITORY,
 } from "./infrastructure/tokens.js";
 import { WaFallbackController } from "./wa-fallback/wa-fallback.controller.js";
 import {
@@ -133,6 +134,13 @@ import { ReportsController } from "./reports/reports.controller.js";
 import { PostgresReportsRepository, type ReportsRepository } from "./reports/reports.repository.js";
 import { ReportsService } from "./reports/reports.service.js";
 
+import { ProgramStatusController } from "./program-status/program-status.controller.js";
+import {
+  PostgresProgramStatusRepository,
+  type ProgramStatusRepository,
+} from "./program-status/program-status.repository.js";
+import { ProgramStatusService } from "./program-status/program-status.service.js";
+
 export interface AppModuleOptions {
   readonly config: ApiConfig;
   readonly databasePool: DatabasePool;
@@ -154,6 +162,7 @@ export interface AppModuleOptions {
   readonly dashboardRepository?: DashboardRepository;
   readonly waFallbackRepository?: WaFallbackRepository;
   readonly reportsRepository?: ReportsRepository;
+  readonly programStatusRepository?: ProgramStatusRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -181,6 +190,7 @@ export class AppModule {
         MotherDashboardController,
         WaFallbackController,
         ReportsController,
+        ProgramStatusController,
       ],
       providers: [
         { provide: API_CONFIG, useValue: options.config },
@@ -348,6 +358,13 @@ export class AppModule {
           useFactory: (repo: PostgresReportsRepository) => new ReportsService(repo),
           inject: [REPORTS_REPOSITORY],
         },
+        {
+          provide: PROGRAM_STATUS_REPOSITORY,
+          useFactory: (pool: DatabasePool) =>
+            options.programStatusRepository ?? new PostgresProgramStatusRepository(pool),
+          inject: [DATABASE_POOL],
+        },
+        ProgramStatusService,
       ],
     };
   }

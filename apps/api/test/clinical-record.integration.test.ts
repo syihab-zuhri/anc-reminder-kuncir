@@ -33,6 +33,7 @@ import { ApiException } from "../src/errors/api.exception.js";
 import type { IdempotencyService } from "../src/idempotency/idempotency.service.js";
 import { JsonLogger } from "../src/observability/json-logger.js";
 import { apiConfigFixture } from "./fixtures.js";
+import { FakeProgramStatusRepository } from "./program-status-fakes.js";
 import {
   FakeAuditRepository,
   FakeOrganizationScopeRepository,
@@ -87,6 +88,7 @@ describe("Puskesmas K1-K6 clinical record API", () => {
       scopedAccessRepository: new FakeScopedAccessRepository(),
       clinicalRecordRepository: records,
       auditRepository: audit,
+      programStatusRepository: new FakeProgramStatusRepository(),
       idempotencyService: new FakeIdempotencyService() as unknown as IdempotencyService,
       clock: () => new Date(now),
     });
