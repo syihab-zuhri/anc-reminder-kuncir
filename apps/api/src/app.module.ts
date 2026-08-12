@@ -30,7 +30,14 @@ import {
   CLINICAL_RECORD_REPOSITORY,
   OPERATIONAL_QUERIES_REPOSITORY,
   DASHBOARD_REPOSITORY,
+  WA_FALLBACK_REPOSITORY,
 } from "./infrastructure/tokens.js";
+import { WaFallbackController } from "./wa-fallback/wa-fallback.controller.js";
+import {
+  PostgresWaFallbackRepository,
+  type WaFallbackRepository,
+} from "./wa-fallback/wa-fallback.repository.js";
+import { WaFallbackService } from "./wa-fallback/wa-fallback.service.js";
 import { StaffAuthController } from "./auth/staff-auth.controller.js";
 import { StaffAuthGuard } from "./auth/staff-auth.guard.js";
 import {
@@ -140,6 +147,7 @@ export interface AppModuleOptions {
   readonly clinicalRecordRepository?: ClinicalRecordRepository;
   readonly operationalQueriesRepository?: OperationalQueriesRepository;
   readonly dashboardRepository?: DashboardRepository;
+  readonly waFallbackRepository?: WaFallbackRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -165,6 +173,7 @@ export class AppModule {
         OperationalQueriesController,
         DashboardController,
         MotherDashboardController,
+        WaFallbackController,
       ],
       providers: [
         { provide: API_CONFIG, useValue: options.config },
@@ -310,6 +319,17 @@ export class AppModule {
         ClinicalRecordService,
         OperationalQueriesService,
         DashboardService,
+        {
+          provide: WA_FALLBACK_REPOSITORY,
+          useFactory: (pool: DatabasePool) =>
+            options.waFallbackRepository ?? new PostgresWaFallbackRepository(pool),
+          inject: [DATABASE_POOL],
+        },
+        {
+          provide: WaFallbackService,
+          useFactory: (repo: PostgresWaFallbackRepository) => new WaFallbackService(repo),
+          inject: [WA_FALLBACK_REPOSITORY],
+        },
       ],
     };
   }

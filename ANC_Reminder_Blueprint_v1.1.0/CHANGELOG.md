@@ -8,6 +8,14 @@
 > **Last Updated:** 2026-08-12  
 > **Depends On:** All project documents
 
+## [2026-08-12] Phase 4 Background Worker, Outbox & WhatsApp Fallback
+
+### Added
+
+- `TASK-P4-001` & `TASK-P4-002` Transactional Outbox & Worker Loop (`processReminderCycles` in `apps/worker`): queries DUE/OVERDUE milestones from ACTIVE pregnancies with GRANTED REMINDER consent, inserts `reminder_cycles` ON CONFLICT DO NOTHING, and routes to `push_attempts` or `wa_fallback_actions` (`READY`).
+- `TASK-P4-004` Android WebView Shell (`apps/android`): `AndroidSecureStorage` and `parseTrustedDeepLink` supporting HTTPS-only origin enforcement, token format validation (`anc_mt_...`), and zero local health data persistence.
+- `TASK-P4-011` Server-side `wa.me` Link Generator (`apps/api`): `API-WA-001` (`GET /api/v1/wa-fallback/queue`), `API-WA-002` (`POST /api/v1/wa-fallback/:id/generate-link`), and `API-WA-003` (`POST /api/v1/wa-fallback/:id/resolve`) with explicit security disclaimer ("Link wa.me ini adalah aksi manual Bidan dan tidak menjamin status pengiriman/penerimaan pesan di WhatsApp").
+
 ## [2026-08-12] Phase 3 Complete Operational & Patient Experience
 
 ### Added

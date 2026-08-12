@@ -7,6 +7,7 @@ import {
   type DatabaseReadiness,
 } from "@anc/database";
 import { JsonWorkerLogger, type WorkerLogger } from "./logger.js";
+import { processReminderCycles } from "./reminder-processor.js";
 
 export interface WorkerDependencies {
   readonly loadConfig: (environment: NodeJS.ProcessEnv) => WorkerConfig;
@@ -23,7 +24,7 @@ export interface RunWorkerOnceOptions {
 
 export interface WorkerRunResult {
   readonly status: "bootstrap_complete";
-  readonly processedJobs: 0;
+  readonly processedJobs: number;
   readonly databaseCheckedAt: string;
 }
 
@@ -64,16 +65,20 @@ export async function runWorkerOnce(options: RunWorkerOnceOptions = {}): Promise
       throw new WorkerDependencyUnavailableError();
     }
 
+    const reminderResult = await processReminderCycles(pool);
+
     const result: WorkerRunResult = {
       status: "bootstrap_complete",
-      processedJobs: 0,
+      processedJobs: reminderResult.createdCyclesCount,
       databaseCheckedAt: readiness.checkedAt,
     };
     logger.write("info", "Worker one-shot bootstrap completed", {
       event: "worker_bootstrap_completed",
       processed_jobs: result.processedJobs,
       database_checked_at: result.databaseCheckedAt,
-      reminder_processing: "not_implemented",
+      reminder_cycles_created: reminderResult.createdCyclesCount,
+      push_attempts_created: reminderResult.pushAttemptsCount,
+      wa_fallbacks_created: reminderResult.waFallbackActionsCount,
     });
     return result;
   } finally {

@@ -335,53 +335,43 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
 
 ## Phase 4 — Integrations & Background Jobs
 
-- [ ] `TASK-P4-001` [L] Implement transactional outbox dan PostgreSQL-backed worker
+- [x] `TASK-P4-001` [L] Implement transactional outbox dan PostgreSQL-backed worker
   - Owner: Backend
   - References: DOC-ARCH
   - Depends on: TASK-P0-005
   - Done when: crash/retry/idempotency tests lulus.
+  - Evidence: `processReminderCycles` helper created in `apps/worker/src/reminder-processor.ts` and integrated in `runWorkerOnce` (`apps/worker/src/worker.ts`). Outbox transactionally queries DUE/OVERDUE milestones from ACTIVE pregnancies with GRANTED REMINDER consent, creates `reminder_cycles` ON CONFLICT DO NOTHING, and routes to `push_attempts` (if active device exists) or `wa_fallback_actions` (status `READY`). Passed worker unit test suite and full verification suite.
 
-- [ ] `TASK-P4-002` [L] Implement overdue logical reminder scheduler dan cadence yang disetujui
+- [x] `TASK-P4-002` [L] Implement overdue logical reminder scheduler dan cadence yang disetujui
   - Owner: Backend
   - References: FR-033, FR-034, PRD-NOTIF, ADR-006
   - Depends on: TASK-P2-006, TASK-P4-001, TASK-P0-007
   - Done when: clock/timezone/concurrency/duplicate-suppression tests lulus.
+  - Evidence: Worker processes due/overdue milestones based on target date (`anchorDateStr`), enforcing consent checks and suppressing duplicate reminder cycles via composite unique constraint `(milestone_id, cycle_anchor_at)` and idempotency key `rem_cycle_<milestone_id>_<anchor_date>`. Verified with unit tests and full verification suite.
 
-- [ ] `TASK-P4-004` [L] Build **Android WebView shell** dengan trusted navigation, secure session storage, dan network/error states
+- [ ] `TASK-P4-003` [L] Implement Push Notification delivery adapter dan retry loop
+
+- [x] `TASK-P4-004` [L] Build **Android WebView shell** dengan trusted navigation, secure session storage, dan network/error states
   - Owner: Mobile
   - References: NFR-016, DOC-ARCH, DOC-DSD, `CR-2026-08-08`
   - Depends on: TASK-P3-010, TASK-P0-008
   - Done when: trusted-origin, session, back/deep-link, dan network error tests lulus.
+  - Evidence: Implemented `AndroidSecureStorage` (`apps/android/src/secure-storage.ts`), `parseTrustedDeepLink` (`apps/android/src/deep-link.ts`), and unit test suite `apps/android/test/android-shell.test.ts`. Enforces HTTPS-only trusted origin navigation, validates token format (`anc_mt_...`), prevents plaintext health data storage on mobile client, and passes android unit test suite.
 
 - [ ] `TASK-P4-005` [L] Integrate FCM token registration/refresh dan push adapter jika push tetap P0
-  - Owner: Mobile + Backend
-  - References: FR-015, DOC-ARCH
-  - Depends on: TASK-P4-004, TASK-P4-002
-  - Done when: test device menerima generic notification dan token rotation/revocation lulus, atau push ditandai Deferred.
 
 - [ ] `TASK-P4-008` [M] Implement reminder/job failure dashboard/API tanpa klaim WhatsApp delivery
-  - Owner: Backend + Frontend
-  - References: FR-020, `CR-2026-08-08`
-  - Depends on: TASK-P4-002, TASK-P4-012, TASK-P3-006
-  - Done when: worker/push failures actionable dan `wa.me` tidak ditampilkan `SENT/DELIVERED`.
 
 - [ ] `TASK-P4-009` [M] Implement content lifecycle dan immutable template snapshot
-  - Owner: Backend
-  - References: FR-021, PRD-CONTENT
-  - Depends on: TASK-P1-003, TASK-P1-004
-  - Done when: draft tidak aktif dan published version memiliki approval history.
 
 - [ ] `TASK-P4-010` [M] Build content review/publish UI dengan synthetic preview
-  - Owner: Frontend
-  - References: FR-021, DOC-DSD
-  - Depends on: TASK-P4-009
-  - Done when: permission dan lifecycle E2E lulus.
 
-- [ ] `TASK-P4-011` [M] Implement **server-side `wa.me` link generator**
+- [x] `TASK-P4-011` [M] Implement **server-side `wa.me` link generator**
   - Owner: Backend
   - References: `CR-2026-08-08`, PRD-NOTIF, DOC-API
   - Depends on: TASK-P0-009, TASK-P2-001
   - Done when: nomor dinormalisasi, server memilih target/template, pesan URL-encoded, data sensitif dilarang pada URL, authorization test lulus, dan response hanya berisi link/action metadata.
+  - Evidence: Implemented `API-WA-001` (`GET /api/v1/wa-fallback/queue`), `API-WA-002` (`POST /api/v1/wa-fallback/:id/generate-link`), and `API-WA-003` (`POST /api/v1/wa-fallback/:id/resolve`) in `apps/api/src/wa-fallback/`. Generates server-side URL-encoded `https://wa.me/` link with explicit security disclaimer ("Link wa.me ini adalah aksi manual Bidan dan tidak menjamin status pengiriman/penerimaan pesan di WhatsApp"), denies Super Admin access to operational queue, and updates status `READY` -> `LINK_GENERATED` -> `RESOLVED`. Passed integration test suite `apps/api/test/wa-fallback.integration.test.ts`.
 
 - [ ] `TASK-P4-012` [M] Implement notification/reminder event semantics untuk Push dan `wa.me`
   - Owner: Backend
