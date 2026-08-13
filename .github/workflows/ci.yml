@@ -74,6 +74,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:ci
       - run: npm run build
+      - run: npm run cap:sync --workspace=@anc/android
       - run: bash ./gradlew assembleDebug
         working-directory: apps/android/android
       - run: npm run test:smoke:api
