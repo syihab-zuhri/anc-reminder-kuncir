@@ -79,6 +79,10 @@ class FakeWaFallbackRepository implements WaFallbackRepository {
           status: item.status,
           phoneNormalized: this.phoneNormalized,
           milestoneCode: item.milestone_code,
+          templateVersionId: "c1000000-0000-4000-8000-000000000002",
+          templateBody:
+            "Pengingat jadwal pemeriksaan kehamilan {{milestone_code}} dari {{facility_name}}.",
+          facilityName: "Puskesmas Kuncir",
           linkGeneratedAt:
             item.link_generated_at === null ? null : new Date(item.link_generated_at),
         };
@@ -326,6 +330,8 @@ describe("wa-fallback integration (API-WA-001..003)", () => {
     // URL structure validation
     expect(linkData.wa_me_url).toMatch(/^https:\/\/wa\.me\/\d+\?text=/u);
     expect(linkData.wa_me_url).toContain("wa.me/6281234567890");
+    expect(decodeURIComponent(linkData.wa_me_url)).toContain("K2 dari Puskesmas Kuncir");
+    expect(decodeURIComponent(linkData.wa_me_url)).not.toContain("{{");
     // Exclude unmasked NIK or private medical notes
     expect(linkData.wa_me_url).not.toContain("3603");
     expect(linkData.wa_me_url).not.toContain("NIK");

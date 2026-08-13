@@ -49,6 +49,9 @@ const programStatusMigration = loadModule(
 const auditRemediationMigration = loadModule(
   "../migrations/000013_audit_remediation.cjs",
 ) as BaselineMigration;
+const contentLifecycleMigration = loadModule(
+  "../migrations/000014_phase_4_content_lifecycle.cjs",
+) as BaselineMigration;
 
 describe("baseline database migration", () => {
   it("defines the ERD baseline and privacy-sensitive NIK column", () => {
@@ -376,5 +379,34 @@ describe("audit remediation migration", () => {
     expect(statement).toContain("DROP TRIGGER IF EXISTS consent_records_append_only");
     expect(statement).toContain("DROP FUNCTION IF EXISTS anc_reject_consent_mutation");
     expect(statement).toContain("CREATE UNIQUE INDEX program_rule_requirements_version_unique_idx");
+  });
+});
+
+describe("phase 4 content lifecycle migration", () => {
+  it("adds governed immutable content snapshots and safe system baselines", () => {
+    const sql = vi.fn();
+    contentLifecycleMigration.up({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("CREATE TABLE content_templates");
+    expect(statement).toContain("CREATE TABLE content_versions");
+    expect(statement).toMatch(/'DRAFT',\s*'REVIEW',\s*'APPROVED',\s*'PUBLISHED',\s*'ARCHIVED'/u);
+    expect(statement).toContain("Content version snapshot is immutable outside DRAFT");
+    expect(statement).toContain("WAME_REMINDER contains a prohibited sensitive placeholder");
+    expect(statement).toContain("wa_fallback_actions_template_version_fk");
+    expect(statement).toContain("push_template_version_id uuid");
+    expect(statement).toContain("BLUEPRINT-CR-2026-08-08");
+    expect(statement).not.toMatch(/\{\{\s*(nik|diagnosis|lab_result|risk_category)/iu);
+  });
+
+  it("provides an explicit reverse migration", () => {
+    const sql = vi.fn();
+    contentLifecycleMigration.down({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("DROP TABLE IF EXISTS content_versions");
+    expect(statement).toContain("DROP TABLE IF EXISTS content_templates");
+    expect(statement).toContain("DROP TYPE IF EXISTS content_version_status");
+    expect(statement).toContain("DROP COLUMN IF EXISTS push_template_version_id");
   });
 });

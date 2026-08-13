@@ -34,6 +34,7 @@ import {
   REPORTS_REPOSITORY,
   PROGRAM_STATUS_REPOSITORY,
   REMINDER_OPERATIONS_REPOSITORY,
+  CONTENT_MANAGEMENT_REPOSITORY,
 } from "./infrastructure/tokens.js";
 import { WaFallbackController } from "./wa-fallback/wa-fallback.controller.js";
 import {
@@ -147,6 +148,12 @@ import {
   type ReminderOperationsRepository,
 } from "./reminder-operations/reminder-operations.repository.js";
 import { ReminderOperationsService } from "./reminder-operations/reminder-operations.service.js";
+import { ContentManagementController } from "./content-management/content-management.controller.js";
+import {
+  PostgresContentManagementRepository,
+  type ContentManagementRepository,
+} from "./content-management/content-management.repository.js";
+import { ContentManagementService } from "./content-management/content-management.service.js";
 
 export interface AppModuleOptions {
   readonly config: ApiConfig;
@@ -171,6 +178,7 @@ export interface AppModuleOptions {
   readonly reportsRepository?: ReportsRepository;
   readonly programStatusRepository?: ProgramStatusRepository;
   readonly reminderOperationsRepository?: ReminderOperationsRepository;
+  readonly contentManagementRepository?: ContentManagementRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -200,6 +208,7 @@ export class AppModule {
         ReportsController,
         ProgramStatusController,
         ReminderOperationsController,
+        ContentManagementController,
       ],
       providers: [
         { provide: API_CONFIG, useValue: options.config },
@@ -399,6 +408,13 @@ export class AppModule {
             ),
           inject: [REMINDER_OPERATIONS_REPOSITORY, AuthorizationPolicy, CLOCK],
         },
+        {
+          provide: CONTENT_MANAGEMENT_REPOSITORY,
+          useFactory: (pool: DatabasePool) =>
+            options.contentManagementRepository ?? new PostgresContentManagementRepository(pool),
+          inject: [DATABASE_POOL],
+        },
+        ContentManagementService,
       ],
     };
   }

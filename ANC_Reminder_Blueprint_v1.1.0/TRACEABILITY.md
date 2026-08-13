@@ -45,7 +45,11 @@
 
 ## 2. P1 Matrix
 
-FR-021, FR-023, FR-026, FR-028 remain covered by P1 tasks/PRDs but are not P0 release blockers.
+| Requirement | Feature/PRD | API/UI | Data | Permission | Task | Test | Status |
+|---|---|---|---|---|---|---|---|
+| FR-021 | FEAT-CONTENT | API-CONTENT-001..008 | content_templates/content_versions + reminder snapshots | Puskesmas draft; Clinical/Program Owner approve/publish/archive | TASK-P4-009/P4-010 | content contract/API/worker/migration/PostgreSQL lifecycle | Backend Verified; UI Pending |
+
+FR-023, FR-026, and FR-028 remain covered by P1 tasks/PRDs but are not P0 release blockers.
 
 ## 3. Coverage Assessment
 

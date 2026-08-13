@@ -28,6 +28,7 @@ import type { WaFallbackRepository } from "./wa-fallback/wa-fallback.repository.
 import type { ReportsRepository } from "./reports/reports.repository.js";
 import type { ProgramStatusRepository } from "./program-status/program-status.repository.js";
 import type { ReminderOperationsRepository } from "./reminder-operations/reminder-operations.repository.js";
+import type { ContentManagementRepository } from "./content-management/content-management.repository.js";
 import { CanonicalErrorFilter } from "./errors/canonical-error.filter.js";
 import { HttpLoggingInterceptor } from "./observability/http-logging.interceptor.js";
 import { JsonLogger } from "./observability/json-logger.js";
@@ -60,6 +61,7 @@ export interface CreateApiApplicationOptions {
   readonly reportsRepository?: ReportsRepository;
   readonly programStatusRepository?: ProgramStatusRepository;
   readonly reminderOperationsRepository?: ReminderOperationsRepository;
+  readonly contentManagementRepository?: ContentManagementRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -134,6 +136,9 @@ export async function createApiApplication(
       ...(options.reminderOperationsRepository === undefined
         ? {}
         : { reminderOperationsRepository: options.reminderOperationsRepository }),
+      ...(options.contentManagementRepository === undefined
+        ? {}
+        : { contentManagementRepository: options.contentManagementRepository }),
       ...(options.auditRepository === undefined
         ? {}
         : { auditRepository: options.auditRepository }),

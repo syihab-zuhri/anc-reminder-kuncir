@@ -17,6 +17,7 @@ export async function processReminderCycles(
     SELECT 
       pm.id AS milestone_id,
       p.mother_id AS mother_id,
+      p.health_center_id AS health_center_id,
       pm.due_at AS due_at
     FROM pregnancy_milestones pm
     JOIN pregnancies p ON pm.pregnancy_id = p.id
@@ -36,10 +37,12 @@ export async function processReminderCycles(
   const client = await pool.connect();
   try {
     await client.query("BEGIN;");
-    const res = await client.query<{ milestone_id: string; mother_id: string; due_at: string }>(
-      query,
-      [targetDate],
-    );
+    const res = await client.query<{
+      milestone_id: string;
+      mother_id: string;
+      health_center_id: string;
+      due_at: string;
+    }>(query, [targetDate]);
 
     let createdCycles = 0;
     let pushAttempts = 0;
@@ -58,12 +61,30 @@ export async function processReminderCycles(
           cycle_anchor_at,
           status,
           idempotency_key,
+          push_template_version_id,
           created_at
-        ) VALUES ($1, $2, $3::timestamptz, 'PENDING', $4, CURRENT_TIMESTAMP)
+        ) VALUES (
+          $1,
+          $2,
+          $3::timestamptz,
+          'PENDING',
+          $4,
+          (
+            SELECT cv.id
+              FROM content_versions cv
+              JOIN content_templates ct ON ct.id = cv.content_template_id
+             WHERE ct.content_type = 'PUSH_REMINDER'
+               AND cv.status = 'PUBLISHED'
+               AND (ct.health_center_id = $5 OR ct.health_center_id IS NULL)
+             ORDER BY (ct.health_center_id = $5) DESC, cv.published_at DESC
+             LIMIT 1
+          ),
+          CURRENT_TIMESTAMP
+        )
         ON CONFLICT (milestone_id, cycle_anchor_at) DO NOTHING
         RETURNING id;
         `,
-        [cycleId, row.milestone_id, targetDate, idempotencyKey],
+        [cycleId, row.milestone_id, targetDate, idempotencyKey, row.health_center_id],
       );
 
       if ((cycleRes.rowCount ?? 0) === 0) {
@@ -108,11 +129,27 @@ export async function processReminderCycles(
             id,
             reminder_cycle_id,
             mother_id,
+            template_version_id,
             status
-          ) VALUES ($1, $2, $3, 'READY')
+          ) VALUES (
+            $1,
+            $2,
+            $3,
+            (
+              SELECT cv.id
+                FROM content_versions cv
+                JOIN content_templates ct ON ct.id = cv.content_template_id
+               WHERE ct.content_type = 'WAME_REMINDER'
+                 AND cv.status = 'PUBLISHED'
+                 AND (ct.health_center_id = $4 OR ct.health_center_id IS NULL)
+               ORDER BY (ct.health_center_id = $4) DESC, cv.published_at DESC
+               LIMIT 1
+            ),
+            'READY'
+          )
           ON CONFLICT (reminder_cycle_id) DO NOTHING;
           `,
-          [waFallbackId, cycleId, row.mother_id],
+          [waFallbackId, cycleId, row.mother_id, row.health_center_id],
         );
         waFallbacks++;
       }
