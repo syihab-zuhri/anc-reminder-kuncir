@@ -14,6 +14,10 @@ import { createApiApplication } from "../src/application.js";
 import { PasswordHasher } from "../src/auth/password-hasher.js";
 import { JsonLogger } from "../src/observability/json-logger.js";
 import type { WaFallbackRepository } from "../src/wa-fallback/wa-fallback.repository.js";
+import type {
+  WaFallbackQueueScope,
+  WaFallbackTransitionResult,
+} from "../src/wa-fallback/wa-fallback.repository.js";
 import { apiConfigFixture } from "./fixtures.js";
 import {
   FakeAuditRepository,
@@ -29,6 +33,8 @@ const fallbackId = "91000000-0000-4000-8000-000000000001";
 const password = "AmanSekali2026";
 
 class FakeWaFallbackRepository implements WaFallbackRepository {
+  public accessAllowed = true;
+  private readonly phoneNormalized = "081234567890";
   public items: WaFallbackItem[] = [
     {
       id: fallbackId,
@@ -37,57 +43,94 @@ class FakeWaFallbackRepository implements WaFallbackRepository {
       mother_full_name: "Siti Aminah",
       phone_number_masked: "0812****7890",
       milestone_code: "K2",
-      due_at: "2026-09-01",
+      due_at: "2026-09-01T00:00:00.000Z",
       status: "READY",
       wa_me_url: null,
       link_generated_at: null,
+      link_opened_at: null,
       resolved_at: null,
       resolved_by: null,
       manual_note: null,
     },
   ];
 
-  public async getQueue(): Promise<WaFallbackItem[]> {
-    return this.items.filter((i) => ["READY", "LINK_GENERATED"].includes(i.status));
+  public async getQueue(_scope: WaFallbackQueueScope): Promise<WaFallbackItem[]> {
+    void _scope;
+    if (!this.accessAllowed) return [];
+    return this.items.filter((i) => ["READY", "LINK_GENERATED", "LINK_OPENED"].includes(i.status));
   }
 
   public async getById(id: string): Promise<WaFallbackItem | null> {
     return this.items.find((i) => i.id === id) ?? null;
   }
 
-  public async updateWaLink(
+  public async getScopeTarget(
     id: string,
-    waMeUrl: string,
-    generatedAt: string,
-  ): Promise<WaFallbackItem | null> {
+  ): Promise<{ healthCenterId: string; motherId: string } | null> {
     const item = await this.getById(id);
-    if (!item) return null;
-    const updated: WaFallbackItem = {
-      ...item,
-      status: "LINK_GENERATED",
-      wa_me_url: waMeUrl,
-      link_generated_at: generatedAt,
-    };
-    this.items = this.items.map((i) => (i.id === id ? updated : i));
-    return updated;
+    return item === null ? null : { healthCenterId: centerId, motherId: item.mother_id };
   }
 
-  public async resolve(
+  public async getLinkTarget(id: string) {
+    const item = await this.getById(id);
+    return item === null
+      ? null
+      : {
+          status: item.status,
+          phoneNormalized: this.phoneNormalized,
+          milestoneCode: item.milestone_code,
+          linkGeneratedAt:
+            item.link_generated_at === null ? null : new Date(item.link_generated_at),
+        };
+  }
+
+  public async markLinkGenerated(
+    id: string,
+    generatedAt: Date,
+  ): Promise<WaFallbackTransitionResult> {
+    return this.transition(id, ["READY"], {
+      status: "LINK_GENERATED",
+      link_generated_at: generatedAt.toISOString(),
+    });
+  }
+
+  public async markLinkOpened(id: string, openedAt: Date): Promise<WaFallbackTransitionResult> {
+    return this.transition(id, ["LINK_GENERATED"], {
+      status: "LINK_OPENED",
+      link_opened_at: openedAt.toISOString(),
+    });
+  }
+
+  public async markResolved(
     id: string,
     staffUserId: string,
-    manualNote?: string,
-  ): Promise<WaFallbackItem | null> {
-    const item = await this.getById(id);
-    if (!item) return null;
-    const updated: WaFallbackItem = {
-      ...item,
-      status: "RESOLVED",
-      resolved_at: new Date().toISOString(),
+    manualNote: string | null,
+    resolvedAt: Date,
+  ): Promise<WaFallbackTransitionResult> {
+    return this.transition(id, ["READY", "LINK_GENERATED", "LINK_OPENED"], {
+      status: "RESOLVED_MANUALLY",
+      resolved_at: resolvedAt.toISOString(),
       resolved_by: staffUserId,
-      manual_note: manualNote ?? null,
-    };
-    this.items = this.items.map((i) => (i.id === id ? updated : i));
-    return updated;
+      manual_note: manualNote,
+    });
+  }
+
+  public async canAccessMother(): Promise<boolean> {
+    return this.accessAllowed;
+  }
+
+  private transition(
+    id: string,
+    allowedStatuses: readonly string[],
+    patch: Partial<WaFallbackItem>,
+  ): WaFallbackTransitionResult {
+    const item = this.items.find((candidate) => candidate.id === id);
+    if (item === undefined) return "NOT_FOUND";
+    if (!allowedStatuses.includes(item.status)) return "INVALID_STATE";
+    this.items = this.items.map((candidate) =>
+      candidate.id === id ? { ...candidate, ...patch } : candidate,
+    );
+    return "UPDATED";
   }
 }
 
@@ -95,6 +138,7 @@ describe("wa-fallback integration (API-WA-001..003)", () => {
   let app: INestApplication;
   let staffAuthRepo: FakeStaffAuthRepository;
   let waFallbackRepo: FakeWaFallbackRepository;
+  let auditRepo: FakeAuditRepository;
   let bidanToken: string;
   let superAdminToken: string;
 
@@ -125,6 +169,7 @@ describe("wa-fallback integration (API-WA-001..003)", () => {
     });
 
     waFallbackRepo = new FakeWaFallbackRepository();
+    auditRepo = new FakeAuditRepository();
 
     app = await createApiApplication({
       config,
@@ -134,7 +179,7 @@ describe("wa-fallback integration (API-WA-001..003)", () => {
       staffAuthRepository: staffAuthRepo,
       organizationScopeRepository: new FakeOrganizationScopeRepository(),
       scopedAccessRepository: new FakeScopedAccessRepository(),
-      auditRepository: new FakeAuditRepository(),
+      auditRepository: auditRepo,
       waFallbackRepository: waFallbackRepo,
     });
 
@@ -180,7 +225,30 @@ describe("wa-fallback integration (API-WA-001..003)", () => {
     expect(linkData.wa_me_url).toContain("https://wa.me/");
     expect(linkData.disclaimer).toContain("Link wa.me ini adalah aksi manual Bidan");
 
-    // 3. Resolve fallback
+    const repeatedLinkRes = await request(server)
+      .post(`/api/v1/wa-fallback/${fallbackId}/generate-link`)
+      .set("Authorization", `Bearer ${bidanToken}`);
+    expect(repeatedLinkRes.status).toBe(200);
+    expect((repeatedLinkRes.body as GenerateWaLinkResponse).generated_at).toBe(
+      linkData.generated_at,
+    );
+
+    // 3. Mark the manual WhatsApp action as opened
+    const openedRes = await request(server)
+      .post(`/api/v1/wa-fallback/${fallbackId}/mark-opened`)
+      .set("Authorization", `Bearer ${bidanToken}`);
+
+    expect(openedRes.status).toBe(200);
+    expect((openedRes.body as WaFallbackItem).status).toBe("LINK_OPENED");
+    expect(
+      (
+        await request(server)
+          .post(`/api/v1/wa-fallback/${fallbackId}/mark-opened`)
+          .set("Authorization", `Bearer ${bidanToken}`)
+      ).status,
+    ).toBe(200);
+
+    // 4. Resolve fallback
     const resolveRes = await request(server)
       .post(`/api/v1/wa-fallback/${fallbackId}/resolve`)
       .set("Authorization", `Bearer ${bidanToken}`)
@@ -188,8 +256,13 @@ describe("wa-fallback integration (API-WA-001..003)", () => {
 
     expect(resolveRes.status).toBe(200);
     const resolvedItem = resolveRes.body as WaFallbackItem;
-    expect(resolvedItem.status).toBe("RESOLVED");
+    expect(resolvedItem.status).toBe("RESOLVED_MANUALLY");
     expect(resolvedItem.manual_note).toBe("WA pengingat dikirim manual.");
+    expect(
+      auditRepo.events
+        .filter((event) => event.resourceId === fallbackId)
+        .map((event) => event.action),
+    ).toEqual(["WA_FALLBACK_LINK_GENERATED", "WA_FALLBACK_LINK_OPENED", "WA_FALLBACK_RESOLVED"]);
   });
 
   it("denies Super Admin from accessing WhatsApp fallback operational queue", async () => {
@@ -215,6 +288,7 @@ describe("wa-fallback integration (API-WA-001..003)", () => {
 
     // URL structure validation
     expect(linkData.wa_me_url).toMatch(/^https:\/\/wa\.me\/\d+\?text=/u);
+    expect(linkData.wa_me_url).toContain("wa.me/6281234567890");
     // Exclude unmasked NIK or private medical notes
     expect(linkData.wa_me_url).not.toContain("3603");
     expect(linkData.wa_me_url).not.toContain("NIK");
@@ -228,5 +302,41 @@ describe("wa-fallback integration (API-WA-001..003)", () => {
       .set("Authorization", `Bearer ${bidanToken}`);
 
     expect(missingRes.status).toBe(404);
+  });
+
+  it("rejects an unassigned Bidan and invalid state transitions", async () => {
+    const server = app.getHttpServer() as Parameters<typeof request>[0];
+    waFallbackRepo.accessAllowed = false;
+
+    const forbiddenRes = await request(server)
+      .post(`/api/v1/wa-fallback/${fallbackId}/generate-link`)
+      .set("Authorization", `Bearer ${bidanToken}`);
+    expect(forbiddenRes.status).toBe(403);
+
+    waFallbackRepo.accessAllowed = true;
+    await request(server)
+      .post(`/api/v1/wa-fallback/${fallbackId}/resolve`)
+      .set("Authorization", `Bearer ${bidanToken}`)
+      .send({});
+
+    const conflictRes = await request(server)
+      .post(`/api/v1/wa-fallback/${fallbackId}/generate-link`)
+      .set("Authorization", `Bearer ${bidanToken}`);
+    expect(conflictRes.status).toBe(409);
+  });
+
+  it("validates identifiers and resolve payloads at the HTTP boundary", async () => {
+    const server = app.getHttpServer() as Parameters<typeof request>[0];
+
+    const invalidIdRes = await request(server)
+      .post("/api/v1/wa-fallback/not-a-uuid/generate-link")
+      .set("Authorization", `Bearer ${bidanToken}`);
+    expect(invalidIdRes.status).toBe(400);
+
+    const invalidPayloadRes = await request(server)
+      .post(`/api/v1/wa-fallback/${fallbackId}/resolve`)
+      .set("Authorization", `Bearer ${bidanToken}`)
+      .send({ manual_note: "" });
+    expect(invalidPayloadRes.status).toBe(400);
   });
 });
