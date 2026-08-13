@@ -37,6 +37,7 @@ jobs:
       MOTHER_SESSION_SECRET: ci-only-mother-secret-at-least-32-characters
       IDEMPOTENCY_SECRET: ci-only-idempotency-secret-at-least-32-characters
       NIK_ENCRYPTION_KEY: bm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm4=
+      PUSH_TOKEN_ENCRYPTION_KEY: cHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHA=
       PRIMARY_TIMEZONE: Asia/Jakarta
       LOG_LEVEL: error
       REMINDER_INTERVAL_DAYS: 3
@@ -58,6 +59,10 @@ jobs:
         with:
           node-version-file: .node-version
           cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
       - run: npm ci
       - run: npm run db:migrate
       - run: npm run db:rollback
@@ -69,6 +74,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:ci
       - run: npm run build
+      - run: bash ./gradlew assembleDebug
+        working-directory: apps/android/android
       - run: npm run test:smoke:api
       - run: npm run test:smoke:idempotency
       - run: npm run staff:provision:puskesmas

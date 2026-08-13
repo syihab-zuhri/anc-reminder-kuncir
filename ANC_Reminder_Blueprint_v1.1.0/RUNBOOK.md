@@ -42,6 +42,16 @@ account, writes an append-only system audit event, and prints only the target ID
 ## 5. Smoke Tests
 Staff login; mother name+code; dashboard; K3 confirm by Bidan; Bidan denied detail write; Puskesmas detail validation; forced push terminal failure creates WA action; WA link generation; program status read.
 
+### FCM and Android activation
+
+1. Create/register Android app id `id.my.kuncir.posyandu.anc` in the approved Firebase project.
+2. Place the environment-specific `google-services.json` at `apps/android/android/app/google-services.json` locally or in the private mobile-build pipeline. It is intentionally gitignored.
+3. Inject `FCM_PROJECT_ID`, the complete `FCM_SERVICE_ACCOUNT_JSON`, and the same dedicated `PUSH_TOKEN_ENCRYPTION_KEY` into the worker; inject that push-token key into the API.
+4. Run `npm run cap:sync --workspace=@anc/android`, build the Android app, authenticate with a synthetic test mother, grant notification permission, and verify `PUT /mother/me/devices/android` returns only device metadata.
+5. Force one FCM success, one `UNAVAILABLE` retry (including `Retry-After`), and one `UNREGISTERED` response. Verify success closes the cycle, retry creates a delayed attempt, and terminal invalidates the device plus creates exactly one manual `wa.me` fallback.
+
+Never commit Firebase credentials or a production `google-services.json`, and never print a registration token while troubleshooting.
+
 The implemented Phase 1 subset is automated by `npm run test:smoke:auth`: login, identity lookup,
 single-use refresh rotation, old-token rejection, Puskesmas-scoped village/facility/Bidan/assignment
 management, Bidan management denial, disable-triggered session revocation, and logout.

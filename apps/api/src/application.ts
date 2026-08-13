@@ -29,6 +29,7 @@ import type { ReportsRepository } from "./reports/reports.repository.js";
 import type { ProgramStatusRepository } from "./program-status/program-status.repository.js";
 import type { ReminderOperationsRepository } from "./reminder-operations/reminder-operations.repository.js";
 import type { ContentManagementRepository } from "./content-management/content-management.repository.js";
+import type { DeviceRegistrationRepository } from "./device-registration/device-registration.repository.js";
 import { CanonicalErrorFilter } from "./errors/canonical-error.filter.js";
 import { HttpLoggingInterceptor } from "./observability/http-logging.interceptor.js";
 import { JsonLogger } from "./observability/json-logger.js";
@@ -62,6 +63,7 @@ export interface CreateApiApplicationOptions {
   readonly programStatusRepository?: ProgramStatusRepository;
   readonly reminderOperationsRepository?: ReminderOperationsRepository;
   readonly contentManagementRepository?: ContentManagementRepository;
+  readonly deviceRegistrationRepository?: DeviceRegistrationRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -139,6 +141,9 @@ export async function createApiApplication(
       ...(options.contentManagementRepository === undefined
         ? {}
         : { contentManagementRepository: options.contentManagementRepository }),
+      ...(options.deviceRegistrationRepository === undefined
+        ? {}
+        : { deviceRegistrationRepository: options.deviceRegistrationRepository }),
       ...(options.auditRepository === undefined
         ? {}
         : { auditRepository: options.auditRepository }),

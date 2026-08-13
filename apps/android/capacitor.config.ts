@@ -1,6 +1,6 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
-import { createTrustedServerConfig } from "./src/trusted-origin.js";
+import { createTrustedServerConfig } from "./src/trusted-origin.ts";
 
 const server = createTrustedServerConfig(process.env.CAPACITOR_SERVER_URL, process.env.NODE_ENV);
 
@@ -11,6 +11,11 @@ const config: CapacitorConfig = {
   ...(server === undefined ? {} : { server }),
   android: {
     allowMixedContent: false,
+  },
+  plugins: {
+    PushNotifications: {
+      presentationOptions: ["alert", "sound"],
+    },
   },
 };
 

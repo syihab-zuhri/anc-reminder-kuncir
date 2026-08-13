@@ -4,10 +4,15 @@ export type EnvironmentSource = Readonly<Record<string, string | undefined>>;
 
 const requiredText = z.string().trim().min(1);
 
-const encryptionKey = requiredText.refine((value) => {
-  const decoded = Buffer.from(value, "base64");
-  return decoded.length === 32 && decoded.toString("base64") === value;
-}, "NIK_ENCRYPTION_KEY must be a base64-encoded 32-byte key");
+function base64EncryptionKey(label: string) {
+  return requiredText.refine((value) => {
+    const decoded = Buffer.from(value, "base64");
+    return decoded.length === 32 && decoded.toString("base64") === value;
+  }, `${label} must be a base64-encoded 32-byte key`);
+}
+
+const nikEncryptionKey = base64EncryptionKey("NIK_ENCRYPTION_KEY");
+const pushTokenEncryptionKey = base64EncryptionKey("PUSH_TOKEN_ENCRYPTION_KEY");
 
 const postgresUrl = z
   .string()
@@ -101,6 +106,7 @@ const runtimeEnvironmentShape = {
   REMINDER_INTERVAL_DAYS: reminderIntervalDays,
   PUSH_MAX_ATTEMPTS: positiveInteger("3"),
   PUSH_BACKOFF_SECONDS: backoffSchedule,
+  PUSH_TOKEN_ENCRYPTION_KEY: pushTokenEncryptionKey,
   WA_FALLBACK_ESCALATION_HOURS: positiveInteger(),
   PRIMARY_TIMEZONE: z.literal("Asia/Jakarta").default("Asia/Jakarta"),
   LOG_LEVEL: logLevelSchema,
@@ -117,7 +123,7 @@ export const apiEnvironmentSchema = z
     SESSION_SECRET: requiredText.min(32),
     MOTHER_SESSION_SECRET: requiredText.min(32),
     IDEMPOTENCY_SECRET: requiredText.min(32),
-    NIK_ENCRYPTION_KEY: encryptionKey,
+    NIK_ENCRYPTION_KEY: nikEncryptionKey,
     STAFF_ACCESS_TOKEN_TTL_MINUTES: positiveInteger("15"),
     STAFF_REFRESH_TOKEN_TTL_DAYS: positiveInteger("7"),
     STAFF_LOGIN_MAX_FAILURES: positiveInteger("5"),
@@ -162,6 +168,19 @@ export const apiEnvironmentSchema = z
       });
     }
 
+    if (
+      environment.PUSH_TOKEN_ENCRYPTION_KEY === environment.NIK_ENCRYPTION_KEY ||
+      environment.PUSH_TOKEN_ENCRYPTION_KEY === environment.SESSION_SECRET ||
+      environment.PUSH_TOKEN_ENCRYPTION_KEY === environment.MOTHER_SESSION_SECRET ||
+      environment.PUSH_TOKEN_ENCRYPTION_KEY === environment.IDEMPOTENCY_SECRET
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "PUSH_TOKEN_ENCRYPTION_KEY must be distinct from all other application secrets",
+        path: ["PUSH_TOKEN_ENCRYPTION_KEY"],
+      });
+    }
+
     for (const key of ["APP_BASE_URL", "API_BASE_URL"] as const) {
       const url = new URL(environment[key]);
       const isLoopback = isLoopbackHost(url.hostname);
@@ -185,6 +204,7 @@ export const apiEnvironmentSchema = z
     motherSessionSecret: environment.MOTHER_SESSION_SECRET,
     idempotencySecret: environment.IDEMPOTENCY_SECRET,
     nikEncryptionKey: environment.NIK_ENCRYPTION_KEY,
+    pushTokenEncryptionKey: environment.PUSH_TOKEN_ENCRYPTION_KEY,
     staffAccessTokenTtlMinutes: environment.STAFF_ACCESS_TOKEN_TTL_MINUTES,
     staffRefreshTokenTtlDays: environment.STAFF_REFRESH_TOKEN_TTL_DAYS,
     staffLoginMaxFailures: environment.STAFF_LOGIN_MAX_FAILURES,
@@ -209,8 +229,8 @@ export const workerEnvironmentSchema = z
   .object({
     ...runtimeEnvironmentShape,
     FCM_PROJECT_ID: requiredText,
-    // This may be inline JSON or an environment-specific secret reference. The
-    // credential adapter is responsible for resolving and validating its shape.
+    // Deployment injects the complete JSON through its secret store. Never
+    // commit a service-account file or place the value in logs.
     FCM_SERVICE_ACCOUNT_JSON: requiredText,
   })
   .superRefine(requireProductionDatabaseTls)
@@ -219,6 +239,7 @@ export const workerEnvironmentSchema = z
     databaseUrl: environment.DATABASE_URL,
     fcmProjectId: environment.FCM_PROJECT_ID,
     fcmServiceAccountJson: environment.FCM_SERVICE_ACCOUNT_JSON,
+    pushTokenEncryptionKey: environment.PUSH_TOKEN_ENCRYPTION_KEY,
     reminderIntervalDays: environment.REMINDER_INTERVAL_DAYS,
     pushMaxAttempts: environment.PUSH_MAX_ATTEMPTS,
     pushBackoffSeconds: environment.PUSH_BACKOFF_SECONDS,

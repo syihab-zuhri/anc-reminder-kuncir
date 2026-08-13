@@ -52,6 +52,9 @@ const auditRemediationMigration = loadModule(
 const contentLifecycleMigration = loadModule(
   "../migrations/000014_phase_4_content_lifecycle.cjs",
 ) as BaselineMigration;
+const pushDeliveryMigration = loadModule(
+  "../migrations/000015_phase_4_push_delivery.cjs",
+) as BaselineMigration;
 
 describe("baseline database migration", () => {
   it("defines the ERD baseline and privacy-sensitive NIK column", () => {
@@ -408,5 +411,30 @@ describe("phase 4 content lifecycle migration", () => {
     expect(statement).toContain("DROP TABLE IF EXISTS content_templates");
     expect(statement).toContain("DROP TYPE IF EXISTS content_version_status");
     expect(statement).toContain("DROP COLUMN IF EXISTS push_template_version_id");
+  });
+});
+
+describe("phase 4 push delivery migration", () => {
+  it("adds encrypted-token fingerprints, single-active-device integrity, and leased attempts", () => {
+    const sql = vi.fn();
+    pushDeliveryMigration.up({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("push_token_fingerprint text");
+    expect(statement).toContain("devices_one_active_platform_per_mother_idx");
+    expect(statement).toContain("scheduled_for timestamptz");
+    expect(statement).toContain("lease_expires_at timestamptz");
+    expect(statement).toContain("push_attempts_completion_state");
+    expect(statement).not.toMatch(/push_token\s+text/iu);
+  });
+
+  it("provides an explicit reverse migration", () => {
+    const sql = vi.fn();
+    pushDeliveryMigration.down({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("DROP INDEX IF EXISTS push_attempts_due_idx");
+    expect(statement).toContain("DROP COLUMN IF EXISTS push_token_fingerprint");
+    expect(statement).toContain("DROP COLUMN IF EXISTS scheduled_for");
   });
 });

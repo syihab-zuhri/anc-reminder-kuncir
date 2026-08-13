@@ -8,6 +8,7 @@ const commonEnvironment = {
   WA_FALLBACK_ESCALATION_HOURS: "24",
   IDEMPOTENCY_SECRET: "synthetic-idempotency-test-secret-001",
   NIK_ENCRYPTION_KEY: Buffer.from("n".repeat(32)).toString("base64"),
+  PUSH_TOKEN_ENCRYPTION_KEY: Buffer.from("p".repeat(32)).toString("base64"),
 };
 
 describe("loadApiConfig", () => {
@@ -31,6 +32,7 @@ describe("loadApiConfig", () => {
       motherSessionSecret: "synthetic-mother-test-secret-000001",
       idempotencySecret: "synthetic-idempotency-test-secret-001",
       nikEncryptionKey: Buffer.from("n".repeat(32)).toString("base64"),
+      pushTokenEncryptionKey: Buffer.from("p".repeat(32)).toString("base64"),
       staffAccessTokenTtlMinutes: 15,
       staffRefreshTokenTtlDays: 7,
       staffLoginMaxFailures: 5,
@@ -116,6 +118,19 @@ describe("loadApiConfig", () => {
         MOTHER_ACCESS_IP_MAX_FAILURES: "0",
       }),
     ).toThrow();
+  });
+
+  it("requires a dedicated push-token key distinct from every other secret", () => {
+    expect(() =>
+      loadApiConfig({
+        ...commonEnvironment,
+        PUSH_TOKEN_ENCRYPTION_KEY: commonEnvironment.NIK_ENCRYPTION_KEY,
+        APP_BASE_URL: "http://localhost:3000",
+        API_BASE_URL: "http://localhost:3001",
+        SESSION_SECRET: "synthetic-api-test-secret-00000001",
+        MOTHER_SESSION_SECRET: "synthetic-mother-test-secret-000001",
+      }),
+    ).toThrow("PUSH_TOKEN_ENCRYPTION_KEY");
   });
 
   it("requires TLS for a remote production database", () => {

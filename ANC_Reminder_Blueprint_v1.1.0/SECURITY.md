@@ -93,7 +93,7 @@ permits their assignment outside production.
 
 ## 6. Encryption and Secret Management
 
-TLS in transit. Secrets/environment variables never committed. DB/storage encryption capability enabled where hosting supports it. FCM service credentials in secret store. NIK must use protected/encrypted persistence appropriate to the deployment; phone/token fields may also require application/DB encryption based on threat review. NIK must never appear in application logs, push payloads, `wa.me` URLs, analytics payloads, or generic audit metadata.
+TLS in transit. Secrets/environment variables never committed. DB/storage encryption capability enabled where hosting supports it. FCM service credentials stay in the deployment secret store. NIK and FCM registration tokens use separate versioned AES-256-GCM application envelopes; device upsert uses only a domain-separated keyed fingerprint. Raw tokens, ciphertext, and fingerprints must never appear in API responses, logs, audit metadata, analytics, or notification payload content. NIK must never appear in application logs, push payloads, `wa.me` URLs, analytics payloads, or generic audit metadata.
 
 ## 7. Privacy Requirements
 

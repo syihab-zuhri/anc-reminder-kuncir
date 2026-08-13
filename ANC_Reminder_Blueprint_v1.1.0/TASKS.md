@@ -58,7 +58,7 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
 | `TASK-P2-005` | `DEPRECATED` | Hanya K1–K6; domain baru memakai milestone K1–K8. | `TASK-P2-010` |
 | `TASK-P2-007` | `DEPRECATED` | Completion digabung; sekarang `CONFIRMED` Bidan dipisah dari `VALIDATED` Puskesmas. | `TASK-P2-012`, `TASK-P2-013` |
 | `TASK-P3-004` | `DEPRECATED` | UI K1–K6 gabungan tidak sesuai pembagian role. | `TASK-P3-008`, `TASK-P3-009`, `TASK-P3-010` |
-| `TASK-P4-003` | `DEPRECATED` | Channel router push-vs-WhatsApp otomatis tidak berlaku untuk `wa.me`. | `TASK-P4-011`, `TASK-P4-012` |
+| Legacy router portion of `TASK-P4-003` | `SUPERSEDED` | Automatic push-vs-WhatsApp provider routing does not apply to manual `wa.me`; the active push adapter/retry portion remains below. | `TASK-P4-011`, `TASK-P4-012` |
 | `TASK-P4-006` | `DEPRECATED` | Official WhatsApp provider dikeluarkan dari MVP. | `TASK-P4-011` |
 | `TASK-P4-007` | `DEPRECATED` | WhatsApp webhook/reconciliation tidak ada pada `wa.me`. | `TASK-P4-012` |
 | `TASK-P5-001` | `DEPRECATED` | Push failure → WhatsApp otomatis tidak mungkin dengan `wa.me`. | None in MVP |
@@ -350,7 +350,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Done when: clock/timezone/concurrency/duplicate-suppression tests lulus.
   - Evidence: Worker processes due/overdue milestones based on target date (`anchorDateStr`), enforcing consent checks and suppressing duplicate reminder cycles via composite unique constraint `(milestone_id, cycle_anchor_at)` and idempotency key `rem_cycle_<milestone_id>_<anchor_date>`. Verified with unit tests and full verification suite.
 
-- [ ] `TASK-P4-003` [L] Implement Push Notification delivery adapter dan retry loop
+- [x] `TASK-P4-003` [L] Implement Push Notification delivery adapter dan retry loop
+  - Owner: Backend
+  - References: FR-035, NFR-019, PRD-NOTIF, ADR-006
+  - Depends on: TASK-P4-001, TASK-P4-002
+  - Done when: HTTP v1 success/retryable/terminal outcomes are classified, attempts use crash-recoverable leases and configurable delayed retries, invalid tokens are disabled, and terminal/exhausted outcomes create one manual fallback.
+  - Evidence: `FcmHttpV1PushAdapter` uses OAuth-backed FCM HTTP v1 with minimal payloads and `Retry-After`; `processPendingPushAttempts` uses `FOR UPDATE SKIP LOCKED`, five-minute leases, configured backoff+jitter, immutable template snapshots, terminal device invalidation, and idempotent fallback creation. Covered by adapter, worker retry/terminal/no-device, migration, and full verification tests.
 
 - [x] `TASK-P4-004` [L] Build **Android WebView shell** dengan trusted navigation, secure session storage, dan network/error states
   - Owner: Mobile
@@ -360,6 +365,11 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Evidence: Implemented `AndroidSecureStorage` (`apps/android/src/secure-storage.ts`), `parseTrustedDeepLink` (`apps/android/src/deep-link.ts`), and unit test suite `apps/android/test/android-shell.test.ts`. Enforces HTTPS-only trusted origin navigation, validates token format (`anc_mt_...`), prevents plaintext health data storage on mobile client, and passes android unit test suite.
 
 - [ ] `TASK-P4-005` [L] Integrate FCM token registration/refresh dan push adapter jika push tetap P0
+  - Owner: Mobile + Backend
+  - References: FR-015, FR-035, NFR-014, NFR-016
+  - Depends on: TASK-P4-003, TASK-P4-004
+  - Done when: Android permission/token callbacks refresh the authenticated mother device through API-DEVICE-001, raw tokens never enter response/log/audit state, and the native project includes the Capacitor push plugin/channel.
+  - Progress: repository implementation is complete: `PUT /mother/me/devices/android` stores a versioned encrypted token plus keyed fingerprint and returns metadata only. `AndroidPushRegistrationCoordinator` handles permission, initial/refresh registration, safe API sync, and the private `anc_reminders` channel. Capacitor Android output includes `@capacitor/push-notifications`. Keep this task open until the coordinator is wired into the deployable mother-auth runtime and a real approved Firebase project validates token registration plus one device delivery; provider credentials and `google-services.json` remain private deployment inputs.
 
 - [x] `TASK-P4-008` [M] Implement reminder/job failure dashboard/API tanpa klaim WhatsApp delivery
   - Owner: Backend + Frontend

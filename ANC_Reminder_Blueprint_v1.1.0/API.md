@@ -89,6 +89,27 @@ only the validated staff identity or a safe canonical error. Login/logout reject
 | API-MACCESS-006 | POST | `/mothers/{id}/access-code/revoke` | Puskesmas, same center |
 | API-DEVICE-001 | PUT | `/mother/me/devices/android` | Bumil WebView |
 
+#### `API-DEVICE-001` — Register or Refresh Android FCM Token
+
+The authenticated Bumil WebView submits the opaque token emitted by Capacitor after notification
+permission is granted. The endpoint is idempotent per mother/platform, moves a token safely when the same
+physical device changes account, and returns no token material. Persistence uses a versioned AES-256-GCM
+envelope plus a separate keyed fingerprint; responses and audit metadata never contain either value.
+
+```json
+{ "push_token": "opaque-fcm-registration-token" }
+```
+
+```json
+{
+  "id": "device-uuid",
+  "platform": "ANDROID",
+  "status": "ACTIVE",
+  "registered_at": "2026-08-13T03:00:00.000Z",
+  "last_seen_at": "2026-08-13T03:00:00.000Z"
+}
+```
+
 #### `API-MACCESS-001/002/004` — Validate, Read Own Identity, and Logout
 
 `API-MACCESS-001` accepts a name and the response-only code handed off by Puskesmas. Name comparison is

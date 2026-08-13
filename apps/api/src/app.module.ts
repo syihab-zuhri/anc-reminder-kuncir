@@ -1,6 +1,11 @@
 import { Module, type DynamicModule } from "@nestjs/common";
 import type { ApiConfig } from "@anc/config";
-import { checkDatabaseReadiness, closeDatabasePool, type DatabasePool } from "@anc/database";
+import {
+  checkDatabaseReadiness,
+  closeDatabasePool,
+  DeviceTokenCrypto,
+  type DatabasePool,
+} from "@anc/database";
 import { HealthController } from "./health/health.controller.js";
 import { HealthService, type DatabaseReadinessCheck } from "./health/health.service.js";
 import {
@@ -35,7 +40,14 @@ import {
   PROGRAM_STATUS_REPOSITORY,
   REMINDER_OPERATIONS_REPOSITORY,
   CONTENT_MANAGEMENT_REPOSITORY,
+  DEVICE_REGISTRATION_REPOSITORY,
 } from "./infrastructure/tokens.js";
+import { DeviceRegistrationController } from "./device-registration/device-registration.controller.js";
+import {
+  PostgresDeviceRegistrationRepository,
+  type DeviceRegistrationRepository,
+} from "./device-registration/device-registration.repository.js";
+import { DeviceRegistrationService } from "./device-registration/device-registration.service.js";
 import { WaFallbackController } from "./wa-fallback/wa-fallback.controller.js";
 import {
   PostgresWaFallbackRepository,
@@ -179,6 +191,7 @@ export interface AppModuleOptions {
   readonly programStatusRepository?: ProgramStatusRepository;
   readonly reminderOperationsRepository?: ReminderOperationsRepository;
   readonly contentManagementRepository?: ContentManagementRepository;
+  readonly deviceRegistrationRepository?: DeviceRegistrationRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -209,6 +222,7 @@ export class AppModule {
         ProgramStatusController,
         ReminderOperationsController,
         ContentManagementController,
+        DeviceRegistrationController,
       ],
       providers: [
         { provide: API_CONFIG, useValue: options.config },
@@ -415,6 +429,27 @@ export class AppModule {
           inject: [DATABASE_POOL],
         },
         ContentManagementService,
+        {
+          provide: DEVICE_REGISTRATION_REPOSITORY,
+          useFactory: (pool: DatabasePool) =>
+            options.deviceRegistrationRepository ?? new PostgresDeviceRegistrationRepository(pool),
+          inject: [DATABASE_POOL],
+        },
+        {
+          provide: DeviceRegistrationService,
+          useFactory: (
+            repository: DeviceRegistrationRepository,
+            audit: AuditService,
+            clock: Clock,
+          ) =>
+            new DeviceRegistrationService(
+              repository,
+              new DeviceTokenCrypto(options.config.pushTokenEncryptionKey),
+              audit,
+              clock,
+            ),
+          inject: [DEVICE_REGISTRATION_REPOSITORY, AUDIT_SERVICE, CLOCK],
+        },
       ],
     };
   }

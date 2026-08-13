@@ -40,6 +40,11 @@ describe("reminder content snapshots (TASK-P4-009)", () => {
       waFallbackActionsCount: 1,
     });
     const cycleInsert = queries.find((entry) => entry.sql.includes("INSERT INTO reminder_cycles"));
+    const eligibilityQuery = queries.find((entry) =>
+      entry.sql.includes("FROM pregnancy_milestones pm"),
+    );
+    expect(eligibilityQuery?.sql).toContain("JOIN LATERAL");
+    expect(eligibilityQuery?.sql).toContain("ORDER BY recorded_at DESC, id DESC");
     expect(cycleInsert?.sql).toContain("push_template_version_id");
     expect(cycleInsert?.sql).toContain("ct.content_type = 'PUSH_REMINDER'");
     expect(cycleInsert?.params[4]).toBe("30000000-0000-4000-8000-000000000001");

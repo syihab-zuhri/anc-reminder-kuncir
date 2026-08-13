@@ -13,7 +13,11 @@ const workerConfig: WorkerConfig = {
   nodeEnv: "test",
   databaseUrl: "postgresql://anc:local-only@localhost:5432/anc_test",
   fcmProjectId: "test-project",
-  fcmServiceAccountJson: "synthetic-test-credential",
+  fcmServiceAccountJson: JSON.stringify({
+    client_email: "synthetic@example.test",
+    private_key: "synthetic-private-key",
+  }),
+  pushTokenEncryptionKey: Buffer.from("p".repeat(32)).toString("base64"),
   reminderIntervalDays: 3,
   pushMaxAttempts: 3,
   pushBackoffSeconds: [30, 120, 300],
@@ -113,6 +117,7 @@ function createFakePool(): DatabasePool {
     release: vi.fn(),
   };
   return {
+    query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
     connect: vi.fn().mockResolvedValue(fakeClient),
   } as unknown as DatabasePool;
 }

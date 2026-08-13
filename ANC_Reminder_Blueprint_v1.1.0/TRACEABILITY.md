@@ -20,7 +20,7 @@
 | FR-006 | FEAT-MOTHER-ACCESS | API-MACCESS-001 | credentials | Bumil/Puskesmas | TASK-P2-003/004 | TEST-AUTH-002 | Covered |
 | FR-007 | FEAT-MOTHER-ACCESS | reissue | credentials | Puskesmas | TASK-P2-003 | revoke/reissue | Covered |
 | FR-009 | FEAT-ANC | API-MILESTONE-003 | milestone due date + append-only schedule events | Puskesmas | TASK-P2-006 | TEST-SCHEDULE-001..005 + PostgreSQL race smoke | Backend Verified |
-| FR-015 | FEAT-NOTIF | API-DEVICE-001 | devices | Bumil | TASK-P4-004/005 | mobile integration | Covered |
+| FR-015 | FEAT-NOTIF | API-DEVICE-001 | devices | Bumil | TASK-P4-004/005 | contract/API/crypto/Android permission+refresh tests | Repository slice verified; deployable mother runtime + live Firebase pending |
 | FR-017 | FEAT-CHECKUP/NOTIF | confirm/close | milestone/reminder | staff | TASK-P4-014 | TEST-VISIT-004 | Covered |
 | FR-018 | FEAT-REGISTRY/NOTIF | consent | consent_records | Puskesmas/Bumil | TASK-P2-001 | consent test | Covered |
 | FR-019 | FEAT-DASHBOARD | API-DASH-003 | read model | Bumil own | TASK-P3-005/010 | privacy E2E | Covered |
@@ -33,7 +33,7 @@
 | FR-032 | FEAT-ANC | confirm validation | rules/facilities | server | TASK-P2-010 | structural facility-policy tests | Backend Verified |
 | FR-033 | FEAT-NOTIF | API-MILESTONE-001/002 + internal scheduler | milestones | server | TASK-P2-011/P4-002 | timezone/window/terminal/clock tests + PostgreSQL smoke | Backend Derivation Verified; Worker Pending |
 | FR-034 | FEAT-NOTIF | worker | reminder_cycles | worker | TASK-P4-002 | TEST-NOTIF-001 | Covered |
-| FR-035 | FEAT-NOTIF | FCM adapter | push_attempts | worker | TASK-P4-005 | TEST-NOTIF-002 | Covered |
+| FR-035 | FEAT-NOTIF | FCM HTTP v1 adapter | push_attempts | worker | TASK-P4-003/005 | success/retry-after/lease/terminal/no-device tests | Implementation Verified; live Firebase activation pending |
 | FR-036 | FEAT-NOTIF | API-REM-003 | wa_fallback_actions | Bidan/Puskesmas | TASK-P4-011/013 | TEST-NOTIF-003/004 | Covered |
 | FR-037 | FEAT-NOTIF | API-REM | push/wa states | scoped | TASK-P4-012 | TEST-NOTIF-005 | Covered |
 | FR-038 | FEAT-NOTIF/DASH | API-REM-007 | fallback/escalation | Puskesmas | TASK-P4-008 | TEST-NOTIF-006 | Covered |

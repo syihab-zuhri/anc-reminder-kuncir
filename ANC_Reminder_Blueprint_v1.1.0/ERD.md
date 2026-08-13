@@ -318,8 +318,10 @@ Durable application-level anti-brute-force state. No raw IP, name, access code, 
 - `mother_id uuid FK`
 - `platform enum(ANDROID)`
 - `push_token_encrypted text`
+- `push_token_fingerprint text nullable` — keyed lookup only; never returned
 - `status enum(ACTIVE,INVALID,REVOKED)`
-- `last_seen_at`, `updated_at`
+- `registered_at`, `last_seen_at`, `updated_at`
+- unique active `(mother_id, platform)` and unique active token fingerprint
 
 ### `consent_records`
 - `id uuid PK`
@@ -350,7 +352,9 @@ Every non-`CANCELLED` insert/update locks and checks the parent pregnancy. A clo
 - `status enum(PENDING,SUCCESS,RETRYABLE_FAILURE,TERMINAL_FAILURE)`
 - `provider_message_id text nullable`
 - `error_code text nullable`
-- `attempted_at`
+- `device_id uuid FK nullable`
+- `scheduled_for`, `claimed_at nullable`, `lease_expires_at nullable`
+- `attempted_at`, `completed_at nullable`
 - unique `(reminder_cycle_id, attempt_no)`
 
 ### `wa_fallback_actions`
