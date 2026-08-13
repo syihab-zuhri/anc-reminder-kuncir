@@ -132,7 +132,16 @@ export const contentTemplateResponseSchema = z
 export type ContentTemplateResponse = z.infer<typeof contentTemplateResponseSchema>;
 
 export const contentTemplateListResponseSchema = z
-  .object({ items: z.array(contentTemplateResponseSchema), total: z.number().int().min(0) })
+  .object({
+    items: z.array(contentTemplateResponseSchema),
+    total: z.number().int().min(0),
+    capabilities: z
+      .object({
+        can_draft_and_review: z.boolean(),
+        can_approve_publish_archive: z.boolean(),
+      })
+      .strict(),
+  })
   .strict();
 export type ContentTemplateListResponse = z.infer<typeof contentTemplateListResponseSchema>;
 

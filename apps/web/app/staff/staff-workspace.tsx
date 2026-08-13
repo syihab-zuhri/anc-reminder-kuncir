@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { BidanVisitConfirmationPanel } from "@/components/bidan-visit-confirmation-panel";
 import { BrandMark } from "@/components/brand-mark";
 import { BumilPatientPortal } from "@/components/bumil-patient-portal";
+import { ContentManagementPanel } from "@/components/content-management-panel";
 import { MotherAccessPanel } from "@/components/mother-access-panel";
 import { MotherRegistrationPanel } from "@/components/mother-registration-panel";
 import { OrganizationAdminPanel } from "@/components/organization-admin-panel";
@@ -19,7 +20,8 @@ type SessionState =
   | { readonly kind: "ready"; readonly staff: StaffMeResponse }
   | { readonly kind: "unavailable" };
 
-type ModuleTab = "summary" | "admin" | "register" | "access" | "clinical" | "confirm" | "bumil";
+type ModuleTab =
+  "summary" | "admin" | "register" | "access" | "clinical" | "confirm" | "bumil" | "content";
 
 const roleCopy = {
   BIDAN: {
@@ -157,6 +159,13 @@ export function StaffWorkspace() {
           >
             <span>07</span> Portal Bumil
           </button>
+          <button
+            type="button"
+            className={activeTab === "content" ? "is-current" : ""}
+            onClick={() => setActiveTab("content")}
+          >
+            <span>08</span> Konten Reminder
+          </button>
         </nav>
         <button className="staff-rail-logout" type="button" onClick={logout} disabled={loggingOut}>
           {loggingOut ? "Keluar…" : "Keluar"}
@@ -228,6 +237,8 @@ export function StaffWorkspace() {
         {activeTab === "confirm" && <BidanVisitConfirmationPanel userRole={staff.role} />}
 
         {activeTab === "bumil" && <BumilPatientPortal />}
+
+        {activeTab === "content" && <ContentManagementPanel userRole={staff.role} />}
       </main>
     </div>
   );
