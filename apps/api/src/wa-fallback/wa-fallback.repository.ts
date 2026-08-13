@@ -40,6 +40,13 @@ export interface WaFallbackRepository {
     resolvedAt: Date,
     scope: WaFallbackQueueScope,
   ): Promise<WaFallbackTransitionResult>;
+  markUnreachable(
+    id: string,
+    staffUserId: string,
+    manualNote: string,
+    occurredAt: Date,
+    scope: WaFallbackQueueScope,
+  ): Promise<WaFallbackTransitionResult>;
   canAccessMother(staffUserId: string, motherId: string): Promise<boolean>;
 }
 
@@ -268,6 +275,54 @@ export class PostgresWaFallbackRepository implements WaFallbackRepository {
       [
         id,
         resolvedAt,
+        staffUserId,
+        manualNote,
+        scope.healthCenterId,
+        scope.role,
+        scope.actorStaffId,
+      ],
+      id,
+    );
+  }
+
+  public async markUnreachable(
+    id: string,
+    staffUserId: string,
+    manualNote: string,
+    occurredAt: Date,
+    scope: WaFallbackQueueScope,
+  ): Promise<WaFallbackTransitionResult> {
+    return this.transition(
+      `UPDATE wa_fallback_actions AS fallback
+          SET status = 'UNREACHABLE',
+              resolved_at = $2,
+              resolved_by = $3,
+              manual_note = $4,
+              escalated_at = COALESCE(fallback.escalated_at, $2)
+         FROM mothers AS mother
+        WHERE fallback.id = $1
+          AND fallback.status IN ('READY', 'LINK_GENERATED', 'LINK_OPENED')
+          AND fallback.mother_id = mother.id
+          AND mother.health_center_id = $5
+          AND (
+            $6::staff_role = 'PUSKESMAS'
+            OR EXISTS (
+              SELECT 1 FROM staff_assignments AS assignment
+               WHERE assignment.staff_user_id = $7
+                 AND assignment.revoked_at IS NULL
+                 AND (
+                   (assignment.scope_type = 'MOTHER' AND assignment.scope_id = mother.id)
+                   OR (
+                     assignment.scope_type = 'AREA'
+                     AND mother.village_id IS NOT NULL
+                     AND assignment.scope_id = mother.village_id
+                   )
+                 )
+            )
+          )`,
+      [
+        id,
+        occurredAt,
         staffUserId,
         manualNote,
         scope.healthCenterId,

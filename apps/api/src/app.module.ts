@@ -33,6 +33,7 @@ import {
   WA_FALLBACK_REPOSITORY,
   REPORTS_REPOSITORY,
   PROGRAM_STATUS_REPOSITORY,
+  REMINDER_OPERATIONS_REPOSITORY,
 } from "./infrastructure/tokens.js";
 import { WaFallbackController } from "./wa-fallback/wa-fallback.controller.js";
 import {
@@ -140,6 +141,12 @@ import {
   type ProgramStatusRepository,
 } from "./program-status/program-status.repository.js";
 import { ProgramStatusService } from "./program-status/program-status.service.js";
+import { ReminderOperationsController } from "./reminder-operations/reminder-operations.controller.js";
+import {
+  PostgresReminderOperationsRepository,
+  type ReminderOperationsRepository,
+} from "./reminder-operations/reminder-operations.repository.js";
+import { ReminderOperationsService } from "./reminder-operations/reminder-operations.service.js";
 
 export interface AppModuleOptions {
   readonly config: ApiConfig;
@@ -163,6 +170,7 @@ export interface AppModuleOptions {
   readonly waFallbackRepository?: WaFallbackRepository;
   readonly reportsRepository?: ReportsRepository;
   readonly programStatusRepository?: ProgramStatusRepository;
+  readonly reminderOperationsRepository?: ReminderOperationsRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -191,6 +199,7 @@ export class AppModule {
         WaFallbackController,
         ReportsController,
         ProgramStatusController,
+        ReminderOperationsController,
       ],
       providers: [
         { provide: API_CONFIG, useValue: options.config },
@@ -369,6 +378,27 @@ export class AppModule {
           inject: [DATABASE_POOL],
         },
         ProgramStatusService,
+        {
+          provide: REMINDER_OPERATIONS_REPOSITORY,
+          useFactory: (pool: DatabasePool) =>
+            options.reminderOperationsRepository ?? new PostgresReminderOperationsRepository(pool),
+          inject: [DATABASE_POOL],
+        },
+        {
+          provide: ReminderOperationsService,
+          useFactory: (
+            repo: ReminderOperationsRepository,
+            policy: AuthorizationPolicy,
+            clock: Clock,
+          ) =>
+            new ReminderOperationsService(
+              repo,
+              policy,
+              clock,
+              options.config.waFallbackEscalationHours,
+            ),
+          inject: [REMINDER_OPERATIONS_REPOSITORY, AuthorizationPolicy, CLOCK],
+        },
       ],
     };
   }

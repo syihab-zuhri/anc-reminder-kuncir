@@ -361,7 +361,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
 
 - [ ] `TASK-P4-005` [L] Integrate FCM token registration/refresh dan push adapter jika push tetap P0
 
-- [ ] `TASK-P4-008` [M] Implement reminder/job failure dashboard/API tanpa klaim WhatsApp delivery
+- [x] `TASK-P4-008` [M] Implement reminder/job failure dashboard/API tanpa klaim WhatsApp delivery
+  - Owner: Backend + Frontend
+  - References: FR-038, API-REM-007, PRD-NOTIF, PRD-DASHBOARD, NFR-010
+  - Depends on: TASK-P4-001, TASK-P4-012
+  - Done when: Puskesmas menerima aggregate push/fallback yang dihitung server, antrean menampilkan umur dan eskalasi berbasis SLA konfigurasi, serta UI tidak menyatakan delivery WhatsApp.
+  - Evidence: `GET /api/v1/reminders/summary` menghitung latest push job state, unresolved/escalated/`UNREACHABLE` fallback, masked phone, dan fallback age untuk health center actor. `RoleDashboardShell` menampilkan aggregate/queue serta aksi manual. Kontrak memaksa `whatsapp_delivery_status: UNKNOWN`; API menolak Bidan dan Super Admin untuk ringkasan lintas fasilitas. Covered by `reminder-operations.integration.test.ts`, `reminder-operations.test.ts`, full typecheck/build, dan 215-test CI suite.
 
 - [ ] `TASK-P4-009` [M] Implement content lifecycle dan immutable template snapshot
 
@@ -400,7 +405,7 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - References: FR-038, PRD-NOTIF, PRD-DASHBOARD
   - Depends on: TASK-P4-012, TASK-P4-008
   - Done when: push terminal/no-device + fallback `UNREACHABLE` atau melewati configurable SLA muncul di Puskesmas aggregate queue; tidak ada klaim provider failure untuk `wa.me`.
-  - Evidence: Overdue milestones and unresolved fallbacks are automatically surfaced in Puskesmas priority action queue (`priority_action_queue` with `WA_FALLBACK_REQUIRED`) and `unresolved_wa_fallbacks_count` in Puskesmas summary dashboard.
+  - Evidence: `GET /api/v1/reminders/summary` menampilkan terminal/no-device fallback, umur antrean yang dihitung server, status melewati configurable SLA, dan hasil `UNREACHABLE`. `POST /api/v1/reminders/fallback-actions/:id/unreachable` menyimpan actor/time/note, menandai eskalasi, dan menulis audit event. Dashboard Puskesmas menyediakan aksi Buka WA, Tandai Ditindaklanjuti, dan Tidak Dapat Dihubungi tanpa klaim provider delivery untuk `wa.me`.
 
 ## Phase 5 — P1 Features
 

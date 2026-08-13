@@ -5,6 +5,7 @@ import type {
   MotherSummary,
   OrganizationReportResponse,
   PuskesmasDashboardResponse,
+  ReminderSummaryResponse,
   WaFallbackItem,
 } from "@anc/contracts";
 import { useEffect, useState } from "react";
@@ -29,6 +30,8 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
   const [waQueue, setWaQueue] = useState<WaFallbackItem[]>([]);
   const [waLoading, setWaLoading] = useState(false);
   const [waActionMessage, setWaActionMessage] = useState<string | null>(null);
+  const [reminderSummary, setReminderSummary] = useState<ReminderSummaryResponse | null>(null);
+  const [reminderLoading, setReminderLoading] = useState(false);
 
   // TASK-P5-004: Organization Summary Reports
   const [reportData, setReportData] = useState<OrganizationReportResponse | null>(null);
@@ -41,6 +44,7 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
     }
     if (userRole === "PUSKESMAS") {
       void fetchReportSummary();
+      void fetchReminderSummary();
     }
 
     async function fetchDashboardData(): Promise<void> {
@@ -103,6 +107,20 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
     }
   }
 
+  async function fetchReminderSummary(): Promise<void> {
+    setReminderLoading(true);
+    try {
+      const res = await fetch("/api/staff-proxy/reminders/summary", { cache: "no-store" });
+      if (res.ok) {
+        setReminderSummary((await res.json()) as ReminderSummaryResponse);
+      }
+    } catch {
+      // The clinical dashboard remains usable when observability is unavailable.
+    } finally {
+      setReminderLoading(false);
+    }
+  }
+
   async function handleSearchMothers(e: React.FormEvent): Promise<void> {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -135,6 +153,7 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
       window.open(data.wa_me_url, "_blank");
       setWaActionMessage(`[READY → LINK_GENERATED] ${data.disclaimer}`);
       void fetchWaQueue();
+      if (userRole === "PUSKESMAS") void fetchReminderSummary();
     } catch {
       setWaActionMessage("Gagal menghubungkan ke server.");
     }
@@ -154,6 +173,29 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
       }
       setWaActionMessage("Tindak lanjut WhatsApp berhasil diselesaikan.");
       void fetchWaQueue();
+      if (userRole === "PUSKESMAS") void fetchReminderSummary();
+    } catch {
+      setWaActionMessage("Gagal menghubungkan ke server.");
+    }
+  }
+
+  async function handleUnreachableWaFallback(id: string): Promise<void> {
+    setWaActionMessage(null);
+    try {
+      const res = await fetch(`/api/staff-proxy/reminders/fallback-actions/${id}/unreachable`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          manual_note: "Nomor tidak dapat dihubungi setelah percobaan tindak lanjut manual.",
+        }),
+      });
+      if (!res.ok) {
+        setWaActionMessage("Gagal mencatat bahwa nomor tidak dapat dihubungi.");
+        return;
+      }
+      setWaActionMessage("Hasil tindak lanjut dicatat: nomor tidak dapat dihubungi.");
+      void fetchWaQueue();
+      if (userRole === "PUSKESMAS") void fetchReminderSummary();
     } catch {
       setWaActionMessage("Gagal menghubungkan ke server.");
     }
@@ -369,6 +411,136 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
         </div>
       )}
 
+      {/* TASK-P4-008: Puskesmas reminder/job failure dashboard */}
+      {userRole === "PUSKESMAS" && (
+        <div className="queue-section" style={{ marginTop: "2rem" }}>
+          <header
+            style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+          >
+            <div>
+              <h3>Kegagalan Reminder &amp; Tindak Lanjut</h3>
+              {reminderSummary && (
+                <p className="field-hint">
+                  SLA tindak lanjut {reminderSummary.fallback_sla_hours} jam · status pengiriman
+                  WhatsApp selalu <strong>UNKNOWN</strong>.
+                </p>
+              )}
+            </div>
+            <button
+              className="btn-secondary"
+              type="button"
+              onClick={() => void fetchReminderSummary()}
+            >
+              {reminderLoading ? "Memuat..." : "Refresh Reminder"}
+            </button>
+          </header>
+
+          {reminderSummary === null ? (
+            <p className="empty-notice">Ringkasan operasional reminder belum tersedia.</p>
+          ) : (
+            <>
+              <div className="metrics-row" style={{ marginTop: "1rem" }}>
+                <div className="metric-card">
+                  <span className="metric-label">Push Menunggu</span>
+                  <strong className="metric-value">
+                    {reminderSummary.summary.pending_push_attempts_count}
+                  </strong>
+                </div>
+                <div className="metric-card">
+                  <span className="metric-label">Gagal, Bisa Dicoba Ulang</span>
+                  <strong className="metric-value text-pending">
+                    {reminderSummary.summary.retryable_push_failures_count}
+                  </strong>
+                </div>
+                <div className="metric-card">
+                  <span className="metric-label">Gagal Terminal</span>
+                  <strong className="metric-value text-overdue">
+                    {reminderSummary.summary.terminal_push_failures_count}
+                  </strong>
+                </div>
+                <div className="metric-card">
+                  <span className="metric-label">Melewati SLA / Tidak Terhubung</span>
+                  <strong className="metric-value text-overdue">
+                    {reminderSummary.summary.escalated_fallbacks_count +
+                      reminderSummary.summary.unreachable_fallbacks_count}
+                  </strong>
+                </div>
+              </div>
+
+              {reminderSummary.fallback_queue.length === 0 ? (
+                <p className="empty-notice">
+                  Tidak ada kegagalan reminder yang perlu ditindaklanjuti.
+                </p>
+              ) : (
+                <div className="table-responsive" style={{ marginTop: "1rem" }}>
+                  <table className="staff-table">
+                    <thead>
+                      <tr>
+                        <th>Ibu Hamil</th>
+                        <th>Milestone</th>
+                        <th>Ringkasan Push</th>
+                        <th>Usia Antrean</th>
+                        <th>Status Tindak Lanjut</th>
+                        <th>Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reminderSummary.fallback_queue.map((item) => (
+                        <tr key={item.fallback_id}>
+                          <td>
+                            <strong>{item.mother_full_name}</strong>
+                            <br />
+                            <span className="field-hint">{item.phone_number_masked}</span>
+                          </td>
+                          <td>
+                            <span className="badge-code">{item.milestone_code}</span>
+                          </td>
+                          <td>{reminderFailureLabel(item.push_failure_summary)}</td>
+                          <td>
+                            {item.fallback_age_hours} jam
+                            {item.escalated && <span className="badge-action"> Eskalasi</span>}
+                          </td>
+                          <td>{item.fallback_status}</td>
+                          <td>
+                            {item.fallback_status === "UNREACHABLE" ? (
+                              <span className="field-hint">Sudah dicatat</span>
+                            ) : (
+                              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                                <button
+                                  className="btn-primary"
+                                  type="button"
+                                  onClick={() => void handleGenerateWaLink(item.fallback_id)}
+                                >
+                                  Buka WA
+                                </button>
+                                <button
+                                  className="btn-secondary"
+                                  type="button"
+                                  onClick={() => void handleResolveWaFallback(item.fallback_id)}
+                                >
+                                  Tandai Ditindaklanjuti
+                                </button>
+                                <button
+                                  className="btn-secondary"
+                                  type="button"
+                                  onClick={() => void handleUnreachableWaFallback(item.fallback_id)}
+                                >
+                                  Tidak Dapat Dihubungi
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       {/* TASK-P5-004: Organization Summary Reports per Village */}
       {userRole === "PUSKESMAS" && (
         <div className="queue-section" style={{ marginTop: "2rem" }}>
@@ -490,6 +662,13 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
                         >
                           Selesai
                         </button>
+                        <button
+                          className="btn-secondary"
+                          type="button"
+                          onClick={() => void handleUnreachableWaFallback(item.id)}
+                        >
+                          Tidak Dapat Dihubungi
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -559,4 +738,17 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
       </div>
     </div>
   );
+}
+
+function reminderFailureLabel(
+  kind: ReminderSummaryResponse["fallback_queue"][number]["push_failure_summary"],
+): string {
+  const labels = {
+    NO_ACTIVE_DEVICE: "Tidak ada perangkat aktif",
+    PUSH_PENDING: "Push menunggu diproses",
+    RETRYABLE_FAILURE: "Push gagal, dapat dicoba ulang",
+    TERMINAL_FAILURE: "Push gagal terminal",
+    NO_PUSH_ATTEMPT: "Tidak ada kegagalan push aktif",
+  } as const;
+  return labels[kind];
 }

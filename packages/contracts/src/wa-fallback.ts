@@ -54,3 +54,12 @@ export const resolveWaFallbackRequestSchema = z
   })
   .strict();
 export type ResolveWaFallbackRequest = z.infer<typeof resolveWaFallbackRequestSchema>;
+
+export const markWaFallbackUnreachableRequestSchema = z
+  .object({
+    manual_note: z.string().trim().min(1).max(500),
+  })
+  .strict();
+export type MarkWaFallbackUnreachableRequest = z.infer<
+  typeof markWaFallbackUnreachableRequestSchema
+>;
