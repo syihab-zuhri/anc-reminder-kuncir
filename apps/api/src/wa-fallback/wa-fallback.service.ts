@@ -103,6 +103,27 @@ export class WaFallbackService {
     return item;
   }
 
+  public async markUnreachable(
+    actor: StaffActor,
+    id: string,
+    manualNote: string,
+  ): Promise<WaFallbackItem> {
+    await this.assertFallbackAccess(actor, id);
+    const occurredAt = new Date();
+    const result = await this.repository.markUnreachable(
+      id,
+      actor.staffUserId,
+      manualNote,
+      occurredAt,
+      this.scope(actor),
+    );
+    const item = await this.transitionOutcome(result, id, ["UNREACHABLE"]);
+    if (result === "UPDATED") {
+      await this.recordTransition(actor, id, "WA_FALLBACK_UNREACHABLE", occurredAt);
+    }
+    return item;
+  }
+
   private async transitionOutcome(
     result: "UPDATED" | "NOT_FOUND" | "INVALID_STATE",
     id: string,

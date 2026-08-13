@@ -115,6 +115,20 @@ class FakeWaFallbackRepository implements WaFallbackRepository {
     });
   }
 
+  public async markUnreachable(
+    id: string,
+    staffUserId: string,
+    manualNote: string,
+    occurredAt: Date,
+  ): Promise<WaFallbackTransitionResult> {
+    return this.transition(id, ["READY", "LINK_GENERATED", "LINK_OPENED"], {
+      status: "UNREACHABLE",
+      resolved_at: occurredAt.toISOString(),
+      resolved_by: staffUserId,
+      manual_note: manualNote,
+    });
+  }
+
   public async canAccessMother(): Promise<boolean> {
     return this.accessAllowed;
   }
@@ -275,6 +289,29 @@ describe("wa-fallback integration (API-WA-001..003)", () => {
     expect(queueRes.status).toBe(403);
   });
 
+  it("records an unreachable outcome through both operational and canonical reminder routes", async () => {
+    const server = app.getHttpServer() as Parameters<typeof request>[0];
+
+    const result = await request(server)
+      .post(`/api/v1/reminders/fallback-actions/${fallbackId}/unreachable`)
+      .set("Authorization", `Bearer ${bidanToken}`)
+      .send({ manual_note: "Nomor tidak aktif setelah percobaan tindak lanjut." });
+
+    expect(result.status).toBe(200);
+    expect((result.body as WaFallbackItem).status).toBe("UNREACHABLE");
+    expect((result.body as WaFallbackItem).manual_note).toContain("Nomor tidak aktif");
+    expect(auditRepo.events.at(-1)?.action).toBe("WA_FALLBACK_UNREACHABLE");
+
+    const repeated = await request(server)
+      .post(`/api/v1/wa-fallback/${fallbackId}/unreachable`)
+      .set("Authorization", `Bearer ${bidanToken}`)
+      .send({ manual_note: "Percobaan ulang." });
+    expect(repeated.status).toBe(200);
+    expect(
+      auditRepo.events.filter((event) => event.action === "WA_FALLBACK_UNREACHABLE"),
+    ).toHaveLength(1);
+  });
+
   it("enforces wa.me contract requirements: phone normalization, URL encoding, no sensitive clinical detail, and safe status (TASK-P6-007)", async () => {
     const server = app.getHttpServer() as Parameters<typeof request>[0];
 
@@ -338,5 +375,11 @@ describe("wa-fallback integration (API-WA-001..003)", () => {
       .set("Authorization", `Bearer ${bidanToken}`)
       .send({ manual_note: "" });
     expect(invalidPayloadRes.status).toBe(400);
+
+    const missingReasonRes = await request(server)
+      .post(`/api/v1/wa-fallback/${fallbackId}/unreachable`)
+      .set("Authorization", `Bearer ${bidanToken}`)
+      .send({});
+    expect(missingReasonRes.status).toBe(400);
   });
 });

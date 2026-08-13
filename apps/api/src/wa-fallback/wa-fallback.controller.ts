@@ -10,8 +10,10 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import {
+  markWaFallbackUnreachableRequestSchema,
   resolveWaFallbackRequestSchema,
   type GenerateWaLinkResponse,
+  type MarkWaFallbackUnreachableRequest,
   type ResolveWaFallbackRequest,
   type WaFallbackItem,
   type WaFallbackQueueResponse,
@@ -63,6 +65,24 @@ export class WaFallbackController {
   ): Promise<WaFallbackItem> {
     const parsed: ResolveWaFallbackRequest = parseRequest(resolveWaFallbackRequestSchema, body);
     return this.service.resolve(
+      requireActor(request),
+      parseRequest(uuidPathSchema, id),
+      parsed.manual_note,
+    );
+  }
+
+  @Post(":id/unreachable")
+  @HttpCode(HttpStatus.OK)
+  public markUnreachable(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ): Promise<WaFallbackItem> {
+    const parsed: MarkWaFallbackUnreachableRequest = parseRequest(
+      markWaFallbackUnreachableRequestSchema,
+      body,
+    );
+    return this.service.markUnreachable(
       requireActor(request),
       parseRequest(uuidPathSchema, id),
       parsed.manual_note,
