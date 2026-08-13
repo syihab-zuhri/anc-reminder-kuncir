@@ -1,16 +1,23 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type {
+  BidanConfirmationQueueItem,
   BidanDashboardResponse,
   BumilDashboardResponse,
+  PregnancyMilestoneResponse,
   PriorityActionItem,
   PuskesmasDashboardResponse,
 } from "@anc/contracts";
 import type { DatabasePool } from "@anc/database";
 
-import { deriveGestationalState } from "../anc-plan/anc-derived-state.js";
-import type { MotherActor } from "../mother-access/mother-auth.types.js";
+import {
+  derivePregnancyMilestoneState,
+  type PregnancyMilestoneSnapshot,
+} from "../anc-plan/anc-derived-state.js";
+import { PostgresAncPlanRepository } from "../anc-plan/anc-plan.repository.js";
 import type { StaffActor } from "../auth/staff-auth.types.js";
 import { DATABASE_POOL } from "../infrastructure/tokens.js";
+import type { MotherActor } from "../mother-access/mother-auth.types.js";
+import { maskPhone } from "../registry/mother-registry.repository.js";
 import { dateOnlyInTimezone } from "../registry/registry-validation.js";
 
 export interface DashboardRepository {
@@ -31,9 +38,31 @@ export interface DashboardRepository {
   ): Promise<BumilDashboardResponse>;
 }
 
+interface DashboardPregnancyRow {
+  readonly pregnancy_id: string;
+  readonly mother_id: string;
+  readonly mother_full_name: string;
+  readonly phone_normalized: string;
+  readonly village_name: string | null;
+}
+
+interface DerivedDashboardPregnancy {
+  readonly row: DashboardPregnancyRow;
+  readonly snapshot: PregnancyMilestoneSnapshot;
+  readonly milestones: readonly PregnancyMilestoneResponse[];
+  readonly completedWeeks: number;
+  readonly completedDays: number;
+  readonly trimesterLabel: string | null;
+  readonly nextMilestoneCode: PregnancyMilestoneResponse["code"] | null;
+}
+
 @Injectable()
 export class PostgresDashboardRepository implements DashboardRepository {
-  public constructor(@Inject(DATABASE_POOL) private readonly pool: DatabasePool) {}
+  private readonly planRepository: PostgresAncPlanRepository;
+
+  public constructor(@Inject(DATABASE_POOL) private readonly pool: DatabasePool) {
+    this.planRepository = new PostgresAncPlanRepository(pool, false);
+  }
 
   public async getPuskesmasDashboard(
     actor: StaffActor,
@@ -41,110 +70,71 @@ export class PostgresDashboardRepository implements DashboardRepository {
     timezone: string,
   ): Promise<PuskesmasDashboardResponse> {
     if (actor.healthCenterId === null || actor.role !== "PUSKESMAS") {
-      return {
-        summary: {
-          total_active_pregnancies: 0,
-          milestones_due_count: 0,
-          milestones_overdue_count: 0,
-          pending_validations_count: 0,
-          unresolved_wa_fallbacks_count: 0,
-        },
-        priority_action_queue: [],
-      };
+      return emptyPuskesmasDashboard();
     }
 
-    const todayStr = dateOnlyInTimezone(now, timezone);
-
-    const activePregnanciesRes = await this.pool.query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM pregnancies WHERE health_center_id = $1 AND status = 'ACTIVE'`,
-      [actor.healthCenterId],
-    );
-    const totalActivePregnancies = parseInt(activePregnanciesRes.rows[0]?.count ?? "0", 10);
-
-    const dueRes = await this.pool.query<{ count: string }>(
-      `SELECT COUNT(*) as count 
-       FROM milestone_schedule ms
-       JOIN pregnancies p ON ms.pregnancy_id = p.id
-       WHERE p.health_center_id = $1 AND p.status = 'ACTIVE' AND ms.visit_status = 'DUE'`,
-      [actor.healthCenterId],
-    );
-    const dueCount = parseInt(dueRes.rows[0]?.count ?? "0", 10);
-
-    const overdueRes = await this.pool.query<{ count: string }>(
-      `SELECT COUNT(*) as count 
-       FROM milestone_schedule ms
-       JOIN pregnancies p ON ms.pregnancy_id = p.id
-       WHERE p.health_center_id = $1 AND p.status = 'ACTIVE' AND (ms.visit_status = 'OVERDUE' OR (ms.visit_status = 'DUE' AND ms.due_at < $2))`,
-      [actor.healthCenterId, todayStr],
-    );
-    const overdueCount = parseInt(overdueRes.rows[0]?.count ?? "0", 10);
-
-    const pendingValRes = await this.pool.query<{ count: string }>(
-      `SELECT COUNT(*) as count 
-       FROM milestone_schedule ms
-       JOIN pregnancies p ON ms.pregnancy_id = p.id
-       WHERE p.health_center_id = $1 AND p.status = 'ACTIVE' AND ms.visit_status = 'CONFIRMED' AND ms.record_validation_status = 'INCOMPLETE'`,
-      [actor.healthCenterId],
-    );
-    const pendingValCount = parseInt(pendingValRes.rows[0]?.count ?? "0", 10);
-
-    const queueRes = await this.pool.query<{
-      mother_id: string;
-      mother_full_name: string;
-      village_name: string | null;
-      milestone_code: "K1" | "K2" | "K3" | "K4" | "K5" | "K6" | "K7" | "K8";
-      visit_status: "UPCOMING" | "DUE" | "OVERDUE" | "CONFIRMED" | "CANCELLED" | "NOT_APPLICABLE";
-      due_at: string | null;
-      record_validation_status: "NOT_REQUIRED" | "INCOMPLETE" | "VALIDATED";
-    }>(
-      `SELECT m.id as mother_id, m.full_name as mother_full_name, v.name as village_name,
-              ms.milestone_code, ms.visit_status, ms.due_at, ms.record_validation_status
-       FROM milestone_schedule ms
-       JOIN pregnancies p ON ms.pregnancy_id = p.id
-       JOIN mothers m ON p.mother_id = m.id
-       LEFT JOIN villages v ON m.village_id = v.id
-       WHERE p.health_center_id = $1 AND p.status = 'ACTIVE'
-         AND (ms.visit_status IN ('DUE', 'OVERDUE') OR (ms.visit_status = 'CONFIRMED' AND ms.record_validation_status = 'INCOMPLETE'))
-       ORDER BY ms.due_at ASC
-       LIMIT 10`,
-      [actor.healthCenterId],
+    const pregnancyRows = await this.listActivePregnancies(`p.health_center_id = $1`, [
+      actor.healthCenterId,
+    ]);
+    const pregnancies = await this.derivePregnancies(pregnancyRows, now, timezone);
+    const milestones = pregnancies.flatMap(({ row, milestones: items }) =>
+      items.map((milestone) => ({ row, milestone })),
     );
 
-    const priorityActionQueue: PriorityActionItem[] = queueRes.rows.map((row) => {
-      let actionType: "CONFIRMATION_NEEDED" | "VALIDATION_NEEDED" | "WA_FALLBACK_REQUIRED" =
-        "CONFIRMATION_NEEDED";
-      if (row.visit_status === "CONFIRMED" && row.record_validation_status === "INCOMPLETE") {
-        actionType = "VALIDATION_NEEDED";
-      } else if (row.visit_status === "OVERDUE") {
-        actionType = "WA_FALLBACK_REQUIRED";
-      }
-      return {
+    const dueCount = milestones.filter(({ milestone }) => milestone.visit_status === "DUE").length;
+    const overdueCount = milestones.filter(
+      ({ milestone }) => milestone.visit_status === "OVERDUE",
+    ).length;
+    const pendingValidationCount = milestones.filter(
+      ({ milestone }) =>
+        milestone.visit_status === "CONFIRMED" &&
+        milestone.record_validation_status === "INCOMPLETE",
+    ).length;
+
+    const priorityActionQueue: PriorityActionItem[] = milestones
+      .filter(
+        ({ milestone }) =>
+          milestone.visit_status === "DUE" ||
+          milestone.visit_status === "OVERDUE" ||
+          (milestone.visit_status === "CONFIRMED" &&
+            milestone.record_validation_status === "INCOMPLETE"),
+      )
+      .sort(compareDashboardMilestones)
+      .slice(0, 10)
+      .map(({ row, milestone }) => ({
         mother_id: row.mother_id,
         mother_full_name: row.mother_full_name,
         village_name: row.village_name,
-        milestone_code: row.milestone_code,
-        visit_status: row.visit_status,
-        due_at: row.due_at,
-        action_type: actionType,
-      };
-    });
+        milestone_code: milestone.code,
+        visit_status: milestone.visit_status,
+        due_at: effectiveDueDate(milestone, timezone),
+        action_type:
+          milestone.visit_status === "CONFIRMED"
+            ? "VALIDATION_NEEDED"
+            : milestone.visit_status === "OVERDUE"
+              ? "WA_FALLBACK_REQUIRED"
+              : "CONFIRMATION_NEEDED",
+      }));
 
-    const unresolvedWaRes = await this.pool.query<{ count: string }>(
-      `SELECT COUNT(*) as count 
-       FROM wa_fallback_actions wf
-       JOIN mothers m ON wf.mother_id = m.id
-       WHERE m.health_center_id = $1 AND wf.status IN ('READY', 'LINK_GENERATED')`,
+    const unresolvedWaResult = await this.pool.query<{ readonly count: string }>(
+      `SELECT COUNT(*)::text AS count
+         FROM wa_fallback_actions AS fallback
+         JOIN mothers AS mother ON mother.id = fallback.mother_id
+        WHERE mother.health_center_id = $1
+          AND fallback.status IN ('READY', 'LINK_GENERATED', 'LINK_OPENED')`,
       [actor.healthCenterId],
     );
-    const unresolvedWaCount = parseInt(unresolvedWaRes.rows[0]?.count ?? "0", 10);
 
     return {
       summary: {
-        total_active_pregnancies: totalActivePregnancies,
+        total_active_pregnancies: pregnancies.length,
         milestones_due_count: dueCount,
         milestones_overdue_count: overdueCount,
-        pending_validations_count: pendingValCount,
-        unresolved_wa_fallbacks_count: unresolvedWaCount,
+        pending_validations_count: pendingValidationCount,
+        unresolved_wa_fallbacks_count: Number.parseInt(
+          unresolvedWaResult.rows[0]?.count ?? "0",
+          10,
+        ),
       },
       priority_action_queue: priorityActionQueue,
     };
@@ -156,167 +146,109 @@ export class PostgresDashboardRepository implements DashboardRepository {
     timezone: string,
   ): Promise<BidanDashboardResponse> {
     if (actor.healthCenterId === null || actor.role !== "BIDAN") {
-      return {
-        summary: {
-          assigned_mothers_count: 0,
-          milestones_due_count: 0,
-          milestones_overdue_count: 0,
-          action_required_count: 0,
-        },
-        assigned_villages: [],
-        confirmation_queue: [],
-      };
+      return emptyBidanDashboard();
     }
 
-    const todayStr = dateOnlyInTimezone(now, timezone);
-
-    const villageScopeRes = await this.pool.query<{ village_id: string; village_name: string }>(
-      `SELECT v.id as village_id, v.name as village_name
-       FROM staff_assignments sa
-       JOIN villages v ON sa.village_id = v.id
-       WHERE sa.staff_user_id = $1 AND sa.revoked_at IS NULL`,
+    const villageResult = await this.pool.query<{
+      readonly village_id: string;
+      readonly village_name: string;
+    }>(
+      `SELECT village.id AS village_id, village.name AS village_name
+         FROM staff_assignments AS assignment
+         JOIN villages AS village
+           ON assignment.scope_type = 'AREA'
+          AND assignment.scope_id = village.id
+        WHERE assignment.staff_user_id = $1
+          AND assignment.revoked_at IS NULL
+        ORDER BY village.name, village.id`,
       [actor.staffUserId],
     );
-    const assignedVillages = villageScopeRes.rows.map((r) => ({
-      village_id: r.village_id,
-      village_name: r.village_name,
-    }));
-    const assignedVillageIds = assignedVillages.map((v) => v.village_id);
 
-    const mothersRes = await this.pool.query<{ count: string }>(
-      `SELECT COUNT(*) as count
-       FROM mothers m
-       JOIN pregnancies p ON p.mother_id = m.id
-       WHERE p.health_center_id = $1 AND p.status = 'ACTIVE'
-         AND (m.village_id = ANY($2::uuid[]) OR m.id IN (
-           SELECT target_id FROM scoped_access_grants WHERE staff_user_id = $3 AND scope_type = 'MOTHER' AND revoked_at IS NULL
-         ))`,
-      [
-        actor.healthCenterId,
-        assignedVillageIds.length > 0 ? assignedVillageIds : [null],
-        actor.staffUserId,
-      ],
+    const pregnancyRows = await this.listActivePregnancies(
+      `p.health_center_id = $1
+       AND EXISTS (
+         SELECT 1
+           FROM staff_assignments AS assignment
+          WHERE assignment.staff_user_id = $2
+            AND assignment.revoked_at IS NULL
+            AND (
+              (assignment.scope_type = 'MOTHER' AND assignment.scope_id = m.id)
+              OR (
+                assignment.scope_type = 'AREA'
+                AND m.village_id IS NOT NULL
+                AND assignment.scope_id = m.village_id
+              )
+            )
+       )`,
+      [actor.healthCenterId, actor.staffUserId],
     );
-    const assignedMothersCount = parseInt(mothersRes.rows[0]?.count ?? "0", 10);
+    const pregnancies = await this.derivePregnancies(pregnancyRows, now, timezone);
+    const actionable = pregnancies
+      .flatMap(({ row, milestones }) => milestones.map((milestone) => ({ row, milestone })))
+      .filter(
+        ({ milestone }) => milestone.visit_status === "DUE" || milestone.visit_status === "OVERDUE",
+      );
+    const dueCount = actionable.filter(({ milestone }) => milestone.visit_status === "DUE").length;
+    const overdueCount = actionable.length - dueCount;
 
-    const dueRes = await this.pool.query<{ count: string }>(
-      `SELECT COUNT(*) as count
-       FROM milestone_schedule ms
-       JOIN pregnancies p ON ms.pregnancy_id = p.id
-       JOIN mothers m ON p.mother_id = m.id
-       WHERE p.health_center_id = $1 AND p.status = 'ACTIVE' AND ms.visit_status = 'DUE'
-         AND (m.village_id = ANY($2::uuid[]) OR m.id IN (
-           SELECT target_id FROM scoped_access_grants WHERE staff_user_id = $3 AND scope_type = 'MOTHER' AND revoked_at IS NULL
-         ))`,
-      [
-        actor.healthCenterId,
-        assignedVillageIds.length > 0 ? assignedVillageIds : [null],
-        actor.staffUserId,
-      ],
-    );
-    const dueCount = parseInt(dueRes.rows[0]?.count ?? "0", 10);
-
-    const overdueRes = await this.pool.query<{ count: string }>(
-      `SELECT COUNT(*) as count
-       FROM milestone_schedule ms
-       JOIN pregnancies p ON ms.pregnancy_id = p.id
-       JOIN mothers m ON p.mother_id = m.id
-       WHERE p.health_center_id = $1 AND p.status = 'ACTIVE' AND (ms.visit_status = 'OVERDUE' OR (ms.visit_status = 'DUE' AND ms.due_at < $4))
-         AND (m.village_id = ANY($2::uuid[]) OR m.id IN (
-           SELECT target_id FROM scoped_access_grants WHERE staff_user_id = $3 AND scope_type = 'MOTHER' AND revoked_at IS NULL
-         ))`,
-      [
-        actor.healthCenterId,
-        assignedVillageIds.length > 0 ? assignedVillageIds : [null],
-        actor.staffUserId,
-        todayStr,
-      ],
-    );
-    const overdueCount = parseInt(overdueRes.rows[0]?.count ?? "0", 10);
-
-    const queueRes = await this.pool.query<{
-      mother_id: string;
-      mother_full_name: string;
-      mother_phone_masked: string;
-      village_name: string | null;
-      milestone_code: "K1" | "K2" | "K3" | "K4" | "K5" | "K6" | "K7" | "K8";
-      visit_status: "UPCOMING" | "DUE" | "OVERDUE" | "CONFIRMED" | "CANCELLED" | "NOT_APPLICABLE";
-      due_at: string | null;
-    }>(
-      `SELECT m.id as mother_id, m.full_name as mother_full_name, m.phone_masked as mother_phone_masked,
-              v.name as village_name, ms.milestone_code, ms.visit_status, ms.due_at
-       FROM milestone_schedule ms
-       JOIN pregnancies p ON ms.pregnancy_id = p.id
-       JOIN mothers m ON p.mother_id = m.id
-       LEFT JOIN villages v ON m.village_id = v.id
-       WHERE p.health_center_id = $1 AND p.status = 'ACTIVE' AND ms.visit_status IN ('DUE', 'OVERDUE')
-         AND (m.village_id = ANY($2::uuid[]) OR m.id IN (
-           SELECT target_id FROM scoped_access_grants WHERE staff_user_id = $3 AND scope_type = 'MOTHER' AND revoked_at IS NULL
-         ))
-       ORDER BY ms.due_at ASC
-       LIMIT 10`,
-      [
-        actor.healthCenterId,
-        assignedVillageIds.length > 0 ? assignedVillageIds : [null],
-        actor.staffUserId,
-      ],
-    );
+    const confirmationQueue: BidanConfirmationQueueItem[] = actionable
+      .sort(compareDashboardMilestones)
+      .slice(0, 10)
+      .map(({ row, milestone }) => ({
+        mother_id: row.mother_id,
+        mother_full_name: row.mother_full_name,
+        mother_phone_masked: maskPhone(row.phone_normalized),
+        village_name: row.village_name,
+        milestone_code: milestone.code,
+        visit_status: milestone.visit_status,
+        due_at: effectiveDueDate(milestone, timezone),
+      }));
 
     return {
       summary: {
-        assigned_mothers_count: assignedMothersCount,
+        assigned_mothers_count: new Set(pregnancies.map(({ row }) => row.mother_id)).size,
         milestones_due_count: dueCount,
         milestones_overdue_count: overdueCount,
-        action_required_count: dueCount + overdueCount,
+        action_required_count: actionable.length,
       },
-      assigned_villages: assignedVillages,
-      confirmation_queue: queueRes.rows,
+      assigned_villages: villageResult.rows,
+      confirmation_queue: confirmationQueue,
     };
   }
 
-  public async getBumilDashboard(actor: MotherActor, now: Date): Promise<BumilDashboardResponse> {
-    const motherRes = await this.pool.query<{
-      id: string;
-      full_name: string;
-      address: string;
-      village_name: string | null;
+  public async getBumilDashboard(
+    actor: MotherActor,
+    now: Date,
+    timezone: string,
+  ): Promise<BumilDashboardResponse> {
+    const motherResult = await this.pool.query<{
+      readonly id: string;
+      readonly full_name: string;
+      readonly address: string;
+      readonly village_name: string | null;
+      readonly health_center_name: string;
     }>(
-      `SELECT m.id, m.full_name, m.address, v.name as village_name
-       FROM mothers m
-       LEFT JOIN villages v ON m.village_id = v.id
-       WHERE m.id = $1`,
+      `SELECT mother.id, mother.full_name, mother.address,
+              village.name AS village_name,
+              center.name AS health_center_name
+         FROM mothers AS mother
+         JOIN health_centers AS center ON center.id = mother.health_center_id
+         LEFT JOIN villages AS village ON village.id = mother.village_id
+        WHERE mother.id = $1
+        LIMIT 1`,
       [actor.motherId],
     );
-    const motherRow = motherRes.rows[0];
-    if (!motherRow) {
-      return {
-        mother_info: { full_name: "", address: "", village_name: null },
-        active_pregnancy: null,
-        next_milestone: null,
-        milestones: [],
-      };
-    }
+    const mother = motherResult.rows[0];
+    if (mother === undefined) return emptyBumilDashboard();
 
-    const pregRes = await this.pool.query<{
-      id: string;
-      dating_date: string;
-      status: "ACTIVE" | "CLOSED";
-    }>(
-      `SELECT id, dating_date, status
-       FROM pregnancies
-       WHERE mother_id = $1 AND status = 'ACTIVE'
-       ORDER BY created_at DESC
-       LIMIT 1`,
-      [actor.motherId],
-    );
-    const pregRow = pregRes.rows[0];
-
-    if (!pregRow) {
+    const pregnancyRows = await this.listActivePregnancies(`m.id = $1`, [actor.motherId]);
+    const pregnancy = (await this.derivePregnancies(pregnancyRows.slice(0, 1), now, timezone))[0];
+    if (pregnancy === undefined) {
       return {
         mother_info: {
-          full_name: motherRow.full_name,
-          address: motherRow.address,
-          village_name: motherRow.village_name,
+          full_name: mother.full_name,
+          address: mother.address,
+          village_name: mother.village_name,
         },
         active_pregnancy: null,
         next_milestone: null,
@@ -324,61 +256,157 @@ export class PostgresDashboardRepository implements DashboardRepository {
       };
     }
 
-    const datingDate = new Date(`${pregRow.dating_date}T00:00:00.000Z`);
-    const gest = deriveGestationalState(datingDate, now);
-
-    const milestonesRes = await this.pool.query<{
-      milestone_code: "K1" | "K2" | "K3" | "K4" | "K5" | "K6" | "K7" | "K8";
-      visit_status: "UPCOMING" | "DUE" | "OVERDUE" | "CONFIRMED" | "CANCELLED" | "NOT_APPLICABLE";
-      record_validation_status: "NOT_REQUIRED" | "INCOMPLETE" | "VALIDATED";
-      due_at: string | null;
-      expected_due_date: string | null;
-      occurred_on: string | null;
+    const confirmationResult = await this.pool.query<{
+      readonly milestone_id: string;
+      readonly occurred_on: string | null;
     }>(
-      `SELECT milestone_code, visit_status, record_validation_status, due_at, expected_due_date, occurred_on
-       FROM milestone_schedule
-       WHERE pregnancy_id = $1
-       ORDER BY milestone_code ASC`,
-      [pregRow.id],
+      `SELECT DISTINCT ON (confirmation.milestone_id)
+              confirmation.milestone_id,
+              confirmation.occurred_on::text AS occurred_on
+         FROM visit_confirmations AS confirmation
+         JOIN pregnancy_milestones AS milestone ON milestone.id = confirmation.milestone_id
+        WHERE milestone.pregnancy_id = $1
+        ORDER BY confirmation.milestone_id, confirmation.created_at DESC, confirmation.id DESC`,
+      [pregnancy.row.pregnancy_id],
     );
-
-    const milestones = milestonesRes.rows.map((r) => ({
-      milestone_code: r.milestone_code,
-      visit_status: r.visit_status,
-      record_validation_status: r.record_validation_status,
-      due_at: r.due_at,
-      occurred_on: r.occurred_on,
-    }));
-
-    const nextRow = milestonesRes.rows.find((r) =>
-      ["UPCOMING", "DUE", "OVERDUE"].includes(r.visit_status),
+    const occurredOnByMilestone = new Map(
+      confirmationResult.rows.map((row) => [row.milestone_id, row.occurred_on] as const),
     );
-    const nextMilestone = nextRow
-      ? {
-          milestone_code: nextRow.milestone_code,
-          visit_status: nextRow.visit_status,
-          due_at: nextRow.due_at,
-          expected_due_date: nextRow.expected_due_date,
-          recommended_facility_name: "Puskesmas Kuncir",
-        }
-      : null;
+    const nextMilestone = pregnancy.milestones.find(
+      (milestone) => milestone.code === pregnancy.nextMilestoneCode,
+    );
 
     return {
       mother_info: {
-        full_name: motherRow.full_name,
-        address: motherRow.address,
-        village_name: motherRow.village_name,
+        full_name: mother.full_name,
+        address: mother.address,
+        village_name: mother.village_name,
       },
       active_pregnancy: {
-        id: pregRow.id,
-        dating_date: pregRow.dating_date,
-        completed_weeks: gest.completedWeeks,
-        completed_days: gest.completedDays,
-        trimester_label: gest.trimesterLabel,
-        status: pregRow.status,
+        id: pregnancy.row.pregnancy_id,
+        dating_date: pregnancy.snapshot.datingDate,
+        completed_weeks: pregnancy.completedWeeks,
+        completed_days: pregnancy.completedDays,
+        trimester_label: pregnancy.trimesterLabel ?? "Belum ditetapkan",
+        status: pregnancy.snapshot.pregnancyStatus,
       },
-      next_milestone: nextMilestone,
-      milestones,
+      next_milestone:
+        nextMilestone === undefined
+          ? null
+          : {
+              milestone_code: nextMilestone.code,
+              visit_status: nextMilestone.visit_status,
+              due_at: explicitDueDate(nextMilestone, timezone),
+              expected_due_date: nextMilestone.target_date_end,
+              recommended_facility_name: mother.health_center_name,
+            },
+      milestones: pregnancy.milestones.map((milestone) => ({
+        milestone_code: milestone.code,
+        visit_status: milestone.visit_status,
+        record_validation_status: milestone.record_validation_status,
+        due_at: explicitDueDate(milestone, timezone),
+        occurred_on: occurredOnByMilestone.get(milestone.id) ?? null,
+      })),
     };
   }
+
+  private async listActivePregnancies(
+    scopeSql: string,
+    params: readonly unknown[],
+  ): Promise<DashboardPregnancyRow[]> {
+    const result = await this.pool.query<DashboardPregnancyRow>(
+      `SELECT p.id AS pregnancy_id,
+              m.id AS mother_id,
+              m.full_name AS mother_full_name,
+              m.phone_normalized,
+              village.name AS village_name
+         FROM pregnancies AS p
+         JOIN mothers AS m ON m.id = p.mother_id
+         LEFT JOIN villages AS village ON village.id = m.village_id
+        WHERE p.status = 'ACTIVE' AND ${scopeSql}
+        ORDER BY p.created_at DESC, p.id DESC`,
+      [...params],
+    );
+    return result.rows;
+  }
+
+  private async derivePregnancies(
+    rows: readonly DashboardPregnancyRow[],
+    now: Date,
+    timezone: string,
+  ): Promise<DerivedDashboardPregnancy[]> {
+    const derived = await Promise.all(
+      rows.map(async (row): Promise<DerivedDashboardPregnancy | null> => {
+        const snapshot = await this.planRepository.listPregnancyMilestones(row.pregnancy_id);
+        if (snapshot === null) return null;
+        const state = derivePregnancyMilestoneState(snapshot, now, timezone);
+        return {
+          row,
+          snapshot,
+          milestones: state.milestones,
+          completedWeeks: state.gestational_age.completed_weeks,
+          completedDays: state.gestational_age.additional_days,
+          trimesterLabel: state.trimester_label,
+          nextMilestoneCode: state.next_milestone_code,
+        };
+      }),
+    );
+    return derived.filter((item): item is DerivedDashboardPregnancy => item !== null);
+  }
+}
+
+function explicitDueDate(milestone: PregnancyMilestoneResponse, timezone: string): string | null {
+  return milestone.due_at === null
+    ? null
+    : dateOnlyInTimezone(new Date(milestone.due_at), timezone);
+}
+
+function effectiveDueDate(milestone: PregnancyMilestoneResponse, timezone: string): string | null {
+  return explicitDueDate(milestone, timezone) ?? milestone.target_date_end;
+}
+
+function compareDashboardMilestones(
+  left: { readonly milestone: PregnancyMilestoneResponse },
+  right: { readonly milestone: PregnancyMilestoneResponse },
+): number {
+  const leftDate = left.milestone.target_date_end ?? "9999-12-31";
+  const rightDate = right.milestone.target_date_end ?? "9999-12-31";
+  return (
+    leftDate.localeCompare(rightDate) || left.milestone.code.localeCompare(right.milestone.code)
+  );
+}
+
+function emptyPuskesmasDashboard(): PuskesmasDashboardResponse {
+  return {
+    summary: {
+      total_active_pregnancies: 0,
+      milestones_due_count: 0,
+      milestones_overdue_count: 0,
+      pending_validations_count: 0,
+      unresolved_wa_fallbacks_count: 0,
+    },
+    priority_action_queue: [],
+  };
+}
+
+function emptyBidanDashboard(): BidanDashboardResponse {
+  return {
+    summary: {
+      assigned_mothers_count: 0,
+      milestones_due_count: 0,
+      milestones_overdue_count: 0,
+      action_required_count: 0,
+    },
+    assigned_villages: [],
+    confirmation_queue: [],
+  };
+}
+
+function emptyBumilDashboard(): BumilDashboardResponse {
+  return {
+    mother_info: { full_name: "", address: "", village_name: null },
+    active_pregnancy: null,
+    next_milestone: null,
+    milestones: [],
+  };
 }

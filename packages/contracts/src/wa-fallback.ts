@@ -1,14 +1,10 @@
 import { z } from "zod";
 
-import { milestoneCodeSchema } from "./domain.js";
+import { milestoneCodeSchema, waFallbackActionStatusSchema } from "./domain.js";
 
-export const waFallbackStatusSchema = z.enum([
-  "READY",
-  "LINK_GENERATED",
-  "OPENED",
-  "RESOLVED",
-  "EXPIRED",
-]);
+// Reuses the authoritative DB enum. A wa.me link never reports delivery, so
+// RESOLVED_MANUALLY records staff follow-up, not message receipt.
+export const waFallbackStatusSchema = waFallbackActionStatusSchema;
 export type WaFallbackStatus = z.infer<typeof waFallbackStatusSchema>;
 
 export const waFallbackItemSchema = z
@@ -19,11 +15,12 @@ export const waFallbackItemSchema = z
     mother_full_name: z.string(),
     phone_number_masked: z.string(),
     milestone_code: milestoneCodeSchema,
-    due_at: z.string().nullable(),
+    due_at: z.string().datetime({ offset: true }).nullable(),
     status: waFallbackStatusSchema,
     wa_me_url: z.string().url().nullable(),
-    link_generated_at: z.string().nullable(),
-    resolved_at: z.string().nullable(),
+    link_generated_at: z.string().datetime({ offset: true }).nullable(),
+    link_opened_at: z.string().datetime({ offset: true }).nullable(),
+    resolved_at: z.string().datetime({ offset: true }).nullable(),
     resolved_by: z.string().uuid().nullable(),
     manual_note: z.string().nullable(),
   })
@@ -42,8 +39,8 @@ export const generateWaLinkResponseSchema = z
   .object({
     fallback_id: z.string().uuid(),
     wa_me_url: z.string().url(),
-    generated_at: z.string(),
-    status: waFallbackStatusSchema,
+    generated_at: z.string().datetime({ offset: true }),
+    status: z.literal("LINK_GENERATED"),
     disclaimer: z.literal(
       "Link wa.me ini adalah aksi manual Bidan dan tidak menjamin status pengiriman/penerimaan pesan di WhatsApp.",
     ),
@@ -53,7 +50,7 @@ export type GenerateWaLinkResponse = z.infer<typeof generateWaLinkResponseSchema
 
 export const resolveWaFallbackRequestSchema = z
   .object({
-    manual_note: z.string().trim().max(500).optional(),
+    manual_note: z.string().trim().min(1).max(500).optional(),
   })
   .strict();
 export type ResolveWaFallbackRequest = z.infer<typeof resolveWaFallbackRequestSchema>;

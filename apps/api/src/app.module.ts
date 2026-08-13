@@ -344,8 +344,12 @@ export class AppModule {
         },
         {
           provide: WaFallbackService,
-          useFactory: (repo: PostgresWaFallbackRepository) => new WaFallbackService(repo),
-          inject: [WA_FALLBACK_REPOSITORY],
+          useFactory: (
+            repo: WaFallbackRepository,
+            policy: AuthorizationPolicy,
+            audit: AuditService,
+          ) => new WaFallbackService(repo, policy, audit),
+          inject: [WA_FALLBACK_REPOSITORY, AuthorizationPolicy, AUDIT_SERVICE],
         },
         {
           provide: REPORTS_REPOSITORY,

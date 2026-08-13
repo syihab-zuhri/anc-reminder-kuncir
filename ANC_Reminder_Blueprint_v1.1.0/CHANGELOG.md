@@ -8,6 +8,16 @@
 > **Last Updated:** 2026-08-13  
 > **Depends On:** All project documents
 
+## [2026-08-13] Critical Backend Audit Remediation
+
+### Fixed
+
+- Replaced stale dashboard SQL (`milestone_schedule`, `scoped_access_grants`, and `phone_masked`) with the current PostgreSQL schema and authoritative server-side milestone derivation.
+- Corrected operational query date serialization, rule-window end calculation, derived due/overdue filtering, and stable cursor ordering including unscheduled milestones.
+- Hardened manual `wa.me` actions with strict request/response contracts, scoped mutations, idempotent link generation, explicit opened/resolved states, and redacted audit events. Link generation/opening is still not evidence of WhatsApp delivery or receipt.
+- Added migration `000013_audit_remediation.cjs` to preserve distinct `FIELD_PRESENT` program requirements and make consent history append-only.
+- Verified migrations 000001–000013 from a fresh PostgreSQL 17 database, rollback/reapply of 000013, populated repository queries, scoped fallback transitions, and consent mutation rejection.
+
 ## [2026-08-13] Phase 2 Configurable Program Status Evaluator (Sigizi Kesga / Hak Janin)
 
 ### Added

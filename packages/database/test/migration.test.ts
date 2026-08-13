@@ -43,6 +43,12 @@ const clinicalRecordValidationMigration = loadModule(
 const pregnancyCloseCancellationMigration = loadModule(
   "../migrations/000011_phase_2_pregnancy_close_cancellation.cjs",
 ) as BaselineMigration;
+const programStatusMigration = loadModule(
+  "../migrations/000012_phase_2_program_status.cjs",
+) as BaselineMigration;
+const auditRemediationMigration = loadModule(
+  "../migrations/000013_audit_remediation.cjs",
+) as BaselineMigration;
 
 describe("baseline database migration", () => {
   it("defines the ERD baseline and privacy-sensitive NIK column", () => {
@@ -335,5 +341,40 @@ describe("phase 2 pregnancy close cancellation migration", () => {
     );
     expect(statement).toContain("DROP CONSTRAINT IF EXISTS reminder_cycles_identity_unique");
     expect(statement).toContain("DROP TYPE IF EXISTS pregnancy_close_cancellation_target");
+  });
+});
+
+describe("phase 2 program status migration", () => {
+  it("adds governed rule lifecycle and immutable assessment protection", () => {
+    const sql = vi.fn();
+    programStatusMigration.up({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("program_rule_versions_complete_requirements");
+    expect(statement).toContain("program_rule_requirements_draft_only");
+    expect(statement).toContain("program_assessments_append_only");
+  });
+});
+
+describe("audit remediation migration", () => {
+  it("allows distinct field requirements and makes consent history append-only", () => {
+    const sql = vi.fn();
+    auditRemediationMigration.up({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("(rule_config ->> 'field_key')");
+    expect(statement).toContain("NULLS NOT DISTINCT");
+    expect(statement).toContain("consent_records_append_only");
+    expect(statement).toContain("consent_records is append-only");
+  });
+
+  it("provides an explicit reverse migration", () => {
+    const sql = vi.fn();
+    auditRemediationMigration.down({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("DROP TRIGGER IF EXISTS consent_records_append_only");
+    expect(statement).toContain("DROP FUNCTION IF EXISTS anc_reject_consent_mutation");
+    expect(statement).toContain("CREATE UNIQUE INDEX program_rule_requirements_version_unique_idx");
   });
 });

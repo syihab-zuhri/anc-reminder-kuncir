@@ -15,6 +15,7 @@ import type {
 
 import type { StaffActor } from "../auth/staff-auth.types.js";
 import { DATABASE_POOL } from "../infrastructure/tokens.js";
+import { maskPhone } from "../registry/mother-registry.repository.js";
 import { dateOnlyInTimezone } from "../registry/registry-validation.js";
 
 export interface OperationalQueriesRepository {
@@ -42,7 +43,7 @@ interface MotherQueryResultRow {
   readonly id: string;
   readonly health_center_id: string;
   readonly full_name: string;
-  readonly phone_masked: string;
+  readonly phone_normalized: string;
   readonly address: string;
   readonly village_id: string | null;
   readonly village_name: string | null;
@@ -50,6 +51,7 @@ interface MotherQueryResultRow {
   readonly active_pregnancy_id: string | null;
   readonly active_pregnancy_dating_date: string | null;
   readonly active_pregnancy_status: PregnancyStatus | null;
+  readonly active_pregnancy_trimester_label: string | null;
 }
 
 interface MilestoneQueryResultRow {
@@ -57,7 +59,7 @@ interface MilestoneQueryResultRow {
   readonly pregnancy_id: string;
   readonly mother_id: string;
   readonly mother_full_name: string;
-  readonly mother_phone_masked: string;
+  readonly mother_phone_normalized: string;
   readonly village_id: string | null;
   readonly village_name: string | null;
   readonly milestone_code: MilestoneCode;
@@ -67,6 +69,7 @@ interface MilestoneQueryResultRow {
   readonly expected_due_date: string | null;
   readonly occurred_on: string | null;
   readonly dating_date: string;
+  readonly trimester_label: string | null;
 }
 
 @Injectable()
@@ -87,22 +90,24 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
     const fetchLimit = limit + 1;
 
     const parsedCursor = decodeMotherCursor(query.cursor);
+    const asOfDate = dateOnlyInTimezone(now, timezone);
 
     const searchPattern = query.search ? `%${query.search}%` : null;
 
     const result = await this.pool.query<MotherQueryResultRow>(
-      `SELECT 
+      `SELECT
          m.id,
          m.health_center_id,
          m.full_name,
-         m.phone_masked,
+         m.phone_normalized,
          m.address,
          m.village_id,
          v.name AS village_name,
          m.created_at,
          p.id AS active_pregnancy_id,
-         p.dating_date AS active_pregnancy_dating_date,
-         p.status AS active_pregnancy_status
+         p.dating_date::text AS active_pregnancy_dating_date,
+         p.status AS active_pregnancy_status,
+         ${trimesterLabelSql("$10")} AS active_pregnancy_trimester_label
        FROM mothers m
        LEFT JOIN villages v ON v.id = m.village_id
        LEFT JOIN pregnancies p ON p.mother_id = m.id AND p.status = 'ACTIVE'
@@ -122,10 +127,10 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
              )
            )
          )
-         AND ($4::text IS NULL OR (m.full_name ILIKE $4 OR m.phone_masked ILIKE $4))
+         AND ($4::text IS NULL OR (m.full_name ILIKE $4 OR m.phone_normalized ILIKE $4))
          AND ($5::uuid IS NULL OR m.village_id = $5)
          AND ($6::pregnancy_status IS NULL OR (
-           CASE 
+           CASE
              WHEN $6::pregnancy_status = 'ACTIVE' THEN p.id IS NOT NULL
              WHEN $6::pregnancy_status = 'CLOSED' THEN p.id IS NULL AND EXISTS (SELECT 1 FROM pregnancies p2 WHERE p2.mother_id = m.id AND p2.status = 'CLOSED')
              ELSE TRUE
@@ -148,13 +153,12 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
         parsedCursor?.createdAt ?? null,
         parsedCursor?.id ?? null,
         fetchLimit,
+        asOfDate,
       ],
     );
 
     const hasMore = result.rows.length > limit;
     const rows = hasMore ? result.rows.slice(0, limit) : result.rows;
-    const asOfDate = dateOnlyInTimezone(now, timezone);
-
     const items: MotherSummary[] = rows.map((row) => mapMotherRowToSummary(row, asOfDate));
 
     let nextCursor: string | null = null;
@@ -179,20 +183,22 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
     if (actor.healthCenterId === null || actor.role === "SUPER_ADMIN") {
       return null;
     }
+    const asOfDate = dateOnlyInTimezone(now, timezone);
 
     const result = await this.pool.query<MotherQueryResultRow>(
-      `SELECT 
+      `SELECT
          m.id,
          m.health_center_id,
          m.full_name,
-         m.phone_masked,
+         m.phone_normalized,
          m.address,
          m.village_id,
          v.name AS village_name,
          m.created_at,
          p.id AS active_pregnancy_id,
-         p.dating_date AS active_pregnancy_dating_date,
-         p.status AS active_pregnancy_status
+         p.dating_date::text AS active_pregnancy_dating_date,
+         p.status AS active_pregnancy_status,
+         ${trimesterLabelSql("$5")} AS active_pregnancy_trimester_label
        FROM mothers m
        LEFT JOIN villages v ON v.id = m.village_id
        LEFT JOIN pregnancies p ON p.mother_id = m.id AND p.status = 'ACTIVE'
@@ -213,12 +219,11 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
              )
            )
          )`,
-      [motherId, actor.healthCenterId, actor.role, actor.staffUserId],
+      [motherId, actor.healthCenterId, actor.role, actor.staffUserId, asOfDate],
     );
 
     if (result.rows.length === 0) return null;
     const row = result.rows[0]!;
-    const asOfDate = dateOnlyInTimezone(now, timezone);
     return {
       mother: mapMotherRowToSummary(row, asOfDate),
     };
@@ -238,61 +243,144 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
     const fetchLimit = limit + 1;
 
     const parsedCursor = decodeMilestoneCursor(query.cursor);
+    const asOfDate = dateOnlyInTimezone(now, timezone);
 
+    const targetStartSql = String.raw`COALESCE(
+      (pm.due_at AT TIME ZONE $12)::date,
+      CASE
+        WHEN rule.target_week_start IS NOT NULL
+          THEN p.dating_date + (rule.target_week_start * 7)
+        ELSE NULL
+      END
+    )`;
+    const targetEndSql = String.raw`COALESCE(
+      (pm.due_at AT TIME ZONE $12)::date,
+      CASE
+        WHEN rule.target_week_end IS NOT NULL
+          THEN p.dating_date + (rule.target_week_end * 7 + 6)
+        ELSE NULL
+      END
+    )`;
+    const derivedVisitStatusSql = String.raw`CASE
+      WHEN pm.visit_status IN ('CONFIRMED', 'CANCELLED', 'NOT_APPLICABLE')
+        THEN pm.visit_status
+      WHEN ${targetStartSql} IS NULL OR ${targetEndSql} IS NULL
+        THEN 'UPCOMING'::visit_status
+      WHEN $15::date < ${targetStartSql}
+        THEN 'UPCOMING'::visit_status
+      WHEN $15::date <= ${targetEndSql}
+        THEN 'DUE'::visit_status
+      ELSE 'OVERDUE'::visit_status
+    END`;
+
+    // expected_due_date = explicit due_at (localized) when scheduled, else the
+    // rule-window end derived from pregnancy dating and the milestone rule.
     const result = await this.pool.query<MilestoneQueryResultRow>(
-      `SELECT 
-         pm.id AS milestone_id,
-         pm.pregnancy_id,
-         p.mother_id,
-         m.full_name AS mother_full_name,
-         m.phone_masked AS mother_phone_masked,
-         m.village_id,
-         v.name AS village_name,
-         pm.code AS milestone_code,
-         pm.visit_status,
-         pm.record_validation_status,
-         pm.due_at,
-         pm.expected_due_date,
-         vc.occurred_on,
-         p.dating_date
-       FROM pregnancy_milestones pm
-       JOIN pregnancies p ON p.id = pm.pregnancy_id
-       JOIN mothers m ON m.id = p.mother_id
-       LEFT JOIN villages v ON v.id = m.village_id
-       LEFT JOIN (
-         SELECT DISTINCT ON (milestone_id) milestone_id, occurred_on
-         FROM visit_confirmations
-         ORDER BY milestone_id, created_at DESC
-       ) vc ON vc.milestone_id = pm.id
-       WHERE m.health_center_id = $1
-         AND p.status = 'ACTIVE'
+      `SELECT * FROM (
+         SELECT
+           pm.id AS milestone_id,
+           pm.pregnancy_id,
+           p.mother_id,
+           m.full_name AS mother_full_name,
+           m.phone_normalized AS mother_phone_normalized,
+           m.village_id,
+           v.name AS village_name,
+           pm.code AS milestone_code,
+           ${derivedVisitStatusSql} AS visit_status,
+           pm.record_validation_status,
+           pm.due_at,
+           (${targetEndSql})::text AS expected_due_date,
+           vc.occurred_on::text AS occurred_on,
+           p.dating_date::text AS dating_date,
+           COALESCE(
+             (
+               SELECT current_rule.trimester_label
+                 FROM anc_milestone_rules AS current_rule
+                WHERE current_rule.plan_version_id = pm.plan_version_id
+                  AND current_rule.target_week_start IS NOT NULL
+                  AND current_rule.target_week_end IS NOT NULL
+                  AND (($15::date - p.dating_date) / 7)
+                      BETWEEN current_rule.target_week_start AND current_rule.target_week_end
+                ORDER BY current_rule.target_week_start DESC
+                LIMIT 1
+             ),
+             (
+               SELECT upcoming_rule.trimester_label
+                 FROM anc_milestone_rules AS upcoming_rule
+                WHERE upcoming_rule.plan_version_id = pm.plan_version_id
+                  AND upcoming_rule.target_week_start > (($15::date - p.dating_date) / 7)
+                ORDER BY upcoming_rule.target_week_start ASC
+                LIMIT 1
+             ),
+             (
+               SELECT latest_rule.trimester_label
+                 FROM anc_milestone_rules AS latest_rule
+                WHERE latest_rule.plan_version_id = pm.plan_version_id
+                  AND latest_rule.target_week_end IS NOT NULL
+                ORDER BY latest_rule.target_week_end DESC
+                LIMIT 1
+             )
+           ) AS trimester_label
+         FROM pregnancy_milestones pm
+         JOIN pregnancies p ON p.id = pm.pregnancy_id
+         JOIN anc_milestone_rules rule ON rule.id = pm.rule_id
+         JOIN mothers m ON m.id = p.mother_id
+         LEFT JOIN villages v ON v.id = m.village_id
+         LEFT JOIN (
+           SELECT DISTINCT ON (milestone_id) milestone_id, occurred_on
+           FROM visit_confirmations
+           ORDER BY milestone_id, created_at DESC
+         ) vc ON vc.milestone_id = pm.id
+         WHERE m.health_center_id = $1
+           AND p.status = 'ACTIVE'
+           AND (
+             $2::staff_role = 'PUSKESMAS'
+             OR (
+               $2::staff_role = 'BIDAN'
+               AND EXISTS (
+                 SELECT 1 FROM staff_assignments a
+                 WHERE a.staff_user_id = $3
+                   AND a.revoked_at IS NULL
+                   AND (
+                     (a.scope_type = 'MOTHER' AND a.scope_id = m.id)
+                     OR (a.scope_type = 'AREA' AND m.village_id IS NOT NULL AND a.scope_id = m.village_id)
+                   )
+               )
+             )
+           )
+           AND ($4::visit_status IS NULL OR (${derivedVisitStatusSql}) = $4)
+           AND ($5::milestone_code IS NULL OR pm.code = $5)
+           AND ($6::uuid IS NULL OR m.village_id = $6)
+       ) items
+       WHERE ($7::date IS NULL OR items.expected_due_date::date >= $7)
+         AND ($8::date IS NULL OR items.expected_due_date::date <= $8)
          AND (
-           $2::staff_role = 'PUSKESMAS'
+           $14::boolean = false
            OR (
-             $2::staff_role = 'BIDAN'
-             AND EXISTS (
-               SELECT 1 FROM staff_assignments a
-               WHERE a.staff_user_id = $3
-                 AND a.revoked_at IS NULL
+             $9::date IS NOT NULL
+             AND (
+               items.expected_due_date::date > $9
+               OR items.expected_due_date IS NULL
+               OR (
+                 items.expected_due_date::date = $9
                  AND (
-                   (a.scope_type = 'MOTHER' AND a.scope_id = m.id)
-                   OR (a.scope_type = 'AREA' AND m.village_id IS NOT NULL AND a.scope_id = m.village_id)
+                   items.milestone_code > $10
+                   OR (items.milestone_code = $10 AND items.milestone_id > $11)
                  )
+               )
+             )
+           )
+           OR (
+             $9::date IS NULL
+             AND items.expected_due_date IS NULL
+             AND (
+               items.milestone_code > $10
+               OR (items.milestone_code = $10 AND items.milestone_id > $11)
              )
            )
          )
-         AND ($4::visit_status IS NULL OR pm.visit_status = $4)
-         AND ($5::milestone_code IS NULL OR pm.code = $5)
-         AND ($6::uuid IS NULL OR m.village_id = $6)
-         AND ($7::date IS NULL OR pm.expected_due_date >= $7)
-         AND ($8::date IS NULL OR pm.expected_due_date <= $8)
-         AND (
-           $9::date IS NULL OR (
-             pm.expected_due_date > $9 OR (pm.expected_due_date = $9 AND pm.id > $10)
-           )
-         )
-       ORDER BY pm.expected_due_date ASC NULLS LAST, pm.code ASC, pm.id ASC
-       LIMIT $11`,
+       ORDER BY items.expected_due_date::date ASC NULLS LAST, items.milestone_code ASC, items.milestone_id ASC
+       LIMIT $13`,
       [
         actor.healthCenterId,
         actor.role,
@@ -303,15 +391,17 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
         query.due_date_from ?? null,
         query.due_date_to ?? null,
         parsedCursor?.dueDate ?? null,
+        parsedCursor?.milestoneCode ?? null,
         parsedCursor?.id ?? null,
+        timezone,
         fetchLimit,
+        parsedCursor !== null,
+        asOfDate,
       ],
     );
 
     const hasMore = result.rows.length > limit;
     const rows = hasMore ? result.rows.slice(0, limit) : result.rows;
-    const asOfDate = dateOnlyInTimezone(now, timezone);
-
     const items: OperationalMilestoneItem[] = rows.map((row) =>
       mapMilestoneRowToItem(row, asOfDate, timezone),
     );
@@ -319,7 +409,11 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
     let nextCursor: string | null = null;
     if (hasMore && rows.length > 0) {
       const last = rows.at(-1)!;
-      nextCursor = encodeMilestoneCursor(last.expected_due_date, last.milestone_id);
+      nextCursor = encodeMilestoneCursor(
+        last.expected_due_date,
+        last.milestone_code,
+        last.milestone_id,
+      );
     }
 
     return {
@@ -346,7 +440,7 @@ function mapMotherRowToSummary(row: MotherQueryResultRow, asOfDate: string): Mot
       status: row.active_pregnancy_status,
       completed_weeks: completedWeeks,
       completed_days: completedDays,
-      trimester_label: deriveTrimesterLabelSimple(completedWeeks),
+      trimester_label: row.active_pregnancy_trimester_label ?? "Belum ditetapkan",
     };
   }
 
@@ -354,7 +448,7 @@ function mapMotherRowToSummary(row: MotherQueryResultRow, asOfDate: string): Mot
     id: row.id,
     health_center_id: row.health_center_id,
     full_name: row.full_name,
-    phone_masked: row.phone_masked,
+    phone_masked: maskPhone(row.phone_normalized),
     address: row.address,
     village_id: row.village_id,
     village_name: row.village_name,
@@ -379,7 +473,7 @@ function mapMilestoneRowToItem(
     pregnancy_id: row.pregnancy_id,
     mother_id: row.mother_id,
     mother_full_name: row.mother_full_name,
-    mother_phone_masked: row.mother_phone_masked,
+    mother_phone_masked: maskPhone(row.mother_phone_normalized),
     village_id: row.village_id,
     village_name: row.village_name,
     milestone_code: row.milestone_code,
@@ -390,18 +484,44 @@ function mapMilestoneRowToItem(
     occurred_on: row.occurred_on,
     completed_weeks: completedWeeks,
     completed_days: completedDays,
-    trimester_label: deriveTrimesterLabelSimple(completedWeeks),
+    trimester_label: row.trimester_label ?? "Belum ditetapkan",
   };
-}
-
-function deriveTrimesterLabelSimple(completedWeeks: number): string {
-  if (completedWeeks < 13) return "Trimester 1";
-  if (completedWeeks < 28) return "Trimester 2";
-  return "Trimester 3";
 }
 
 function calendarDayDifference(startDate: string, endDate: string): number {
   return Math.trunc((dateOnlyToEpoch(endDate) - dateOnlyToEpoch(startDate)) / 86_400_000);
+}
+
+function trimesterLabelSql(asOfParameter: "$5" | "$10"): string {
+  const completedWeeks = `GREATEST(0, (${asOfParameter}::date - p.dating_date) / 7)`;
+  return String.raw`COALESCE(
+    (
+      SELECT current_rule.trimester_label
+        FROM anc_milestone_rules AS current_rule
+       WHERE current_rule.plan_version_id = p.care_plan_version_id
+         AND current_rule.target_week_start IS NOT NULL
+         AND current_rule.target_week_end IS NOT NULL
+         AND ${completedWeeks} BETWEEN current_rule.target_week_start AND current_rule.target_week_end
+       ORDER BY current_rule.target_week_start DESC
+       LIMIT 1
+    ),
+    (
+      SELECT upcoming_rule.trimester_label
+        FROM anc_milestone_rules AS upcoming_rule
+       WHERE upcoming_rule.plan_version_id = p.care_plan_version_id
+         AND upcoming_rule.target_week_start > ${completedWeeks}
+       ORDER BY upcoming_rule.target_week_start ASC
+       LIMIT 1
+    ),
+    (
+      SELECT latest_rule.trimester_label
+        FROM anc_milestone_rules AS latest_rule
+       WHERE latest_rule.plan_version_id = p.care_plan_version_id
+         AND latest_rule.target_week_end IS NOT NULL
+       ORDER BY latest_rule.target_week_end DESC
+       LIMIT 1
+    )
+  )`;
 }
 
 function dateOnlyToEpoch(date: string): number {
@@ -433,19 +553,37 @@ function decodeMotherCursor(
   return null;
 }
 
-function encodeMilestoneCursor(dueDate: string | null, id: string): string {
-  return Buffer.from(JSON.stringify({ dueDate, id })).toString("base64url");
+function encodeMilestoneCursor(
+  dueDate: string | null,
+  milestoneCode: MilestoneCode,
+  id: string,
+): string {
+  return Buffer.from(JSON.stringify({ dueDate, milestoneCode, id })).toString("base64url");
 }
 
-function decodeMilestoneCursor(
-  cursor?: string,
-): { readonly dueDate: string | null; readonly id: string } | null {
+function decodeMilestoneCursor(cursor?: string): {
+  readonly dueDate: string | null;
+  readonly milestoneCode: MilestoneCode;
+  readonly id: string;
+} | null {
   if (!cursor) return null;
   try {
     const raw = Buffer.from(cursor, "base64url").toString("utf8");
-    const parsed = JSON.parse(raw) as { dueDate?: string | null; id?: string };
-    if (typeof parsed.id === "string") {
-      return { dueDate: parsed.dueDate ?? null, id: parsed.id };
+    const parsed = JSON.parse(raw) as {
+      dueDate?: string | null;
+      milestoneCode?: string;
+      id?: string;
+    };
+    if (
+      typeof parsed.id === "string" &&
+      typeof parsed.milestoneCode === "string" &&
+      /^K[1-8]$/u.test(parsed.milestoneCode)
+    ) {
+      return {
+        dueDate: parsed.dueDate ?? null,
+        milestoneCode: parsed.milestoneCode as MilestoneCode,
+        id: parsed.id,
+      };
     }
   } catch {
     // Ignore invalid cursor format safely

@@ -29,6 +29,8 @@ Seluruh skema database dikelola melalui skrip migrasi berurutan di `packages/dat
 - `000009_phase_2_visit_confirmation.cjs`: Konfirmasi kunjungan _one-action_ tanpa penyimpanan detail klinis oleh Bidan.
 - `000010_phase_2_clinical_record_validation.cjs`: Rekam medis detail K1–K6 dan validasi Puskesmas.
 - `000011_phase_2_pregnancy_close_cancellation.cjs`: Pembatalan otomatis reminder aktif saat penutupan kehamilan.
+- `000012_phase_2_program_status.cjs`: Governance rule program, evaluasi versioned, dan riwayat assessment append-only.
+- `000013_audit_remediation.cjs`: Uniqueness requirement program per field dan perlindungan append-only untuk riwayat consent.
 
 ---
 
