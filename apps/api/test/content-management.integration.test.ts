@@ -132,6 +132,25 @@ describe("content management integration (TASK-P4-009)", () => {
       .set("Authorization", `Bearer ${managerToken}`);
     expect(listResponse.status).toBe(200);
     expect((listResponse.body as { total: number }).total).toBe(1);
+    expect(
+      (
+        listResponse.body as {
+          capabilities: { can_approve_publish_archive: boolean };
+        }
+      ).capabilities.can_approve_publish_archive,
+    ).toBe(false);
+
+    const ownerListResponse = await request(server())
+      .get("/api/v1/content/templates")
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(ownerListResponse.status).toBe(200);
+    expect(
+      (
+        ownerListResponse.body as {
+          capabilities: { can_approve_publish_archive: boolean };
+        }
+      ).capabilities.can_approve_publish_archive,
+    ).toBe(true);
 
     const archived = await transition(ownerToken, draft!.id, "archive", key(6));
     expect(archived.status).toBe("ARCHIVED");

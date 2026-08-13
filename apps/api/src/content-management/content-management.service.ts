@@ -46,8 +46,18 @@ export class ContentManagementService {
 
   public async list(actor: StaffActor): Promise<ContentTemplateListResponse> {
     const healthCenterId = this.assertContentManager(actor);
-    const items = await this.repository.listTemplates(healthCenterId);
-    return { items, total: items.length };
+    const [items, canGovern] = await Promise.all([
+      this.repository.listTemplates(healthCenterId),
+      this.repository.isClinicalProgramOwner(actor.staffUserId),
+    ]);
+    return {
+      items,
+      total: items.length,
+      capabilities: {
+        can_draft_and_review: true,
+        can_approve_publish_archive: canGovern,
+      },
+    };
   }
 
   public async get(actor: StaffActor, templateId: string): Promise<ContentTemplateResponse> {

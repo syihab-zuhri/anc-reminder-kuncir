@@ -526,6 +526,8 @@ Response:
 
 Lifecycle wajib berurutan `DRAFT → REVIEW → APPROVED → PUBLISHED → ARCHIVED`. Hanya `PUBLISHED` yang production-eligible. Versi pada `REVIEW` atau tahap sesudahnya adalah snapshot immutable. Semua mutation memakai `idempotency_key`; approval juga membutuhkan `approval_reference`. Template adalah plain text dan hanya menerima placeholder `{{milestone_code}}` dan `{{facility_name}}`. Placeholder sensitif, HTML, dan input target/message arbitrary ditolak.
 
+`GET /content/templates` juga mengembalikan capability server-derived `can_draft_and_review` dan `can_approve_publish_archive`. Web memakai capability ini untuk menampilkan kontrol governance tanpa menebak izin dari role di client; API dan database tetap menjadi enforcement authority.
+
 ## 6. Validation Rules
 
 - `API-MOTHER-001` requires `full_name`, `nik`, `address`, `phone_number`, and `pregnancy_start_date`.

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   contentTemplateCreateRequestSchema,
+  contentTemplateListResponseSchema,
   contentVersionResponseSchema,
   extractContentPlaceholderKeys,
 } from "../src/index.js";
@@ -65,5 +66,21 @@ describe("content management contracts", () => {
     expect(
       contentVersionResponseSchema.safeParse({ delivered: true, status: "PUBLISHED" }).success,
     ).toBe(false);
+  });
+
+  it("requires server-derived content governance capabilities", () => {
+    expect(
+      contentTemplateListResponseSchema.safeParse({
+        items: [],
+        total: 0,
+        capabilities: {
+          can_draft_and_review: true,
+          can_approve_publish_archive: false,
+        },
+      }).success,
+    ).toBe(true);
+    expect(contentTemplateListResponseSchema.safeParse({ items: [], total: 0 }).success).toBe(
+      false,
+    );
   });
 });

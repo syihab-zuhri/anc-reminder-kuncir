@@ -375,7 +375,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Done when: lifecycle berurutan dan terotorisasi, published content immutable, placeholder sensitif ditolak, worker/`wa.me` menyimpan versi persis yang dipilih, serta archived template tidak dipilih untuk siklus baru.
   - Evidence: migration `000014_phase_4_content_lifecycle` menambahkan `content_templates`/`content_versions`, DB transition/immutability/sanitization guards, exact-version FK untuk push/WA, dan dua minimal global baseline dari `CR-2026-08-08`. `API-CONTENT-001..008` menerapkan idempotent Puskesmas draft/review dan Clinical/Program Owner approve/publish/archive. Worker memilih hanya versi `PUBLISHED`; generator `wa.me` merender snapshot terikat dan tetap tidak membuat klaim delivery. Covered by contract, API role/lifecycle/audit, worker snapshot, migration structural, rollback/reapply, dan PostgreSQL lifecycle smoke tests.
 
-- [ ] `TASK-P4-010` [M] Build content review/publish UI dengan synthetic preview
+- [x] `TASK-P4-010` [M] Build content review/publish UI dengan synthetic preview
+  - Owner: Frontend + Backend
+  - References: FR-021, PRD-CONTENT, API-CONTENT-001..008, DOC-DSD
+  - Depends on: TASK-P4-009
+  - Done when: Puskesmas dapat meninjau riwayat versi dan lifecycle, membuat draft/versi, melihat preview non-pasien, serta menjalankan aksi governance sesuai capability server tanpa klaim delivery WhatsApp.
+  - Evidence: tab `Konten Reminder` dan `ContentManagementPanel` menyediakan pustaka template lokal/global, version history, lifecycle track, draft form dengan placeholder allowlist, fixed synthetic preview (`K2` + fasilitas sintetis), referensi sumber/approval, serta aksi review/approve/publish/archive. `GET /content/templates` mengembalikan capability owner yang dihitung server-side; tombol owner-only dinonaktifkan tanpa capability dan enforcement API/DB tetap berlaku. Covered by contract/API capability tests, web lifecycle/preview/role tests, responsive production build, dan full CI suite.
 
 - [x] `TASK-P4-011` [M] Implement **server-side `wa.me` link generator**
   - Owner: Backend
