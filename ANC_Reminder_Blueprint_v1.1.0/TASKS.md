@@ -368,7 +368,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Done when: Puskesmas menerima aggregate push/fallback yang dihitung server, antrean menampilkan umur dan eskalasi berbasis SLA konfigurasi, serta UI tidak menyatakan delivery WhatsApp.
   - Evidence: `GET /api/v1/reminders/summary` menghitung latest push job state, unresolved/escalated/`UNREACHABLE` fallback, masked phone, dan fallback age untuk health center actor. `RoleDashboardShell` menampilkan aggregate/queue serta aksi manual. Kontrak memaksa `whatsapp_delivery_status: UNKNOWN`; API menolak Bidan dan Super Admin untuk ringkasan lintas fasilitas. Covered by `reminder-operations.integration.test.ts`, `reminder-operations.test.ts`, full typecheck/build, dan 215-test CI suite.
 
-- [ ] `TASK-P4-009` [M] Implement content lifecycle dan immutable template snapshot
+- [x] `TASK-P4-009` [M] Implement content lifecycle dan immutable template snapshot
+  - Owner: Backend
+  - References: FR-021, PRD-CONTENT, API-CONTENT-001..008, DOC-ERD
+  - Depends on: TASK-P1-004, TASK-P4-001, TASK-P4-011
+  - Done when: lifecycle berurutan dan terotorisasi, published content immutable, placeholder sensitif ditolak, worker/`wa.me` menyimpan versi persis yang dipilih, serta archived template tidak dipilih untuk siklus baru.
+  - Evidence: migration `000014_phase_4_content_lifecycle` menambahkan `content_templates`/`content_versions`, DB transition/immutability/sanitization guards, exact-version FK untuk push/WA, dan dua minimal global baseline dari `CR-2026-08-08`. `API-CONTENT-001..008` menerapkan idempotent Puskesmas draft/review dan Clinical/Program Owner approve/publish/archive. Worker memilih hanya versi `PUBLISHED`; generator `wa.me` merender snapshot terikat dan tetap tidak membuat klaim delivery. Covered by contract, API role/lifecycle/audit, worker snapshot, migration structural, rollback/reapply, dan PostgreSQL lifecycle smoke tests.
 
 - [ ] `TASK-P4-010` [M] Build content review/publish UI dengan synthetic preview
 

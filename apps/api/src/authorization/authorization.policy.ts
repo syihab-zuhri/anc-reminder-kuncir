@@ -17,7 +17,8 @@ export type StaffCapability =
   | "CLINICAL_RECORD_WRITE"
   | "CARE_PLAN_MANAGE"
   | "MILESTONE_SCHEDULE"
-  | "PROGRAM_STATUS_MANAGE";
+  | "PROGRAM_STATUS_MANAGE"
+  | "CONTENT_MANAGE";
 
 const bidanCapabilities = new Set<StaffCapability>([
   "STAFF_SELF_READ",
@@ -36,6 +37,7 @@ const puskesmasCapabilities = new Set<StaffCapability>([
   "CARE_PLAN_MANAGE",
   "MILESTONE_SCHEDULE",
   "PROGRAM_STATUS_MANAGE",
+  "CONTENT_MANAGE",
 ]);
 const superAdminCapabilities = new Set<StaffCapability>(["STAFF_SELF_READ"]);
 

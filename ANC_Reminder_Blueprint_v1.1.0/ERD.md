@@ -336,6 +336,7 @@ One logical reminder decision per milestone/window.
 - `cycle_anchor_at timestamptz`
 - `status enum(PENDING,PUSH_ATTEMPTING,PUSH_SUCCEEDED,WA_ACTION_REQUIRED,MANUAL_FOLLOWUP,ESCALATED,CANCELLED)`
 - `idempotency_key text unique`
+- `push_template_version_id uuid FK nullable` — immutable published content snapshot selected by worker
 - `created_at`, `closed_at nullable`
 
 Suggested unique logical key `(milestone_id, cycle_anchor_at)`.
@@ -358,13 +359,34 @@ No provider delivery status.
 - `reminder_cycle_id uuid FK unique`
 - `mother_id uuid FK`
 - `status enum(READY,LINK_GENERATED,LINK_OPENED,RESOLVED_MANUALLY,UNREACHABLE,SKIPPED,EXPIRED)`
-- `template_version_id uuid nullable`
+- `template_version_id uuid FK nullable` — immutable version snapshot; archived versions remain readable
 - `link_generated_at`, `link_opened_at`, `resolved_at` nullable
 - `resolved_by uuid nullable`
 - `manual_note text nullable`
 - `escalated_at nullable`
 
 Full `wa.me` URL should generally be generated on demand, not persisted.
+
+### `content_templates`
+Logical template identity per Puskesmas/global scope and content type.
+- `id uuid PK`
+- `health_center_id uuid FK nullable` — `NULL` is the system baseline scope
+- `template_key text`
+- `content_type enum(PUSH_REMINDER,WAME_REMINDER,EDUCATION,CONTACT_GUIDANCE)`
+- `created_by uuid nullable`, `created_at`
+- unique `(health_center_id, content_type)` with nulls not distinct
+
+### `content_versions`
+Governed plain-text snapshots.
+- `id uuid PK`
+- `content_template_id uuid FK`
+- `version_no int`
+- `status enum(DRAFT,REVIEW,APPROVED,PUBLISHED,ARCHIVED)`
+- `title`, `body`, `placeholder_keys text[]`, `source_reference`
+- immutable submission/approval/publication/archive actor and timestamp metadata
+- unique `(content_template_id, version_no)`; at most one `PUBLISHED` version per template
+
+Only `DRAFT` content is editable. `WAME_REMINDER` rejects sensitive placeholders and every reminder/fallback references the exact version selected for historical reconstruction.
 
 ### `program_rule_versions`
 - `id uuid PK`

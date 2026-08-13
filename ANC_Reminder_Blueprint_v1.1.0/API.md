@@ -511,6 +511,21 @@ Response:
 | API-PROGRAM-002 | POST | `/pregnancies/{id}/program-status/recalculate` | Puskesmas/system |
 | API-PROGRAM-003 | GET | `/pregnancies/{id}/program-status/history` | Puskesmas |
 
+### Content Management
+
+| Operation ID | Method | Path | Actor |
+|---|---|---|---|
+| API-CONTENT-001 | GET | `/content/templates` | Puskesmas content manager |
+| API-CONTENT-002 | GET | `/content/templates/{id}` | Puskesmas content manager |
+| API-CONTENT-003 | POST | `/content/templates` | Puskesmas content manager |
+| API-CONTENT-004 | POST | `/content/templates/{id}/versions` | Puskesmas content manager |
+| API-CONTENT-005 | POST | `/content/versions/{id}/submit-review` | Puskesmas content manager |
+| API-CONTENT-006 | POST | `/content/versions/{id}/approve` | Clinical/Program Owner |
+| API-CONTENT-007 | POST | `/content/versions/{id}/publish` | Clinical/Program Owner |
+| API-CONTENT-008 | POST | `/content/versions/{id}/archive` | Clinical/Program Owner |
+
+Lifecycle wajib berurutan `DRAFT → REVIEW → APPROVED → PUBLISHED → ARCHIVED`. Hanya `PUBLISHED` yang production-eligible. Versi pada `REVIEW` atau tahap sesudahnya adalah snapshot immutable. Semua mutation memakai `idempotency_key`; approval juga membutuhkan `approval_reference`. Template adalah plain text dan hanya menerima placeholder `{{milestone_code}}` dan `{{facility_name}}`. Placeholder sensitif, HTML, dan input target/message arbitrary ditolak.
+
 ## 6. Validation Rules
 
 - `API-MOTHER-001` requires `full_name`, `nik`, `address`, `phone_number`, and `pregnancy_start_date`.

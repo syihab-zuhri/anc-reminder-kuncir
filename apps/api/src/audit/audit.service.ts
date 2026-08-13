@@ -17,6 +17,8 @@ const allowedMetadataKeys = new Set([
   "milestones_cancelled",
   "reminder_cycles_cancelled",
   "wa_actions_expired",
+  "content_type",
+  "template_id",
 ]);
 const forbiddenKeyPattern = /(nik|password|secret|token|phone|address|clinical|diagnosis)/i;
 

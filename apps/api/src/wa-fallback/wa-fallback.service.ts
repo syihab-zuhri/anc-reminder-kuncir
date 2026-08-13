@@ -45,11 +45,19 @@ export class WaFallbackService {
     if (generatedAt === null) throw invalidState();
     // The message carries no personal or clinical data: wa.me URLs are
     // unencrypted and must not leak mother identity.
-    const messageText = `Pengingat jadwal pemeriksaan kehamilan ${target.milestoneCode} dari Puskesmas. Mohon hubungi Puskesmas untuk konfirmasi jadwal. ${WA_DISCLAIMER}`;
+    const messageText = `${renderApprovedTemplate(target.templateBody, {
+      milestone_code: target.milestoneCode,
+      facility_name: target.facilityName,
+    })} ${WA_DISCLAIMER}`;
     const waMeUrl = `https://wa.me/${normalizeWaPhone(target.phoneNormalized)}?text=${encodeURIComponent(messageText)}`;
 
     if (target.status === "READY") {
-      const result = await this.repository.markLinkGenerated(id, generatedAt, this.scope(actor));
+      const result = await this.repository.markLinkGenerated(
+        id,
+        generatedAt,
+        target.templateVersionId,
+        this.scope(actor),
+      );
       if (result === "NOT_FOUND") throw notFound();
       if (result === "INVALID_STATE") {
         const concurrent = await this.repository.getLinkTarget(id);
@@ -187,6 +195,16 @@ export function normalizeWaPhone(phoneNormalized: string): string {
   if (digits.startsWith("0")) return `62${digits.slice(1)}`;
   if (digits.startsWith("8")) return `62${digits}`;
   return digits;
+}
+
+export function renderApprovedTemplate(
+  templateBody: string,
+  values: Readonly<Record<"milestone_code" | "facility_name", string>>,
+): string {
+  return templateBody.replace(
+    /\{\{\s*(milestone_code|facility_name)\s*\}\}/gu,
+    (_match, key: "milestone_code" | "facility_name") => values[key],
+  );
 }
 
 function notFound(): ApiException {

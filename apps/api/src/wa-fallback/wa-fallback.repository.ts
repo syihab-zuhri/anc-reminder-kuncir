@@ -14,6 +14,9 @@ export interface WaFallbackLinkTarget {
   readonly phoneNormalized: string;
   readonly milestoneCode: MilestoneCode;
   readonly linkGeneratedAt: Date | null;
+  readonly templateVersionId: string;
+  readonly templateBody: string;
+  readonly facilityName: string;
 }
 
 export type WaFallbackTransitionResult = "UPDATED" | "NOT_FOUND" | "INVALID_STATE";
@@ -26,6 +29,7 @@ export interface WaFallbackRepository {
   markLinkGenerated(
     id: string,
     generatedAt: Date,
+    templateVersionId: string,
     scope: WaFallbackQueueScope,
   ): Promise<WaFallbackTransitionResult>;
   markLinkOpened(
@@ -150,13 +154,36 @@ export class PostgresWaFallbackRepository implements WaFallbackRepository {
       readonly phone_normalized: string;
       readonly milestone_code: MilestoneCode;
       readonly link_generated_at: Date | null;
+      readonly template_version_id: string;
+      readonly template_body: string;
+      readonly facility_name: string;
     }>(
-      `SELECT wf.status, m.phone_normalized, pm.code AS milestone_code, wf.link_generated_at
+      `SELECT
+         wf.status,
+         m.phone_normalized,
+         pm.code AS milestone_code,
+         wf.link_generated_at,
+         COALESCE(bound_version.id, selected_version.id) AS template_version_id,
+         COALESCE(bound_version.body, selected_version.body) AS template_body,
+         hc.name AS facility_name
          FROM wa_fallback_actions wf
          JOIN mothers m ON wf.mother_id = m.id
+         JOIN health_centers hc ON hc.id = m.health_center_id
          JOIN reminder_cycles rc ON wf.reminder_cycle_id = rc.id
          JOIN pregnancy_milestones pm ON rc.milestone_id = pm.id
+         LEFT JOIN content_versions bound_version ON bound_version.id = wf.template_version_id
+         LEFT JOIN LATERAL (
+           SELECT cv.id, cv.body
+             FROM content_versions cv
+             JOIN content_templates ct ON ct.id = cv.content_template_id
+            WHERE ct.content_type = 'WAME_REMINDER'
+              AND cv.status = 'PUBLISHED'
+              AND (ct.health_center_id = m.health_center_id OR ct.health_center_id IS NULL)
+            ORDER BY (ct.health_center_id = m.health_center_id) DESC, cv.published_at DESC
+            LIMIT 1
+         ) selected_version ON wf.template_version_id IS NULL
         WHERE wf.id = $1
+          AND COALESCE(bound_version.id, selected_version.id) IS NOT NULL
         LIMIT 1`,
       [id],
     );
@@ -167,27 +194,31 @@ export class PostgresWaFallbackRepository implements WaFallbackRepository {
       phoneNormalized: row.phone_normalized,
       milestoneCode: row.milestone_code,
       linkGeneratedAt: row.link_generated_at,
+      templateVersionId: row.template_version_id,
+      templateBody: row.template_body,
+      facilityName: row.facility_name,
     };
   }
 
   public async markLinkGenerated(
     id: string,
     generatedAt: Date,
+    templateVersionId: string,
     scope: WaFallbackQueueScope,
   ): Promise<WaFallbackTransitionResult> {
     return this.transition(
       `UPDATE wa_fallback_actions AS fallback
-          SET status = 'LINK_GENERATED', link_generated_at = $2
+          SET status = 'LINK_GENERATED', link_generated_at = $2, template_version_id = $3
          FROM mothers AS mother
         WHERE fallback.id = $1
           AND fallback.status = 'READY'
           AND fallback.mother_id = mother.id
-          AND mother.health_center_id = $3
+          AND mother.health_center_id = $4
           AND (
-            $4::staff_role = 'PUSKESMAS'
+            $5::staff_role = 'PUSKESMAS'
             OR EXISTS (
               SELECT 1 FROM staff_assignments AS assignment
-               WHERE assignment.staff_user_id = $5
+               WHERE assignment.staff_user_id = $6
                  AND assignment.revoked_at IS NULL
                  AND (
                    (assignment.scope_type = 'MOTHER' AND assignment.scope_id = mother.id)
@@ -199,7 +230,7 @@ export class PostgresWaFallbackRepository implements WaFallbackRepository {
                  )
             )
           )`,
-      [id, generatedAt, scope.healthCenterId, scope.role, scope.actorStaffId],
+      [id, generatedAt, templateVersionId, scope.healthCenterId, scope.role, scope.actorStaffId],
       id,
     );
   }
