@@ -5,8 +5,26 @@
 > **Version:** 1.1.0  
 > **Status:** Review  
 > **Owner:** Product/Project Lead  
-> **Last Updated:** 2026-08-13  
+> **Last Updated:** 2026-08-14  
 > **Depends On:** All project documents
+
+## [2026-08-14] Worker Cadence, Time Zone, and Cleanup Fixes
+
+### Fixed
+
+- Worker cycle anchor now derives the calendar date in `PRIMARY_TIMEZONE` (`Asia/Jakarta`) instead of UTC, honoring NFR-009: `apps/worker/src/reminder-processor.ts` `localDateString`; UTC and Jakarta dates can differ around local midnight.
+- Worker now enforces `REMINDER_INTERVAL_DAYS` in the reminder-cycle eligibility window: a milestone is eligible again only when its most recent non-cancelled cycle is at least the configured days old. The cadence no longer depends on the external scheduler's invocation frequency.
+- `REMINDER_INTERVAL_DAYS` is now a configurable positive integer (default `3`) in `packages/config/src/environment.ts` instead of a literal `"3"` that was validated but never consumed.
+- Cycle creation now checks for an `ANDROID` active device, matching the platform the push claim path targets, so a non-Android device can never route into a cycle that immediately terminates with `NO_ACTIVE_DEVICE`.
+- Removed the unused duplicate `apps/api/src/reports/reports.tokens.ts` declaration; the effective `REPORTS_REPOSITORY` token lives in `infrastructure/tokens.ts`.
+
+### Added
+
+- Worker unit tests for the time-zone anchor, cadence enforcement, `ANDROID` platform routing, and the `MISSING_PUSH_TEMPLATE` / `DEVICE_TOKEN_DECRYPTION_FAILED` terminal paths.
+
+### Notes
+
+- The worker remains a one-shot process by design; deployments must schedule it at least once per day. With cadence enforced in code, running it more often can no longer create daily cycles for the same milestone.
 
 ## [2026-08-13] Critical Backend Audit Remediation
 

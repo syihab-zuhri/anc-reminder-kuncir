@@ -38,7 +38,7 @@ No secrets in repository/docs. Validate required variables at startup. Separate 
 | `MOTHER_ACCESS_BLOCK_MINUTES` | API env | Mother access block duration after threshold; default `15` |
 | `FCM_PROJECT_ID` | Push env | FCM project |
 | `FCM_SERVICE_ACCOUNT_JSON` | Push env | Complete service-account JSON injected by the deployment secret store; never commit |
-| `REMINDER_INTERVAL_DAYS` | Yes | Default `3` |
+| `REMINDER_INTERVAL_DAYS` | Worker env | Minimum days between reminder cycles per milestone; default `3`, positive integer, enforced by the worker |
 | `PUSH_MAX_ATTEMPTS` | Yes | `PROPOSED` default `3` |
 | `PUSH_BACKOFF_SECONDS` | Yes | Configurable retry schedule |
 | `WA_FALLBACK_ESCALATION_HOURS` | Yes | `TBD` operational SLA |
@@ -49,7 +49,7 @@ No secrets in repository/docs. Validate required variables at startup. Separate 
 
 No WhatsApp API key/token exists in MVP configuration.
 
-Production requires HTTPS for `APP_BASE_URL`, `API_BASE_URL`, and remote PostgreSQL TLS (`sslmode=require`, `verify-ca`, or `verify-full`). Session/idempotency secrets are at least 32 characters and all must be distinct. `REMINDER_INTERVAL_DAYS` is validated as the confirmed value `3`.
+Production requires HTTPS for `APP_BASE_URL`, `API_BASE_URL`, and remote PostgreSQL TLS (`sslmode=require`, `verify-ca`, or `verify-full`). Session/idempotency secrets are at least 32 characters and all must be distinct. `REMINDER_INTERVAL_DAYS` defaults to `3` (confirmed cadence) and is a positive integer enforced by the worker eligibility window.
 
 ## 3. `.env.example`
 

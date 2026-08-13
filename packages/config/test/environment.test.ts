@@ -93,11 +93,22 @@ describe("loadApiConfig", () => {
     ).toThrow();
   });
 
-  it("locks the confirmed reminder cadence to every three days", () => {
+  it("accepts a configurable reminder cadence and rejects invalid values", () => {
+    const config = loadApiConfig({
+      ...commonEnvironment,
+      REMINDER_INTERVAL_DAYS: "4",
+      APP_BASE_URL: "http://localhost:3000",
+      API_BASE_URL: "http://localhost:3001",
+      SESSION_SECRET: "synthetic-api-test-secret-00000001",
+      MOTHER_SESSION_SECRET: "synthetic-mother-test-secret-000001",
+    });
+
+    expect(config.reminderIntervalDays).toBe(4);
+
     expect(() =>
       loadApiConfig({
         ...commonEnvironment,
-        REMINDER_INTERVAL_DAYS: "4",
+        REMINDER_INTERVAL_DAYS: "0",
         APP_BASE_URL: "http://localhost:3000",
         API_BASE_URL: "http://localhost:3001",
         SESSION_SECRET: "synthetic-api-test-secret-00000001",

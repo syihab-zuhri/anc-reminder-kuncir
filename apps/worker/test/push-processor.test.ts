@@ -126,6 +126,56 @@ describe("push attempt processor", () => {
     expect(send).not.toHaveBeenCalled();
     expect(result.waFallbackActionsCount).toBe(1);
   });
+
+  it("records a terminal failure and falls back when no published push template exists", async () => {
+    const fixture = poolFixture(jobRow({ title: null, body: null }));
+    const send = vi.fn();
+
+    const result = await processPendingPushAttempts(
+      fixture.pool,
+      { send },
+      tokenCrypto,
+      { maxAttempts: 3, backoffSeconds: [60] },
+      { now, random: () => 0 },
+    );
+
+    expect(send).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ terminalFailuresCount: 1, waFallbackActionsCount: 1 });
+    expect(fixture.statements.some(({ params }) => params.includes("MISSING_PUSH_TEMPLATE"))).toBe(
+      true,
+    );
+    expect(
+      fixture.statements.some(
+        ({ sql }) => sql.includes("wa_fallback_actions") && sql.includes("WAME_REMINDER"),
+      ),
+    ).toBe(true);
+  });
+
+  it("invalidates a device when its stored push token cannot be decrypted", async () => {
+    const fixture = poolFixture(
+      jobRow({ push_token_encrypted: "v1.ta.mpered-envelope-with-invalid-authentication" }),
+    );
+    const send = vi.fn();
+
+    const result = await processPendingPushAttempts(
+      fixture.pool,
+      { send },
+      tokenCrypto,
+      { maxAttempts: 3, backoffSeconds: [60] },
+      { now, random: () => 0 },
+    );
+
+    expect(send).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ terminalFailuresCount: 1, waFallbackActionsCount: 1 });
+    expect(
+      fixture.statements.some(({ params }) => params.includes("DEVICE_TOKEN_DECRYPTION_FAILED")),
+    ).toBe(true);
+    expect(
+      fixture.statements.some(
+        ({ sql }) => sql.includes("UPDATE devices") && sql.includes("'INVALID'"),
+      ),
+    ).toBe(true);
+  });
 });
 
 function fixedAdapter(result: PushDeliveryResult): PushDeliveryAdapter {

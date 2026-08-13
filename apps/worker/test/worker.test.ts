@@ -2,6 +2,7 @@ import { loadWorkerConfig, type WorkerConfig } from "@anc/config";
 import type { DatabasePool, DatabaseReadiness } from "@anc/database";
 import { describe, expect, it, vi } from "vitest";
 
+import { localDateString } from "../src/reminder-processor.js";
 import { JsonWorkerLogger, type WorkerLogRecord } from "../src/logger.js";
 import {
   runWorkerOnce,
@@ -58,6 +59,27 @@ describe("one-shot worker bootstrap", () => {
     expect(dependencies.closePool).toHaveBeenCalledWith(pool);
   });
 
+  it("anchors reminder cycles in the configured time zone and enforces the configured cadence", async () => {
+    const statements: Array<{ sql: string; params: unknown[] }> = [];
+    const pool = createFakePool(statements);
+    const dependencies = dependencyFixture(pool);
+
+    await runWorkerOnce({
+      environment: { NODE_ENV: "test" },
+      dependencies,
+      logger: loggerFor([]),
+    });
+
+    const eligibility = statements.find((entry) =>
+      entry.sql.includes("FROM pregnancy_milestones pm"),
+    );
+    expect(eligibility).toBeDefined();
+    expect(eligibility?.params?.[0]).toBe(
+      localDateString(new Date(), workerConfig.primaryTimezone),
+    );
+    expect(eligibility?.params?.[1]).toBe(workerConfig.reminderIntervalDays);
+  });
+
   it("fails before opening a pool when startup environment is invalid", async () => {
     const createPool = vi.fn();
     const dependencies: WorkerDependencies = {
@@ -111,14 +133,20 @@ describe("one-shot worker bootstrap", () => {
   });
 });
 
-function createFakePool(): DatabasePool {
+function createFakePool(statements: Array<{ sql: string; params: unknown[] }> = []): DatabasePool {
   const fakeClient = {
-    query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+    query: vi.fn((sql: string, params: unknown[] = []) => {
+      statements.push({ sql, params });
+      return Promise.resolve({ rows: [], rowCount: 0 });
+    }),
     release: vi.fn(),
   };
   return {
-    query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
-    connect: vi.fn().mockResolvedValue(fakeClient),
+    query: vi.fn((sql: string, params: unknown[] = []) => {
+      statements.push({ sql, params });
+      return Promise.resolve({ rows: [], rowCount: 0 });
+    }),
+    connect: vi.fn(() => Promise.resolve(fakeClient)),
   } as unknown as DatabasePool;
 }
 
