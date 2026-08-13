@@ -3,6 +3,7 @@ export * from "./anc-plan.js";
 export * from "./auth.js";
 export * from "./clinical-record.js";
 export * from "./dashboard.js";
+export * from "./device-registration.js";
 export * from "./errors.js";
 export * from "./idempotency.js";
 export * from "./mother-access.js";

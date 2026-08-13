@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Pengingat ANC</string>
+    <string name="title_activity_main">Pengingat ANC</string>
+    <string name="package_name">id.my.kuncir.posyandu.anc</string>
+    <string name="custom_url_scheme">id.my.kuncir.posyandu.anc</string>
+</resources>

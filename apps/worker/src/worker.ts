@@ -3,11 +3,14 @@ import {
   checkDatabaseReadiness,
   closeDatabasePool,
   createDatabasePool,
+  DeviceTokenCrypto,
   type DatabasePool,
   type DatabaseReadiness,
 } from "@anc/database";
 import { JsonWorkerLogger, type WorkerLogger } from "./logger.js";
 import { processReminderCycles } from "./reminder-processor.js";
+import { createFcmPushAdapter, type PushDeliveryAdapter } from "./push-adapter.js";
+import { processPendingPushAttempts } from "./push-processor.js";
 
 export interface WorkerDependencies {
   readonly loadConfig: (environment: NodeJS.ProcessEnv) => WorkerConfig;
@@ -20,6 +23,8 @@ export interface RunWorkerOnceOptions {
   readonly environment?: NodeJS.ProcessEnv;
   readonly dependencies?: Partial<WorkerDependencies>;
   readonly logger?: WorkerLogger;
+  readonly pushAdapter?: PushDeliveryAdapter;
+  readonly now?: Date;
 }
 
 export interface WorkerRunResult {
@@ -56,7 +61,7 @@ export async function runWorkerOnce(options: RunWorkerOnceOptions = {}): Promise
 
   logger.write("info", "Worker one-shot bootstrap started", {
     event: "worker_bootstrap_started",
-    mode: "foundation_only",
+    mode: "reminder_delivery",
   });
 
   try {
@@ -66,10 +71,18 @@ export async function runWorkerOnce(options: RunWorkerOnceOptions = {}): Promise
     }
 
     const reminderResult = await processReminderCycles(pool);
+    const pushResult = await processPendingPushAttempts(
+      pool,
+      options.pushAdapter ??
+        createFcmPushAdapter(config.fcmProjectId, config.fcmServiceAccountJson),
+      new DeviceTokenCrypto(config.pushTokenEncryptionKey),
+      { maxAttempts: config.pushMaxAttempts, backoffSeconds: config.pushBackoffSeconds },
+      options.now === undefined ? {} : { now: options.now },
+    );
 
     const result: WorkerRunResult = {
       status: "bootstrap_complete",
-      processedJobs: reminderResult.createdCyclesCount,
+      processedJobs: reminderResult.createdCyclesCount + pushResult.processedAttemptsCount,
       databaseCheckedAt: readiness.checkedAt,
     };
     logger.write("info", "Worker one-shot bootstrap completed", {
@@ -79,6 +92,11 @@ export async function runWorkerOnce(options: RunWorkerOnceOptions = {}): Promise
       reminder_cycles_created: reminderResult.createdCyclesCount,
       push_attempts_created: reminderResult.pushAttemptsCount,
       wa_fallbacks_created: reminderResult.waFallbackActionsCount,
+      push_attempts_processed: pushResult.processedAttemptsCount,
+      push_attempts_succeeded: pushResult.succeededCount,
+      push_retries_scheduled: pushResult.retriesScheduledCount,
+      push_terminal_failures: pushResult.terminalFailuresCount,
+      push_wa_fallbacks_created: pushResult.waFallbackActionsCount,
     });
     return result;
   } finally {

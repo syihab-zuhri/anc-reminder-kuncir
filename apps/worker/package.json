@@ -19,7 +19,8 @@
   "dependencies": {
     "@anc/config": "*",
     "@anc/contracts": "*",
-    "@anc/database": "*"
+    "@anc/database": "*",
+    "google-auth-library": "11.0.2"
   },
   "devDependencies": {
     "@types/node": "24.13.3",

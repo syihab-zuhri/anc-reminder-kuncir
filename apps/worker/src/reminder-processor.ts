@@ -22,13 +22,18 @@ export async function processReminderCycles(
     FROM pregnancy_milestones pm
     JOIN pregnancies p ON pm.pregnancy_id = p.id
     JOIN mothers m ON p.mother_id = m.id
-    JOIN consent_records c ON m.id = c.mother_id
+    JOIN LATERAL (
+      SELECT status
+        FROM consent_records
+       WHERE mother_id = m.id AND purpose = 'REMINDER'
+       ORDER BY recorded_at DESC, id DESC
+       LIMIT 1
+    ) c ON true
     LEFT JOIN reminder_cycles rc 
       ON rc.milestone_id = pm.id 
      AND DATE(rc.cycle_anchor_at) = DATE($1::timestamptz)
     WHERE p.status = 'ACTIVE'
       AND pm.visit_status IN ('DUE', 'OVERDUE')
-      AND c.purpose = 'REMINDER'
       AND c.status = 'GRANTED'
       AND rc.id IS NULL
     LIMIT 500;
@@ -113,12 +118,16 @@ export async function processReminderCycles(
             reminder_cycle_id,
             attempt_no,
             status,
-            attempted_at
-          ) VALUES ($1, $2, 1, 'PENDING', CURRENT_TIMESTAMP)
+            attempted_at,
+            scheduled_for
+          ) VALUES ($1, $2, 1, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           ON CONFLICT (reminder_cycle_id, attempt_no) DO NOTHING;
           `,
           [pushAttemptId, cycleId],
         );
+        await client.query(`UPDATE reminder_cycles SET status = 'PUSH_ATTEMPTING' WHERE id = $1`, [
+          cycleId,
+        ]);
         pushAttempts++;
       } else {
         // Fallback directly to WA manual action queue
@@ -150,6 +159,10 @@ export async function processReminderCycles(
           ON CONFLICT (reminder_cycle_id) DO NOTHING;
           `,
           [waFallbackId, cycleId, row.mother_id, row.health_center_id],
+        );
+        await client.query(
+          `UPDATE reminder_cycles SET status = 'WA_ACTION_REQUIRED' WHERE id = $1`,
+          [cycleId],
         );
         waFallbacks++;
       }

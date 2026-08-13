@@ -26,6 +26,7 @@ No secrets in repository/docs. Validate required variables at startup. Separate 
 | `MOTHER_SESSION_SECRET` | Yes | Restricted mother session secret |
 | `IDEMPOTENCY_SECRET` | Yes | Dedicated HMAC secret for request fingerprints; distinct from session secrets |
 | `NIK_ENCRYPTION_KEY` | API env | Dedicated base64-encoded 32-byte AES-256-GCM key for restricted NIK ciphertext; distinct from session/idempotency secrets |
+| `PUSH_TOKEN_ENCRYPTION_KEY` | API + worker env | Dedicated base64-encoded 32-byte master key for FCM token encryption/fingerprints; distinct from every other secret |
 | `STAFF_ACCESS_TOKEN_TTL_MINUTES` | API env | Staff access-token lifetime; default `15` |
 | `STAFF_REFRESH_TOKEN_TTL_DAYS` | API env | Staff refresh-token lifetime; default `7` |
 | `STAFF_LOGIN_MAX_FAILURES` | API env | Consecutive failures before lock; default `5` |
@@ -36,7 +37,7 @@ No secrets in repository/docs. Validate required variables at startup. Separate 
 | `MOTHER_ACCESS_RATE_WINDOW_MINUTES` | API env | Durable mother access failure window; default `15` |
 | `MOTHER_ACCESS_BLOCK_MINUTES` | API env | Mother access block duration after threshold; default `15` |
 | `FCM_PROJECT_ID` | Push env | FCM project |
-| `FCM_SERVICE_ACCOUNT_JSON` or secret reference | Push env | FCM credential; never commit |
+| `FCM_SERVICE_ACCOUNT_JSON` | Push env | Complete service-account JSON injected by the deployment secret store; never commit |
 | `REMINDER_INTERVAL_DAYS` | Yes | Default `3` |
 | `PUSH_MAX_ATTEMPTS` | Yes | `PROPOSED` default `3` |
 | `PUSH_BACKOFF_SECONDS` | Yes | Configurable retry schedule |
@@ -63,6 +64,7 @@ SESSION_SECRET=replace-with-at-least-32-random-characters
 MOTHER_SESSION_SECRET=replace-with-a-different-32-character-secret
 IDEMPOTENCY_SECRET=replace-with-a-third-distinct-32-character-secret
 NIK_ENCRYPTION_KEY=replace-with-a-base64-encoded-32-byte-key
+PUSH_TOKEN_ENCRYPTION_KEY=replace-with-a-different-base64-encoded-32-byte-key
 STAFF_ACCESS_TOKEN_TTL_MINUTES=15
 STAFF_REFRESH_TOKEN_TTL_DAYS=7
 STAFF_LOGIN_MAX_FAILURES=5
@@ -94,7 +96,7 @@ Database available → migrations → seed synthetic care-plan version → serve
 
 ## 6. Secret Rotation Ownership
 
-DevOps owns infrastructure/FCM/session/idempotency/NIK-encryption-key rotation with Backend support. Rotation procedure must avoid invalidating active sessions unexpectedly unless incident response requires it. Rotating `MOTHER_SESSION_SECRET` invalidates every mother bearer and also changes credential lookup hashes; all active mother codes must therefore be explicitly reissued under the new secret as part of a reviewed maintenance plan. After `IDEMPOTENCY_SECRET` rotation, reuse of a pre-rotation key fails closed as HTTP `409`; reconcile the original resource before issuing a new key. NIK-key rotation requires a reviewed decrypt-and-re-encrypt migration before the retiring key is removed.
+DevOps owns infrastructure/FCM/session/idempotency/NIK/push-token key rotation with Backend support. Rotation procedure must avoid invalidating active sessions unexpectedly unless incident response requires it. Rotating `MOTHER_SESSION_SECRET` invalidates every mother bearer and also changes credential lookup hashes; all active mother codes must therefore be explicitly reissued under the new secret as part of a reviewed maintenance plan. After `IDEMPOTENCY_SECRET` rotation, reuse of a pre-rotation key fails closed as HTTP `409`; reconcile the original resource before issuing a new key. NIK and push-token key rotation each require a reviewed decrypt-and-re-encrypt migration before the retiring key is removed.
 
 ## 7. Seed Policy
 
