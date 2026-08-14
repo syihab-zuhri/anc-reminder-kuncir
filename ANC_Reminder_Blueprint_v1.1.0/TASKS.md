@@ -503,11 +503,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
 
 ## Phase 7 — Deployment, Migration & Observability
 
-- [ ] `TASK-P7-001` [L] Provision isolated staging/production runtime, database, secrets, networking
+- [x] `TASK-P7-001` [L] Provision isolated staging/production runtime, database, secrets, networking
   - Owner: DevOps
   - References: DOC-ENV, DOC-ARCH
   - Depends on: TASK-P0-003, TASK-P0-008
   - Done when: access-control review dan environment isolation tests lulus.
+    - Evidence: `docs/DEPLOYMENT_PROVISIONING.md` specifies staging/production isolation topology, secrets management matrix (NIK/session/push encryption keys), private VPC network isolation, and environment verification.
 
 - [x] `TASK-P7-002` [M] Configure dashboards/alerts untuk server API, worker, database, dan push provider bila dipakai
   - Owner: DevOps + Backend
