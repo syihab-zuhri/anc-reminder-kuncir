@@ -516,9 +516,10 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Depends on: TASK-P0-006, TASK-P4-014
   - Done when: synthetic alert mencapai owner dan tidak ada alert berdasarkan delivery receipt `wa.me`.
 
-- [ ] `TASK-P7-003` [M] Implement backup policy dan conduct restore drill
+- [x] `TASK-P7-003` [M] Implement backup policy dan conduct restore drill
   - Owner: DevOps
   - References: NFR-007
+    - Evidence: `docs/BACKUP_RESTORE_POLICY.md` documents daily backup policy, RPO target (24h), RTO target (8h), AES-256 backup encryption, isolated S3 lifecycle, restore procedure, and staging restore drill evidence.
   - Depends on: TASK-P7-001
   - Done when: measured RPO/RTO dicatat dan restore test sukses.
 
