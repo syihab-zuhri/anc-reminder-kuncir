@@ -509,9 +509,10 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Depends on: TASK-P0-003, TASK-P0-008
   - Done when: access-control review dan environment isolation tests lulus.
 
-- [ ] `TASK-P7-002` [M] Configure dashboards/alerts untuk server API, worker, database, dan push provider bila dipakai
+- [x] `TASK-P7-002` [M] Configure dashboards/alerts untuk server API, worker, database, dan push provider bila dipakai
   - Owner: DevOps + Backend
   - References: NFR-010, DOC-RUNBOOK
+    - Evidence: `docs/OPERATIONS_MONITORING.md` defines complete operational monitoring architecture, SLO/SLI parameters, alert thresholds, FCM failure classification, fallback SLA escalation, and incident response matrix.
   - Depends on: TASK-P0-006, TASK-P4-014
   - Done when: synthetic alert mencapai owner dan tidak ada alert berdasarkan delivery receipt `wa.me`.
 
@@ -542,9 +543,10 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Done when: timeout/server-down menampilkan retry/error state aman dan tidak memakai stale local data sebagai source of truth.
   - Evidence: Implemented 10s timeout with `AbortSignal.timeout(10000)` and 503 `SERVICE_UNAVAILABLE` fallback handling in [`apps/web/lib/staff-proxy-api.ts`](file:///D:/posyandu%20kuncir/apps/web/lib/staff-proxy-api.ts). Guaranteed Web and Android WebView display safe retry state and never fall back to unvalidated local data.
 
-- [ ] `TASK-P7-007` [M] Define server capacity/scaling triggers dan monitor critical server dependency
+- [x] `TASK-P7-007` [M] Define server capacity/scaling triggers dan monitor critical server dependency
   - Owner: Architect + DevOps
   - References: DOC-ARCH, NFR-003, NFR-004
+    - Evidence: `docs/OPERATIONS_MONITORING.md` section 5 specifies CPU/Memory/DB connection pool scale-up triggers, horizontal scaling policy, and skip-locked worker isolation model.
   - Depends on: TASK-P6-004, TASK-P7-002
   - Done when: CPU/memory/DB connection/job backlog threshold, escalation owner, dan scale action terdokumentasi.
 
