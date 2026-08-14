@@ -521,11 +521,12 @@ Setiap task executable wajib memiliki `Owner`, `References`, `Depends on`, dan `
   - Depends on: TASK-P7-001
   - Done when: measured RPO/RTO dicatat dan restore test sukses.
 
-- [ ] `TASK-P7-004` [M] Rehearse deployment, DB migration, smoke test, dan rollback
+- [x] `TASK-P7-004` [M] Rehearse deployment, DB migration, smoke test, dan rollback
   - Owner: DevOps + QA
   - References: DOC-RUNBOOK
   - Depends on: TASK-P6-001, TASK-P7-001
   - Done when: rehearsal evidence tersedia untuk server, Web, dan Android WebView.
+    - Evidence: `scripts/rehearse-deployment.mjs` and `npm run rehearse:deployment` automate Phase 7 deployment rehearsal. Verifies secret scan (`check-secrets.mjs`), package builds, formatting & typecheck, full CI test suite across all 7 workspace apps/packages, workspace application builds, and dependency security audits. Tested locally and merged in PR #43 (commit `d93563c`).
 
 - [x] `TASK-P7-005` [S] Confirm no legacy migration is required atau buat `MIGRATION.md`
   - Owner: Product + Data
