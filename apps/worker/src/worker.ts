@@ -8,7 +8,7 @@ import {
   type DatabaseReadiness,
 } from "@anc/database";
 import { JsonWorkerLogger, type WorkerLogger } from "./logger.js";
-import { processReminderCycles } from "./reminder-processor.js";
+import { localDateString, processReminderCycles } from "./reminder-processor.js";
 import { createFcmPushAdapter, type PushDeliveryAdapter } from "./push-adapter.js";
 import { processPendingPushAttempts } from "./push-processor.js";
 
@@ -70,7 +70,10 @@ export async function runWorkerOnce(options: RunWorkerOnceOptions = {}): Promise
       throw new WorkerDependencyUnavailableError();
     }
 
-    const reminderResult = await processReminderCycles(pool);
+    const anchorDate = localDateString(options.now ?? new Date(), config.primaryTimezone);
+    const reminderResult = await processReminderCycles(pool, anchorDate, {
+      intervalDays: config.reminderIntervalDays,
+    });
     const pushResult = await processPendingPushAttempts(
       pool,
       options.pushAdapter ??

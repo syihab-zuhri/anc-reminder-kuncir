@@ -24,6 +24,10 @@ describe("DeviceTokenCrypto", () => {
 
     expect(crypto.fingerprint(token)).toBe(crypto.fingerprint(token));
     expect(crypto.fingerprint(token)).not.toBe(crypto.fingerprint(`${token}-different`));
-    expect(() => crypto.decrypt(`${encrypted.slice(0, -1)}A`)).toThrow("authentication failed");
+    // Tamper a byte of the random IV. A change there is always significant,
+    // unlike the final base64url character whose padding bits can decode to the
+    // same byte and let authentication pass nondeterministically.
+    const tamperedIv = `${encrypted.slice(0, 4)}${encrypted[4] === "A" ? "B" : "A"}${encrypted.slice(5)}`;
+    expect(() => crypto.decrypt(tamperedIv)).toThrow("authentication failed");
   });
 });

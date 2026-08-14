@@ -6,11 +6,38 @@ export interface ReminderProcessingResult {
   readonly waFallbackActionsCount: number;
 }
 
+export interface ReminderCycleProcessingOptions {
+  readonly intervalDays?: number;
+  readonly timezone?: string;
+}
+
+const defaultIntervalDays = 3;
+const defaultTimezone = "Asia/Jakarta";
+
+/**
+ * Returns the calendar date (YYYY-MM-DD) that `date` falls on inside the given
+ * IANA time zone. UTC date must never be used as the cycle anchor because it
+ * can shift a reminder one day early or late around local midnight (NFR-009).
+ */
+export function localDateString(date: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const value = (type: string): string => parts.find((part) => part.type === type)?.value ?? "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
 export async function processReminderCycles(
   pool: DatabasePool,
   anchorDateStr?: string,
+  options: ReminderCycleProcessingOptions = {},
 ): Promise<ReminderProcessingResult> {
-  const targetDate = anchorDateStr ?? new Date().toISOString().slice(0, 10);
+  const intervalDays = options.intervalDays ?? defaultIntervalDays;
+  const timezone = options.timezone ?? defaultTimezone;
+  const targetDate = anchorDateStr ?? localDateString(new Date(), timezone);
 
   // 1. Query due/overdue milestones from ACTIVE pregnancies where REMINDER consent is GRANTED
   const query = `
@@ -36,6 +63,12 @@ export async function processReminderCycles(
       AND pm.visit_status IN ('DUE', 'OVERDUE')
       AND c.status = 'GRANTED'
       AND rc.id IS NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM reminder_cycles last_rc
+         WHERE last_rc.milestone_id = pm.id
+           AND last_rc.status <> 'CANCELLED'
+           AND last_rc.cycle_anchor_at >= $1::timestamptz - make_interval(days => $2)
+      )
     LIMIT 500;
   `;
 
@@ -47,7 +80,7 @@ export async function processReminderCycles(
       mother_id: string;
       health_center_id: string;
       due_at: string;
-    }>(query, [targetDate]);
+    }>(query, [targetDate, intervalDays]);
 
     let createdCycles = 0;
     let pushAttempts = 0;
@@ -98,11 +131,12 @@ export async function processReminderCycles(
       }
       createdCycles++;
 
-      // Check if active device exists for FCM push
+      // Check if an Android device exists for FCM push (must match the platform
+      // the push claim path targets, so platforms never produce NO_ACTIVE_DEVICE).
       const deviceRes = await client.query<{ id: string }>(
         `
         SELECT id FROM devices 
-        WHERE mother_id = $1 AND status = 'ACTIVE' 
+        WHERE mother_id = $1 AND platform = 'ANDROID' AND status = 'ACTIVE' 
         LIMIT 1;
         `,
         [row.mother_id],

@@ -39,7 +39,7 @@ function positiveInteger(defaultValue?: string) {
   return schema.transform(Number).pipe(z.number().int().positive());
 }
 
-const reminderIntervalDays = z.literal("3").default("3").transform(Number);
+const reminderIntervalDays = positiveInteger("3");
 
 const apiPort = z
   .string()
