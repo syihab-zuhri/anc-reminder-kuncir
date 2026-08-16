@@ -33,6 +33,7 @@
     "test:smoke:registry": "node scripts/smoke-registry.mjs",
     "test:smoke:web-session": "node scripts/smoke-web-session.mjs",
     "db:migrate": "npm run migrate:up --workspace=@anc/database",
+    "db:migrate:prod": "node packages/database/scripts/migrate-production.mjs",
     "db:rollback": "npm run migrate:down --workspace=@anc/database",
     "db:verify:phase1": "node packages/database/scripts/verify-phase1.mjs",
     "security:secrets": "node scripts/check-secrets.mjs",
