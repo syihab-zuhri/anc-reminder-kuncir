@@ -30,6 +30,10 @@ import type { ProgramStatusRepository } from "./program-status/program-status.re
 import type { ReminderOperationsRepository } from "./reminder-operations/reminder-operations.repository.js";
 import type { ContentManagementRepository } from "./content-management/content-management.repository.js";
 import type { DeviceRegistrationRepository } from "./device-registration/device-registration.repository.js";
+import type {
+  InternalSchedulerService,
+  PushDeliveryAdapter,
+} from "./scheduler/scheduler.service.js";
 import { CanonicalErrorFilter } from "./errors/canonical-error.filter.js";
 import { HttpLoggingInterceptor } from "./observability/http-logging.interceptor.js";
 import { JsonLogger } from "./observability/json-logger.js";
@@ -67,6 +71,8 @@ export interface CreateApiApplicationOptions {
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
+  readonly pushDeliveryAdapter?: PushDeliveryAdapter;
+  readonly internalSchedulerService?: InternalSchedulerService;
 }
 
 export async function createApiApplication(
@@ -151,12 +157,24 @@ export async function createApiApplication(
         ? {}
         : { idempotencyService: options.idempotencyService }),
       ...(options.clock === undefined ? {} : { clock: options.clock }),
+      ...(options.pushDeliveryAdapter === undefined
+        ? {}
+        : { pushDeliveryAdapter: options.pushDeliveryAdapter }),
+      ...(options.internalSchedulerService === undefined
+        ? {}
+        : { internalSchedulerService: options.internalSchedulerService }),
     }),
     { logger },
   );
 
   app.use(requestContextMiddleware);
   app.setGlobalPrefix(API_GLOBAL_PREFIX);
+  app.enableCors({
+    origin: [options.config.appBaseUrl],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id", "X-Idempotency-Key"],
+  });
   app.useGlobalInterceptors(new HttpLoggingInterceptor(logger));
   app.useGlobalFilters(new CanonicalErrorFilter(logger, app.get(AuditService)));
 

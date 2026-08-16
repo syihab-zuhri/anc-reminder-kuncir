@@ -1,4 +1,5 @@
 import { Module, type DynamicModule } from "@nestjs/common";
+import { ScheduleModule } from "@nestjs/schedule";
 import type { ApiConfig } from "@anc/config";
 import {
   checkDatabaseReadiness,
@@ -6,6 +7,10 @@ import {
   DeviceTokenCrypto,
   type DatabasePool,
 } from "@anc/database";
+import {
+  InternalSchedulerService,
+  type PushDeliveryAdapter,
+} from "./scheduler/scheduler.service.js";
 import { HealthController } from "./health/health.controller.js";
 import { HealthService, type DatabaseReadinessCheck } from "./health/health.service.js";
 import {
@@ -195,6 +200,8 @@ export interface AppModuleOptions {
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
+  readonly pushDeliveryAdapter?: PushDeliveryAdapter;
+  readonly internalSchedulerService?: InternalSchedulerService;
 }
 
 @Module({})
@@ -202,6 +209,7 @@ export class AppModule {
   public static register(options: AppModuleOptions): DynamicModule {
     return {
       module: AppModule,
+      imports: [ScheduleModule.forRoot()],
       controllers: [
         HealthController,
         StaffAuthController,
@@ -449,6 +457,13 @@ export class AppModule {
               clock,
             ),
           inject: [DEVICE_REGISTRATION_REPOSITORY, AUDIT_SERVICE, CLOCK],
+        },
+        {
+          provide: InternalSchedulerService,
+          useFactory: (config: ApiConfig, pool: DatabasePool) =>
+            options.internalSchedulerService ??
+            new InternalSchedulerService(config, pool, options.pushDeliveryAdapter, options.clock),
+          inject: [API_CONFIG, DATABASE_POOL],
         },
       ],
     };

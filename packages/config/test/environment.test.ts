@@ -48,6 +48,8 @@ describe("loadApiConfig", () => {
       waFallbackEscalationHours: 24,
       primaryTimezone: "Asia/Jakarta",
       logLevel: "info",
+      schedulerEnabled: true,
+      schedulerIntervalSeconds: 300,
     });
   });
 

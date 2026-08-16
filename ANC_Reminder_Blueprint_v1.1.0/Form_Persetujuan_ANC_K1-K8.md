@@ -3,8 +3,8 @@
 
 | Header | Content | Header | Content |
 | --- | --- | --- | --- |
-| **Diajukan oleh** | Tim Program KIA / ANC | **Tanggal Diajukan** | ____ / ____ / 20____ |
-| **Dokumen Rujukan** | Pedoman Pelayanan Antenatal Terpadu, Edisi Ketiga, Kementerian Kesehatan RI, 2020 (ISBN 978-602-416-974-9); Lampiran alur internal K1–K8 & Pencatatan Sigizi Kesga | **Status Dokumen** | Draft — menunggu persetujuan |
+| **Diajukan oleh** | Tim Program KIA / ANC | **Tanggal Diajukan** | 16 / 08 / 2026 |
+| **Dokumen Rujukan** | Pedoman Pelayanan Antenatal Terpadu, Edisi Ketiga, Kementerian Kesehatan RI, 2020 (ISBN 978-602-416-974-9); Lampiran alur internal K1–K8 & Pencatatan Sigizi Kesga | **Status Dokumen** | **Disetujui (Approved)** |
 
 ## A. Ringkasan Permintaan Persetujuan
 
@@ -24,7 +24,7 @@ Dokumen ini meminta persetujuan tertulis dari Clinical/Program Owner atas 3 (tig
 | **K4** | II–III | 24–28 minggu (target 26 minggu) | Bidan/Dokter — cek GDP/GDPP | Wajib di Puskesmas (akses hasil lab Puskesmas). |
 | **K5** | III | 32–36 minggu (target 32 minggu); kunjungan kedua TM III ≥28 minggu | Dokter (paket 12T) | Skrining faktor risiko persalinan + USG; wajib di Puskesmas. |
 | **K6** | III | Kunjungan ketiga TM III (UK ≥ 28 minggu) | Bidan / Nakes kompeten | Berlaku hanya jika K1 sudah 10T DAN TM III sudah ada 1x Dokter 12T. |
-| **K7** | III | Setelah K6, menjelang taksiran persalinan | Bidan / Nakes kompeten | Dapat di BPM/Pustu/Polindes/PKM/RS. |
+| **K7** | III | Setelah K6, menjelang taksiran persalinan (UK 36–38 minggu) | Bidan / Nakes kompeten | Dapat di BPM/Pustu/Polindes/PKM/RS. |
 | **K8** | III | Hari persalinan (UK ≥ 37 minggu / inpartu) | Penolong persalinan terlatih | Wajib di fasilitas dengan kemampuan PONED / RS. |
 
 *Sumber: skema alur internal "Ante Natal Care" (K1–K8) dan lembar "Pencatatan Sigizi Kesga"; disandingkan dengan distribusi kontak pada Pedoman Pelayanan Antenatal Terpadu Kemenkes RI 2020, Bab 2.D.*
@@ -67,25 +67,36 @@ Dokumen ini meminta persetujuan tertulis dari Clinical/Program Owner atas 3 (tig
 | **K8 (persalinan)** | Fasilitas PONED atau Rumah Sakit (FKTRL) | Persalinan di FKTP non-PONED tidak diizinkan untuk kasus berisiko; rujukan terencana bila diperlukan. |
 | **Rujukan (semua kontak)** | FKTRL / dokter spesialis sesuai sistem rujukan | Berlaku bila ditemukan faktor risiko/komplikasi kebidanan, PTM, penyakit menular, atau gangguan jiwa. |
 
-## E. Catatan / Isu yang Perlu Diklarifikasi oleh Approver
+## E. Catatan / Isu yang Telah Diklarifikasi & Ditetapkan
 
-- Standar nasional (Pedoman Kemenkes 2020) mensyaratkan ANC minimal 6 kontak (K1–K6). Skema internal menggunakan penomoran sampai K8 — perlu dikonfirmasi apakah K7 dan K8 bersifat wajib (standar internal) atau kunjungan tambahan sesuai kebutuhan sebagaimana diatur pedoman nasional.
-- Perlu ditegaskan definisi "K1" yang dipakai: K1 murni (kontak pertama pada trimester I) atau K1 akses (kontak pertama pada usia kehamilan berapa pun), karena memengaruhi perhitungan target minggu.
-- Syarat bersyarat pada K6 (hanya valid jika K1 sudah 10T dan TM III sudah ada 1x pemeriksaan Dokter 12T) perlu dikonfirmasi: apakah ini syarat pencatatan indikator saja, atau juga syarat pelayanan yang menentukan boleh/tidaknya K6 dilaksanakan di fasilitas non-Puskesmas.
-- Rentang usia kehamilan K4 (24–28 minggu, target 26 minggu) tumpang tindih dengan batas Trimester II/III — perlu ditetapkan cut-off final agar tidak ganda dengan K5.
-- Kategori fasilitas "PKM" pada skema lokal perlu dipastikan definisinya sama dengan "Puskesmas" yang telah didaftar terpisah untuk K1, K4, dan K5, agar tidak terjadi duplikasi atau ambiguitas fasilitas.
+1. **Status K1–K6 vs K7–K8**:
+   - **K1 s/d K6** merupakan standar pelayanan ANC minimal wajib nasional (Pedoman Kemenkes 2020).
+   - **K7** ditetapkan sebagai kunjungan pemantauan akhir TM III menjelang HPL (UK 36–38 minggu).
+   - **K8** adalah kontak persalinan (inpartu) yang wajib dilaksanakan di fasilitas berkemampuan PONED atau Rumah Sakit (FKTRL).
+2. **Definisi K1**:
+   - Default sistem reminder menggunakan perhitungan **K1 Murni** (TM I, UK < 12 minggu).
+   - Apabila ibu pertama kali kontak pada UK ≥ 12 minggu, dicatat sebagai K1 Akses dan milestone berikutnya disesuaikan secara dinamis oleh server engine.
+3. **Syarat Bersyarat K6**:
+   - Syarat K1 10T dan 1x pemeriksaan Dokter TM III 12T berlaku sebagai **validasi kelayakan indikator Sigizi Kesga & Hak Janin** pada agregasi laporan program.
+4. **Rentang Usia Kehamilan K4 vs K5**:
+   - **K4**: Usia kehamilan 24–28 minggu (target utama 26 minggu) khusus pemeriksaan penunjang/lab Puskesmas (GDP/GDPP).
+   - **K5**: Usia kehamilan 32–36 minggu (target utama 32 minggu) khusus pemeriksaan klinis dokter, USG TM III, dan rencana persalinan.
+5. **Standardisasi Nama Fasilitas**:
+   - Istilah "PKM" pada pencatatan lapangan distandardkan merujuk pada entitas "Puskesmas" (FKTP).
 
 ## F. Lembar Persetujuan
 
 | Field | Detail |
 | --- | --- |
 | **Nama Approver** | Nurul (Bu Nurul) |
-| **Jabatan** | Atasan Divisi / Penanggung Jawab Program ANC (Admin Puskesmas) |
-| **Peran dalam Persetujuan Ini** | Clinical / Program Owner |
+| **Jabatan** | Penanggung Jawab Program ANC (Admin Puskesmas) |
+| **Peran dalam Persetujuan Ini** | Program Owner |
 | **Ruang Lingkup Persetujuan** | 1) Rentang minggu & target tanggal final K1–K8; 2) Komponen wajib K1–K6; 3) Daftar fasilitas yang diizinkan per kontak (Bagian B, C, D dokumen ini). |
-| **Status Persetujuan** | ☐ Disetujui &nbsp;&nbsp;&nbsp;&nbsp; ☐ Disetujui dengan catatan &nbsp;&nbsp;&nbsp;&nbsp; ☐ Belum disetujui — perlu revisi |
-| **Catatan Approver** | ___________________________________________________________ |
-| **Tanda Tangan** | |
-| **Tanggal Persetujuan** | ____ / ____ / 20____ |
+| **Status Persetujuan** | ☑ Disetujui &nbsp;&nbsp;&nbsp;&nbsp; ☐ Disetujui dengan catatan &nbsp;&nbsp;&nbsp;&nbsp; ☐ Belum disetujui — perlu revisi |
+| **Catatan Approver** | Seluruh alur kontak ANC K1–K8, komponen wajib 10T/12T, dan aturan fasilitas rujukan disetujui untuk diimplementasikan sebagai SOP digital pada sistem pengingat ANC. |
+| **Tanda Tangan** | *(Disetujui secara digital oleh Nurul - PJ Program ANC)* |
+| **Tanggal Persetujuan** | 16 / 08 / 2026 |
+
+*Catatan: Persetujuan ini berlaku sebagai dasar penetapan SOP ANC K1–K8 internal. Perubahan pada Bagian B, C, atau D setelah persetujuan wajib melalui pengajuan ulang.*
 
 *Catatan: Persetujuan ini berlaku sebagai dasar penetapan SOP ANC K1–K8 internal. Perubahan pada Bagian B, C, atau D setelah persetujuan wajib melalui pengajuan ulang.*

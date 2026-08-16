@@ -28,5 +28,7 @@ export function apiConfigFixture(): ApiConfig {
     waFallbackEscalationHours: 24,
     primaryTimezone: "Asia/Jakarta",
     logLevel: "info",
+    schedulerEnabled: false,
+    schedulerIntervalSeconds: 300,
   };
 }
