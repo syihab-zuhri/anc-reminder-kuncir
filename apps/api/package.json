@@ -22,7 +22,7 @@
     "@anc/config": "*",
     "@anc/contracts": "*",
     "@anc/database": "*",
-    "@nestjs/common": "11.1.28",
+    "@nestjs/common": "11.1.29",
     "@nestjs/core": "11.1.28",
     "@nestjs/platform-express": "11.1.28",
     "@nestjs/schedule": "6.1.3",
