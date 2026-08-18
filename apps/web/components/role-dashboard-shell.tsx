@@ -55,7 +55,8 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
         if (userRole === "PUSKESMAS") {
           const res = await fetch("/api/staff-proxy/dashboard/puskesmas");
           if (!res.ok) {
-            setError("Gagal memuat dashboard Puskesmas.");
+            const data = await res.json().catch(() => null);
+            setError(data?.error?.message ?? data?.message ?? "Gagal memuat dashboard Puskesmas.");
             return;
           }
           const data = (await res.json()) as PuskesmasDashboardResponse;
@@ -63,7 +64,8 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
         } else if (userRole === "BIDAN") {
           const res = await fetch("/api/staff-proxy/dashboard/bidan");
           if (!res.ok) {
-            setError("Gagal memuat dashboard Bidan.");
+            const data = await res.json().catch(() => null);
+            setError(data?.error?.message ?? data?.message ?? "Gagal memuat dashboard Bidan.");
             return;
           }
           const data = (await res.json()) as BidanDashboardResponse;

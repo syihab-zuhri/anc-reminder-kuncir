@@ -75,7 +75,7 @@ export function MotherDashboard() {
   if (session.kind === "loading") {
     return (
       <div className="mother-loading" aria-busy="true">
-        <p>Memeriksa sesi Anda\u2026</p>
+        <p>Memeriksa sesi Anda…</p>
       </div>
     );
   }
@@ -105,7 +105,7 @@ export function MotherDashboard() {
           onClick={() => void handleLogout()}
           disabled={loggingOut}
         >
-          {loggingOut ? "Keluar\u2026" : "Keluar"}
+          {loggingOut ? "Keluar…" : "Keluar"}
         </button>
       </header>
 
@@ -117,7 +117,7 @@ export function MotherDashboard() {
 
       {data === null && dataError === null && (
         <div className="mother-loading">
-          <p>Memuat data kehamilan\u2026</p>
+          <p>Memuat data kehamilan…</p>
         </div>
       )}
 

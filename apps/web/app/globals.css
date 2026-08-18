@@ -179,10 +179,16 @@ svg {
   transform-origin: left;
 }
 
-.header-action {
+.header-actions {
   display: inline-flex;
   align-items: center;
   justify-self: end;
+  gap: 0.65rem;
+}
+
+.header-action {
+  display: inline-flex;
+  align-items: center;
   min-height: 46px;
   padding: 0 1.15rem;
   gap: 0.7rem;
@@ -193,11 +199,23 @@ svg {
   font-weight: 700;
   transition:
     color 180ms ease,
-    background-color 180ms ease;
+    background-color 180ms ease,
+    border-color 180ms ease;
 }
 
 .header-action:hover {
   color: var(--ink);
+  background: transparent;
+}
+
+.header-action-mother {
+  color: var(--paper-raised);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.header-action-mother:hover {
+  color: var(--accent);
   background: transparent;
 }
 
@@ -826,6 +844,17 @@ svg {
     display: none;
   }
 
+  .header-actions {
+    gap: 0.5rem;
+  }
+
+  .header-action {
+    min-height: 42px;
+    padding: 0 0.9rem;
+    font-size: 0.75rem;
+    gap: 0.45rem;
+  }
+
   .hero {
     grid-template-columns: 1fr;
     padding: 4.5rem 0 5.5rem;
@@ -895,10 +924,15 @@ svg {
     font-size: 1rem;
   }
 
+  .header-actions {
+    gap: 0.35rem;
+  }
+
   .header-action {
-    min-height: 44px;
-    padding: 0 0.8rem;
-    font-size: 0.73rem;
+    min-height: 38px;
+    padding: 0 0.65rem;
+    font-size: 0.72rem;
+    gap: 0.35rem;
   }
 
   .header-action .arrow-icon {

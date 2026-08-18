@@ -15,8 +15,10 @@ describe("landing content invariants", () => {
     expect(serializedCopy).not.toContain("whatsapp terkirim");
   });
 
-  it("distinguishes the active staff portal from pending mother access", () => {
+  it("provides active access for both staff and mother portal", () => {
     expect(landingCopy.access.staffStatus).toBe("Buka portal");
-    expect(landingCopy.access.motherStatus).toBe("Segera tersedia");
+    expect(landingCopy.access.motherStatus).toBe("Buka portal");
+    expect(landingCopy.navigation.mother).toBe("Masuk ibu hamil");
+    expect(landingCopy.navigation.staff).toBe("Masuk petugas");
   });
 });

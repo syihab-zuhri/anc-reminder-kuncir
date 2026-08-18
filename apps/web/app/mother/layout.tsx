@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { BrandMark } from "@/components/brand-mark";
 
@@ -13,8 +14,10 @@ export default function MotherLayout({ children }: Readonly<{ children: React.Re
   return (
     <div className="mother-shell">
       <header className="mother-header">
-        <BrandMark />
-        <span className="mother-header-label">Portal Ibu Hamil</span>
+        <Link className="mother-brand-link" href="/" aria-label="Kembali ke beranda Pengingat ANC">
+          <BrandMark />
+          <span className="mother-header-label">Portal Ibu Hamil</span>
+        </Link>
       </header>
       <main className="mother-main">{children}</main>
       <footer className="mother-footer">

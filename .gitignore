@@ -15,6 +15,9 @@ out/
 *.jks
 *.keystore
 *service-account*.json
+*firebase-adminsdk*.json
+*-adminsdk-*.json
+*-fbsvc-*.json
 supabase.config.md
 
 # Runtime files
