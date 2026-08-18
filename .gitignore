@@ -15,6 +15,8 @@ out/
 *.jks
 *.keystore
 *service-account*.json
+*-adminsdk-*.json
+*-fbsvc-*.json
 supabase.config.md
 
 # Runtime files
