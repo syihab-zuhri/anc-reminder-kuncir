@@ -12,6 +12,15 @@ interface BidanVisitConfirmationPanelProps {
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
 }
 
+interface ConfirmationSuccessData {
+  readonly motherName: string;
+  readonly milestoneCode: string;
+  readonly trimesterLabel: string;
+  readonly facilityName: string;
+  readonly occurredOn: string;
+  readonly confirmedAt: string;
+}
+
 export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmationPanelProps) {
   // Loaded data states
   const [mothers, setMothers] = useState<readonly MotherSummary[]>([]);
@@ -31,6 +40,7 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(
     null,
   );
+  const [successData, setSuccessData] = useState<ConfirmationSuccessData | null>(null);
 
   const fetchInitialData = useCallback(async (): Promise<void> => {
     setLoadingInitial(true);
@@ -70,6 +80,7 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
     setSelectedMilestoneId("");
     setMilestones([]);
     setFeedback(null);
+    setSuccessData(null);
 
     const mother = mothers.find((m) => m.id === motherId);
     if (!mother || !mother.active_pregnancy) return;
@@ -112,6 +123,11 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
     if (!selectedMilestoneId.trim() || !selectedFacilityId.trim() || !occurredOn.trim()) return;
     setSubmitting(true);
     setFeedback(null);
+    setSuccessData(null);
+
+    const activeMother = mothers.find((m) => m.id === selectedMotherId);
+    const activeMilestone = milestones.find((m) => m.id === selectedMilestoneId);
+    const activeFacility = facilities.find((f) => f.id === selectedFacilityId);
 
     try {
       const res = await fetch(
@@ -127,8 +143,13 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
         },
       );
 
-      const data = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
-      if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as {
+        id?: string;
+        confirmed_at?: string;
+        error?: { message?: string };
+      } | null;
+
+      if (!res.ok || data?.error) {
         setFeedback({
           type: "error",
           message: data?.error?.message ?? "Gagal menyimpan konfirmasi pemeriksaan.",
@@ -136,15 +157,33 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
         return;
       }
 
-      const activeMilestone = milestones.find((m) => m.id === selectedMilestoneId);
+      const confirmedTime = data?.confirmed_at ?? new Date().toISOString();
+
+      setSuccessData({
+        motherName: activeMother?.full_name ?? "Pasien",
+        milestoneCode: activeMilestone?.code ?? "ANC",
+        trimesterLabel: activeMilestone?.trimester_label ?? "",
+        facilityName: activeFacility?.name ?? "Fasilitas Kesehatan",
+        occurredOn,
+        confirmedAt: confirmedTime,
+      });
+
       setFeedback({
         type: "success",
-        message: `Konfirmasi pemeriksaan ${activeMilestone?.code ?? "ANC"} berhasil dicatat ke Supabase! Status milestone kini CONFIRMED.`,
+        message: `Konfirmasi pemeriksaan ${activeMilestone?.code ?? "ANC"} berhasil disimpan ke database Supabase!`,
       });
 
       // Refresh milestones list
-      if (selectedMotherId) {
-        await handleSelectMother(selectedMotherId);
+      if (selectedMotherId && activeMother?.active_pregnancy) {
+        const refreshRes = await fetch(
+          `/api/staff-proxy/pregnancies/${encodeURIComponent(activeMother.active_pregnancy.id)}/milestones`,
+        );
+        if (refreshRes.ok) {
+          const refreshData = (await refreshRes.json()) as PregnancyMilestoneListResponse;
+          setMilestones(refreshData.milestones ?? []);
+          const nextUnconfirmed = refreshData.milestones?.find((m) => m.visit_status !== "CONFIRMED");
+          setSelectedMilestoneId(nextUnconfirmed ? nextUnconfirmed.id : "");
+        }
       }
     } catch {
       setFeedback({ type: "error", message: "Koneksi terputus saat menghubungi server." });
@@ -152,6 +191,14 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
       setSubmitting(false);
     }
   }
+
+  const handleReset = () => {
+    setSuccessData(null);
+    setFeedback(null);
+    setSelectedMotherId("");
+    setSelectedMilestoneId("");
+    setMilestones([]);
+  };
 
   return (
     <div className="staff-panel-card">
@@ -162,7 +209,119 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
         </div>
       </header>
 
-      {feedback && (
+      {/* Prominent Success Notification Card */}
+      {successData && (
+        <div
+          className="staff-success-box"
+          style={{
+            padding: "1.5rem",
+            background: "#f0fdf4",
+            borderRadius: "10px",
+            border: "2px solid #22c55e",
+            boxShadow: "0 4px 12px rgba(34, 197, 94, 0.15)",
+            marginBottom: "1.75rem",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
+            <div
+              style={{
+                width: "48px",
+                height: "48px",
+                borderRadius: "50%",
+                background: "#22c55e",
+                color: "#ffffff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "1.6rem",
+                fontWeight: "bold",
+                flexShrink: 0,
+              }}
+            >
+              ✓
+            </div>
+            <div style={{ flex: 1 }}>
+              <div
+                style={{
+                  display: "inline-block",
+                  padding: "0.2rem 0.6rem",
+                  background: "#dcfce7",
+                  color: "#15803d",
+                  borderRadius: "9999px",
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.5px",
+                  marginBottom: "0.35rem",
+                }}
+              >
+                BERHASIL DIKONFIRMASI KE SUPABASE
+              </div>
+              <h3 style={{ margin: "0 0 0.5rem 0", color: "#166534", fontSize: "1.3rem" }}>
+                Pemeriksaan ANC {successData.milestoneCode} Berhasil Dicatat!
+              </h3>
+              <p style={{ margin: "0 0 1rem 0", color: "#15803d", fontSize: "0.95rem" }}>
+                Status kunjungan untuk <strong>{successData.motherName}</strong> telah resmi diperbarui menjadi{" "}
+                <span className="badge-status status-completed" style={{ fontWeight: 700 }}>
+                  CONFIRMED
+                </span>
+                .
+              </p>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                  gap: "0.75rem",
+                  padding: "0.85rem",
+                  background: "#ffffff",
+                  borderRadius: "6px",
+                  border: "1px solid #bbf7d0",
+                  marginBottom: "1rem",
+                }}
+              >
+                <div>
+                  <small style={{ color: "#64748b", display: "block" }}>Nama Pasien</small>
+                  <strong style={{ color: "#0f172a" }}>{successData.motherName}</strong>
+                </div>
+                <div>
+                  <small style={{ color: "#64748b", display: "block" }}>Milestone ANC</small>
+                  <strong style={{ color: "#0f172a" }}>
+                    {successData.milestoneCode} ({successData.trimesterLabel})
+                  </strong>
+                </div>
+                <div>
+                  <small style={{ color: "#64748b", display: "block" }}>Tempat Periksa</small>
+                  <strong style={{ color: "#0f172a" }}>{successData.facilityName}</strong>
+                </div>
+                <div>
+                  <small style={{ color: "#64748b", display: "block" }}>Tanggal Periksa</small>
+                  <strong style={{ color: "#0f172a" }}>{successData.occurredOn}</strong>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                <button
+                  className="btn-primary"
+                  type="button"
+                  onClick={handleReset}
+                  style={{ background: "#16a34a", borderColor: "#15803d" }}
+                >
+                  + Konfirmasi Pasien Lainnya
+                </button>
+                <button
+                  className="btn-secondary"
+                  type="button"
+                  onClick={() => setSuccessData(null)}
+                >
+                  Tutup Notifikasi
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {feedback && !successData && (
         <div
           className={`staff-alert ${feedback.type === "success" ? "alert-success" : "alert-error"}`}
           style={{ marginBottom: "1rem" }}
