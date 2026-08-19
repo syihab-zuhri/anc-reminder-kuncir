@@ -19,6 +19,10 @@ out/
 *-adminsdk-*.json
 *-fbsvc-*.json
 supabase.config.md
+supabase/.temp/*
+supabase/.environment
+*.env.production
+# 🔑 Protect production environment files only
 
 # Runtime files
 *.log
