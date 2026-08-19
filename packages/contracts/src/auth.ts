@@ -79,6 +79,14 @@ export const staffStatusUpdateRequestSchema = z
   .strict();
 export type StaffStatusUpdateRequest = z.infer<typeof staffStatusUpdateRequestSchema>;
 
+export const staffUpdateRequestSchema = z
+  .object({
+    display_name: z.string().trim().min(2).max(160).optional(),
+    password: newStaffPasswordSchema.optional(),
+  })
+  .strict();
+export type StaffUpdateRequest = z.infer<typeof staffUpdateRequestSchema>;
+
 export const staffSummarySchema = z
   .object({
     id: z.string().uuid(),

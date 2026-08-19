@@ -4,13 +4,17 @@ import type {
   AssignmentRevokeRequest,
   Facility,
   FacilityCreateRequest,
+  FacilityUpdateRequest,
   StaffAssignment,
   StaffAssignmentCreateRequest,
+  StaffAssignmentDetail,
   StaffCreateRequest,
   StaffStatusUpdateRequest,
   StaffSummary,
+  StaffUpdateRequest,
   Village,
   VillageCreateRequest,
+  VillageUpdateRequest,
 } from "@anc/contracts";
 
 import type { AuditService } from "../audit/audit.service.js";
@@ -52,6 +56,57 @@ export class OrganizationScopeService {
     }
   }
 
+  public async updateVillage(
+    actor: StaffActor,
+    villageId: string,
+    input: VillageUpdateRequest,
+  ): Promise<Village> {
+    const healthCenterId = this.requireManagedCenter(actor);
+    try {
+      const village = await this.repository.updateVillage(healthCenterId, villageId, input);
+      if (village === null) {
+        throw new ApiException({
+          status: HttpStatus.NOT_FOUND,
+          code: "VILLAGE_NOT_FOUND",
+          message: "Data desa tidak ditemukan.",
+        });
+      }
+      await this.audit.record({
+        actorType: "STAFF",
+        actorId: actor.staffUserId,
+        action: "VILLAGE_UPDATED",
+        resourceType: "VILLAGE",
+        resourceId: villageId,
+      });
+      return village;
+    } catch (error) {
+      throw mapConflict(error);
+    }
+  }
+
+  public async deleteVillage(actor: StaffActor, villageId: string): Promise<void> {
+    const healthCenterId = this.requireManagedCenter(actor);
+    try {
+      const deleted = await this.repository.deleteVillage(healthCenterId, villageId);
+      if (!deleted) {
+        throw new ApiException({
+          status: HttpStatus.NOT_FOUND,
+          code: "VILLAGE_NOT_FOUND",
+          message: "Data desa tidak ditemukan.",
+        });
+      }
+      await this.audit.record({
+        actorType: "STAFF",
+        actorId: actor.staffUserId,
+        action: "VILLAGE_DELETED",
+        resourceType: "VILLAGE",
+        resourceId: villageId,
+      });
+    } catch (error) {
+      throw mapConflict(error);
+    }
+  }
+
   public async listFacilities(actor: StaffActor): Promise<readonly Facility[]> {
     return this.repository.listFacilities(this.requireManagedCenter(actor));
   }
@@ -68,6 +123,57 @@ export class OrganizationScopeService {
         resourceId: facility.id,
       });
       return facility;
+    } catch (error) {
+      throw mapConflict(error);
+    }
+  }
+
+  public async updateFacility(
+    actor: StaffActor,
+    facilityId: string,
+    input: FacilityUpdateRequest,
+  ): Promise<Facility> {
+    const healthCenterId = this.requireManagedCenter(actor);
+    try {
+      const facility = await this.repository.updateFacility(healthCenterId, facilityId, input);
+      if (facility === null) {
+        throw new ApiException({
+          status: HttpStatus.NOT_FOUND,
+          code: "FACILITY_NOT_FOUND",
+          message: "Data fasilitas tidak ditemukan.",
+        });
+      }
+      await this.audit.record({
+        actorType: "STAFF",
+        actorId: actor.staffUserId,
+        action: "FACILITY_UPDATED",
+        resourceType: "FACILITY",
+        resourceId: facilityId,
+      });
+      return facility;
+    } catch (error) {
+      throw mapConflict(error);
+    }
+  }
+
+  public async deleteFacility(actor: StaffActor, facilityId: string): Promise<void> {
+    const healthCenterId = this.requireManagedCenter(actor);
+    try {
+      const deleted = await this.repository.deleteFacility(healthCenterId, facilityId);
+      if (!deleted) {
+        throw new ApiException({
+          status: HttpStatus.NOT_FOUND,
+          code: "FACILITY_NOT_FOUND",
+          message: "Data fasilitas tidak ditemukan.",
+        });
+      }
+      await this.audit.record({
+        actorType: "STAFF",
+        actorId: actor.staffUserId,
+        action: "FACILITY_DELETED",
+        resourceType: "FACILITY",
+        resourceId: facilityId,
+      });
     } catch (error) {
       throw mapConflict(error);
     }
@@ -105,6 +211,67 @@ export class OrganizationScopeService {
     }
   }
 
+  public async updateStaff(
+    actor: StaffActor,
+    staffUserId: string,
+    input: StaffUpdateRequest,
+  ): Promise<StaffSummary> {
+    this.policy.assertCapability(actor, "STAFF_MANAGE");
+    const healthCenterId = this.requireCenter(actor);
+    const target = await this.repository.findStaff(staffUserId);
+    if (target === null || target.health_center_id !== healthCenterId || target.role !== "BIDAN") {
+      throw forbidden();
+    }
+
+    const passwordHash = input.password ? await this.passwordHasher.hash(input.password) : undefined;
+    const updated = await this.repository.updateStaff(healthCenterId, staffUserId, {
+      ...(input.display_name !== undefined ? { displayName: input.display_name } : {}),
+      ...(passwordHash !== undefined ? { passwordHash } : {}),
+    });
+    if (updated === null) {
+      throw new ApiException({
+        status: HttpStatus.NOT_FOUND,
+        code: "STAFF_NOT_FOUND",
+        message: "Akun petugas tidak ditemukan.",
+      });
+    }
+
+    await this.audit.record({
+      actorType: "STAFF",
+      actorId: actor.staffUserId,
+      action: "STAFF_USER_UPDATED",
+      resourceType: "STAFF_USER",
+      resourceId: staffUserId,
+    });
+    return updated;
+  }
+
+  public async deleteStaff(actor: StaffActor, staffUserId: string): Promise<void> {
+    this.policy.assertCapability(actor, "STAFF_MANAGE");
+    const healthCenterId = this.requireCenter(actor);
+    const target = await this.repository.findStaff(staffUserId);
+    if (target === null || target.health_center_id !== healthCenterId || target.role !== "BIDAN") {
+      throw forbidden();
+    }
+
+    const deleted = await this.repository.deleteStaff(healthCenterId, staffUserId);
+    if (!deleted) {
+      throw new ApiException({
+        status: HttpStatus.NOT_FOUND,
+        code: "STAFF_NOT_FOUND",
+        message: "Akun petugas tidak ditemukan.",
+      });
+    }
+
+    await this.audit.record({
+      actorType: "STAFF",
+      actorId: actor.staffUserId,
+      action: "STAFF_USER_DELETED",
+      resourceType: "STAFF_USER",
+      resourceId: staffUserId,
+    });
+  }
+
   public async updateStaffStatus(
     actor: StaffActor,
     staffUserId: string,
@@ -137,6 +304,10 @@ export class OrganizationScopeService {
         target_staff_user_id: staffUserId,
       },
     });
+  }
+
+  public async listAssignments(actor: StaffActor): Promise<readonly StaffAssignmentDetail[]> {
+    return this.repository.listAssignments(this.requireManagedCenter(actor));
   }
 
   public async createAssignment(
@@ -229,7 +400,13 @@ function mapConflict(error: unknown): unknown {
       message: "Data dengan identitas tersebut sudah tersedia.",
     });
   }
-  if (isDatabaseError(error, "23503")) return forbidden();
+  if (isDatabaseError(error, "23503")) {
+    return new ApiException({
+      status: HttpStatus.CONFLICT,
+      code: "RESOURCE_IN_USE",
+      message: "Data tidak dapat dihapus karena masih terhubung dengan data riwayat/pasien lain.",
+    });
+  }
   return error;
 }
 
