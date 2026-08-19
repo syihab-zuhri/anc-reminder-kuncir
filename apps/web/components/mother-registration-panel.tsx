@@ -6,12 +6,25 @@ import { useState } from "react";
 interface MotherRegistrationPanelProps {
   readonly healthCenterId: string | null;
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
+  readonly onNavigateTab?: (
+    tab:
+      | "summary"
+      | "mothers"
+      | "register"
+      | "access"
+      | "clinical"
+      | "confirm"
+      | "bumil"
+      | "admin"
+      | "content",
+  ) => void;
 }
 
 type RegistrationStep = "FORM" | "REVIEW" | "SUCCESS";
 
 export function MotherRegistrationPanel({
   userRole,
+  onNavigateTab,
 }: MotherRegistrationPanelProps) {
   const [step, setStep] = useState<RegistrationStep>("FORM");
 
@@ -432,7 +445,16 @@ export function MotherRegistrationPanel({
             )}
           </div>
 
-          <div style={{ marginTop: "1rem" }}>
+          <div style={{ marginTop: "1rem", display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            {onNavigateTab && (
+              <button
+                className="btn-primary"
+                type="button"
+                onClick={() => onNavigateTab("mothers")}
+              >
+                👥 Lihat di Daftar Ibu Hamil
+              </button>
+            )}
             <button className="btn-secondary" type="button" onClick={handleResetForm}>
               + Daftarkan Ibu Hamil Lainnya
             </button>

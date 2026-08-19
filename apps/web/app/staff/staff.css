@@ -2433,3 +2433,23 @@
     width: 100%;
   }
 }
+
+/* Registered Mothers Panel & Modal Styles */
+.mothers-registry-panel {
+  animation: content-studio-enter 350ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+.mothers-filter-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.mothers-registry-panel .staff-table tr:hover td {
+  background: rgba(18, 56, 50, 0.025);
+}
+
+@media (max-width: 768px) {
+  .mothers-filter-card form {
+    grid-template-columns: 1fr !important;
+  }
+}
+

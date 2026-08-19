@@ -13,6 +13,7 @@ import { MotherAccessPanel } from "@/components/mother-access-panel";
 import { MotherRegistrationPanel } from "@/components/mother-registration-panel";
 import { OrganizationAdminPanel } from "@/components/organization-admin-panel";
 import { PuskesmasClinicalRecordPanel } from "@/components/puskesmas-clinical-record-panel";
+import { RegisteredMothersPanel } from "@/components/registered-mothers-panel";
 import { RoleDashboardShell } from "@/components/role-dashboard-shell";
 
 type SessionState =
@@ -20,8 +21,16 @@ type SessionState =
   | { readonly kind: "ready"; readonly staff: StaffMeResponse }
   | { readonly kind: "unavailable" };
 
-type ModuleTab =
-  "summary" | "admin" | "register" | "access" | "clinical" | "confirm" | "bumil" | "content";
+export type ModuleTab =
+  | "summary"
+  | "mothers"
+  | "register"
+  | "access"
+  | "clinical"
+  | "confirm"
+  | "bumil"
+  | "admin"
+  | "content";
 
 const roleCopy = {
   BIDAN: {
@@ -38,11 +47,15 @@ const roleCopy = {
   },
 } as const;
 
-export function StaffWorkspace() {
+interface StaffWorkspaceProps {
+  readonly initialTab?: ModuleTab;
+}
+
+export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) {
   const router = useRouter();
   const [session, setSession] = useState<SessionState>({ kind: "loading" });
   const [loggingOut, setLoggingOut] = useState(false);
-  const [activeTab, setActiveTab] = useState<ModuleTab>("summary");
+  const [activeTab, setActiveTab] = useState<ModuleTab>(initialTab);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -119,10 +132,10 @@ export function StaffWorkspace() {
           </button>
           <button
             type="button"
-            className={activeTab === "admin" ? "is-current" : ""}
-            onClick={() => setActiveTab("admin")}
+            className={activeTab === "mothers" ? "is-current" : ""}
+            onClick={() => setActiveTab("mothers")}
           >
-            <span>02</span> Administrasi
+            <span>02</span> Data Bumil
           </button>
           <button
             type="button"
@@ -161,10 +174,17 @@ export function StaffWorkspace() {
           </button>
           <button
             type="button"
+            className={activeTab === "admin" ? "is-current" : ""}
+            onClick={() => setActiveTab("admin")}
+          >
+            <span>08</span> Administrasi
+          </button>
+          <button
+            type="button"
             className={activeTab === "content" ? "is-current" : ""}
             onClick={() => setActiveTab("content")}
           >
-            <span>08</span> Konten Reminder
+            <span>09</span> Konten Reminder
           </button>
         </nav>
         <button className="staff-rail-logout" type="button" onClick={logout} disabled={loggingOut}>
@@ -189,7 +209,11 @@ export function StaffWorkspace() {
 
         {activeTab === "summary" && (
           <>
-            <RoleDashboardShell userRole={staff.role} healthCenterId={staff.health_center_id} />
+            <RoleDashboardShell
+              userRole={staff.role}
+              healthCenterId={staff.health_center_id}
+              onNavigateTab={setActiveTab}
+            />
 
             <section className="staff-session-card" aria-labelledby="session-title">
               <div>
@@ -222,12 +246,24 @@ export function StaffWorkspace() {
           </>
         )}
 
+        {activeTab === "mothers" && (
+          <RegisteredMothersPanel
+            userRole={staff.role}
+            healthCenterId={staff.health_center_id}
+            onNavigateTab={setActiveTab}
+          />
+        )}
+
         {activeTab === "admin" && (
           <OrganizationAdminPanel userRole={staff.role} healthCenterId={staff.health_center_id} />
         )}
 
         {activeTab === "register" && (
-          <MotherRegistrationPanel userRole={staff.role} healthCenterId={staff.health_center_id} />
+          <MotherRegistrationPanel
+            userRole={staff.role}
+            healthCenterId={staff.health_center_id}
+            onNavigateTab={setActiveTab}
+          />
         )}
 
         {activeTab === "access" && <MotherAccessPanel userRole={staff.role} />}

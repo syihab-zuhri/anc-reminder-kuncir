@@ -13,9 +13,21 @@ import { useEffect, useState } from "react";
 interface RoleDashboardShellProps {
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
   readonly healthCenterId: string | null;
+  readonly onNavigateTab?: (
+    tab:
+      | "summary"
+      | "mothers"
+      | "register"
+      | "access"
+      | "clinical"
+      | "confirm"
+      | "bumil"
+      | "admin"
+      | "content",
+  ) => void;
 }
 
-export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
+export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShellProps) {
   const [puskesmasData, setPuskesmasData] = useState<PuskesmasDashboardResponse | null>(null);
   const [bidanData, setBidanData] = useState<BidanDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -683,7 +695,19 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
 
       {/* Scoped Operational Search */}
       <div className="search-section" style={{ marginTop: "2rem" }}>
-        <h3>Cari Ibu Hamil Terdaftar</h3>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+          <h3 style={{ margin: 0 }}>Cari Ibu Hamil Terdaftar</h3>
+          {onNavigateTab && (
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ fontSize: "0.8rem", padding: "0.4rem 0.8rem" }}
+              onClick={() => onNavigateTab("mothers")}
+            >
+              👥 Buka Halaman Data Bumil Lengkap &rarr;
+            </button>
+          )}
+        </div>
         <form onSubmit={(e) => void handleSearchMothers(e)} className="search-form">
           <input
             className="staff-input"

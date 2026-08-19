@@ -1,7 +1,7 @@
 "use client";
 
 import type { MotherAccessCredentialIssueResponse, MotherSummary } from "@anc/contracts";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface MotherAccessPanelProps {
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
@@ -30,26 +30,30 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
 
   const [revokedSuccess, setRevokedSuccess] = useState<boolean>(false);
 
-  const fetchMothers = useCallback(async (): Promise<void> => {
-    setLoadingMothers(true);
-    try {
-      const res = await fetch("/api/staff-proxy/mothers");
-      if (res.ok) {
-        const data = (await res.json()) as { items: readonly MotherSummary[] };
-        setMothers(data.items ?? []);
-      }
-    } catch {
-      // Best-effort load
-    } finally {
-      setLoadingMothers(false);
-    }
-  }, []);
-
   useEffect(() => {
-    if (userRole !== "SUPER_ADMIN") {
-      void fetchMothers();
+    if (userRole === "SUPER_ADMIN") return;
+
+    const controller = new AbortController();
+    void loadMothers(controller.signal);
+    return () => controller.abort();
+
+    async function loadMothers(signal: AbortSignal): Promise<void> {
+      setLoadingMothers(true);
+      try {
+        const res = await fetch("/api/staff-proxy/mothers", { signal });
+        if (res.ok) {
+          const data = (await res.json()) as { items: readonly MotherSummary[] };
+          setMothers(data.items ?? []);
+        }
+      } catch (err) {
+        if (!(err instanceof DOMException && err.name === "AbortError")) {
+          // Best-effort load
+        }
+      } finally {
+        setLoadingMothers(false);
+      }
     }
-  }, [userRole, fetchMothers]);
+  }, [userRole]);
 
   if (userRole === "SUPER_ADMIN") {
     return (
