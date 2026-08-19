@@ -99,15 +99,44 @@ export function BumilPatientPortal() {
       </header>
 
       {/* Patient Selector for Staff */}
-      <div style={{ marginBottom: "1.5rem", padding: "1rem", background: "var(--color-surface, #f8fafc)", borderRadius: "8px", border: "1px solid var(--color-border, #e2e8f0)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
-          <div style={{ flex: 1, minWidth: "260px" }}>
-            <label htmlFor="portal-mother-select" style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
-              Pilih Pasien Ibu Hamil untuk Melihat Pratinjau Portal:
+      <div
+        style={{
+          marginBottom: "1.5rem",
+          padding: "1.25rem",
+          background: "var(--color-surface, #f8fafc)",
+          borderRadius: "8px",
+          border: "1px solid var(--color-border, #e2e8f0)",
+        }}
+      >
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr auto",
+            alignItems: "flex-end",
+            gap: "1rem",
+          }}
+        >
+          <div>
+            <label
+              htmlFor="portal-mother-select"
+              style={{
+                display: "block",
+                fontWeight: 600,
+                fontSize: "0.95rem",
+                marginBottom: "0.5rem",
+                color: "var(--color-ink, #0f172a)",
+              }}
+            >
+              Pilih Pasien Ibu Hamil untuk Melihat Pratinjau Portal
             </label>
             <select
               id="portal-mother-select"
               className="staff-input"
+              style={{
+                width: "100%",
+                height: "44px",
+                margin: 0,
+              }}
               value={selectedMotherId}
               onChange={(e) => setSelectedMotherId(e.target.value)}
               disabled={loadingMothers}
@@ -120,7 +149,9 @@ export function BumilPatientPortal() {
                 mothers.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.full_name} ({m.phone_masked}) - {m.village_name ?? "Tanpa Desa"} [
-                    {m.active_pregnancy ? `${m.active_pregnancy.completed_weeks} mg ${m.active_pregnancy.completed_days} hr` : "Tidak Aktif"}
+                    {m.active_pregnancy
+                      ? `${m.active_pregnancy.completed_weeks} mg ${m.active_pregnancy.completed_days} hr`
+                      : "Tidak Aktif"}
                     ]
                   </option>
                 ))
@@ -133,10 +164,21 @@ export function BumilPatientPortal() {
             href="/mother/login"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", height: "fit-content" }}
+            style={{
+              height: "44px",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "0.5rem",
+              whiteSpace: "nowrap",
+              padding: "0 1.25rem",
+              fontWeight: 600,
+            }}
           >
             <span>Buka Halaman Login Pasien</span>
-            <span aria-hidden="true">↗</span>
+            <span aria-hidden="true" style={{ fontSize: "1.1rem" }}>
+              ↗
+            </span>
           </a>
         </div>
       </div>
