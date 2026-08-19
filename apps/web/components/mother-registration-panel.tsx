@@ -1,5 +1,6 @@
 "use client";
 
+import type { MotherRegistrationResponse, MotherAccessCredentialIssueResponse } from "@anc/contracts";
 import { useState } from "react";
 
 interface MotherRegistrationPanelProps {
@@ -10,7 +11,6 @@ interface MotherRegistrationPanelProps {
 type RegistrationStep = "FORM" | "REVIEW" | "SUCCESS";
 
 export function MotherRegistrationPanel({
-  healthCenterId,
   userRole,
 }: MotherRegistrationPanelProps) {
   const [step, setStep] = useState<RegistrationStep>("FORM");
@@ -21,7 +21,6 @@ export function MotherRegistrationPanel({
   const [address, setAddress] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [pregnancyStartDate, setPregnancyStartDate] = useState("");
-  const [villageId, setVillageId] = useState("");
 
   // Consents
   const [consentReminder, setConsentReminder] = useState(true);
@@ -35,6 +34,11 @@ export function MotherRegistrationPanel({
     pregnancy_id: string;
     registered_at: string;
   } | null>(null);
+
+  // Immediate access code handoff state
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [codeError, setCodeError] = useState<string | null>(null);
 
   if (userRole === "SUPER_ADMIN") {
     return (
@@ -89,46 +93,41 @@ export function MotherRegistrationPanel({
     setSubmitting(true);
     setValidationError(null);
 
-    const consents: Array<{
-      purpose: "REMINDER" | "DATA_PROCESSING";
-      status: "GRANTED" | "WITHDRAWN";
-    }> = [];
-    consents.push({
-      purpose: "REMINDER",
-      status: consentReminder ? "GRANTED" : "WITHDRAWN",
-    });
-    consents.push({
-      purpose: "DATA_PROCESSING",
-      status: consentDataProcessing ? "GRANTED" : "WITHDRAWN",
-    });
-
     try {
-      const res = await fetch("/api/staff-proxy/mothers/register", {
+      const res = await fetch("/api/staff-proxy/mothers", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          health_center_id: healthCenterId,
-          village_id: villageId.trim() || null,
+          idempotency_key: crypto.randomUUID(),
           full_name: fullName.trim(),
           nik: nik.trim(),
           address: address.trim(),
           phone_number: phoneNumber.trim(),
           pregnancy_start_date: pregnancyStartDate.trim(),
-          consents,
+          consent: {
+            notification_allowed: consentReminder,
+          },
         }),
       });
 
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        setValidationError(data?.error?.message ?? "Gagal mendaftarkan ibu hamil.");
+      const data = (await res.json().catch(() => null)) as
+        | MotherRegistrationResponse
+        | { error?: { message?: string } }
+        | null;
+
+      if (!res.ok || !data || !("mother" in data)) {
+        const errorMsg =
+          (data as { error?: { message?: string } } | null)?.error?.message ??
+          "Gagal mendaftarkan ibu hamil ke database.";
+        setValidationError(errorMsg);
         setStep("FORM");
         return;
       }
 
       setSuccessResult({
-        mother_id: data.mother_id,
-        pregnancy_id: data.pregnancy_id,
-        registered_at: data.registered_at,
+        mother_id: data.mother.id,
+        pregnancy_id: data.pregnancy.id,
+        registered_at: data.consent.recorded_at,
       });
       setStep("SUCCESS");
     } catch {
@@ -139,17 +138,57 @@ export function MotherRegistrationPanel({
     }
   }
 
+  async function handleGenerateAccessCode(): Promise<void> {
+    if (!successResult) return;
+    setGeneratingCode(true);
+    setCodeError(null);
+
+    try {
+      const res = await fetch(
+        `/api/staff-proxy/mothers/${encodeURIComponent(successResult.mother_id)}/access-code/reissue`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            idempotency_key: crypto.randomUUID(),
+            reason: "Penerbitan awal saat pendaftaran pasien",
+          }),
+        },
+      );
+
+      const data = (await res.json().catch(() => null)) as
+        | MotherAccessCredentialIssueResponse
+        | { error?: { message?: string } }
+        | null;
+
+      if (!res.ok || !data || "error" in data || !("one_time_code" in data)) {
+        setCodeError(
+          (data as { error?: { message?: string } })?.error?.message ??
+            "Gagal menerbitkan kode akses ibu hamil.",
+        );
+        return;
+      }
+
+      setGeneratedCode(data.one_time_code);
+    } catch {
+      setCodeError("Terjadi gangguan jaringan saat menerbitkan kode akses.");
+    } finally {
+      setGeneratingCode(false);
+    }
+  }
+
   function handleResetForm(): void {
     setFullName("");
     setNik("");
     setAddress("");
     setPhoneNumber("");
     setPregnancyStartDate("");
-    setVillageId("");
     setConsentReminder(true);
     setConsentDataProcessing(true);
     setValidationError(null);
     setSuccessResult(null);
+    setGeneratedCode(null);
+    setCodeError(null);
     setStep("FORM");
   }
 
@@ -159,13 +198,13 @@ export function MotherRegistrationPanel({
     <div className="staff-panel-card">
       <header className="staff-panel-header">
         <div>
-          <span className="staff-kicker">TASK-P3-002 / Registry Pendaftaran</span>
+          <span className="staff-kicker">Registry Pendaftaran Ibu Hamil</span>
           <h2>Pendaftaran Ibu Hamil &amp; Formulir Persetujuan (Consent)</h2>
         </div>
       </header>
 
       {validationError && (
-        <div className="staff-alert alert-error">
+        <div className="staff-alert alert-error" style={{ marginBottom: "1rem" }}>
           <p>{validationError}</p>
         </div>
       )}
@@ -181,6 +220,7 @@ export function MotherRegistrationPanel({
             <label htmlFor="reg-fullname">1. Nama Lengkap Ibu Hamil *</label>
             <input
               id="reg-fullname"
+              className="staff-input"
               type="text"
               required
               placeholder="e.g. Siti Aminah"
@@ -193,6 +233,7 @@ export function MotherRegistrationPanel({
             <label htmlFor="reg-nik">2. Nomor Induk Kependudukan (NIK) *</label>
             <input
               id="reg-nik"
+              className="staff-input"
               type="text"
               required
               maxLength={16}
@@ -200,9 +241,8 @@ export function MotherRegistrationPanel({
               value={nik}
               onChange={(e) => setNik(e.target.value.replace(/\D/gu, ""))}
             />
-            <small className="field-help">
-              NIK dienkripsi server dengan kunci base64 dan tidak pernah disimpan dalam bentuk teks
-              jernih.
+            <small className="field-help" style={{ display: "block", marginTop: "0.25rem", color: "var(--color-ink-muted)" }}>
+              NIK dienkripsi kuat di server dengan kunci base64 dan tidak pernah disimpan dalam bentuk teks jernih.
             </small>
           </div>
 
@@ -210,9 +250,10 @@ export function MotherRegistrationPanel({
             <label htmlFor="reg-address">3. Alamat Domisili Lengkap *</label>
             <input
               id="reg-address"
+              className="staff-input"
               type="text"
               required
-              placeholder="Jalan, RT/RW, Dusun"
+              placeholder="Jalan, RT/RW, Dusun, Desa"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
             />
@@ -222,6 +263,7 @@ export function MotherRegistrationPanel({
             <label htmlFor="reg-phone">4. Nomor WhatsApp / Telepon *</label>
             <input
               id="reg-phone"
+              className="staff-input"
               type="tel"
               required
               placeholder="e.g. 081234567890"
@@ -234,30 +276,20 @@ export function MotherRegistrationPanel({
             <label htmlFor="reg-dating">5. Tanggal Awal Kehamilan (HPHT / Dating Date) *</label>
             <input
               id="reg-dating"
+              className="staff-input"
               type="date"
               required
               value={pregnancyStartDate}
               onChange={(e) => setPregnancyStartDate(e.target.value)}
             />
-            <small className="field-help">
+            <small className="field-help" style={{ display: "block", marginTop: "0.25rem", color: "var(--color-ink-muted)" }}>
               Digunakan oleh server untuk menghitung usia kehamilan dan jadwal K1-K8 otomatis.
             </small>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="reg-village">Desa Domisili (Opsional)</label>
-            <input
-              id="reg-village"
-              type="text"
-              placeholder="UUID desa domisili"
-              value={villageId}
-              onChange={(e) => setVillageId(e.target.value)}
-            />
-          </div>
-
-          <fieldset className="consent-fieldset">
-            <legend>Persetujuan Layanan (Consent Purposes)</legend>
-            <label className="checkbox-label">
+          <fieldset className="consent-fieldset" style={{ padding: "1rem", border: "1px solid var(--color-border)", borderRadius: "8px", margin: "1rem 0" }}>
+            <legend style={{ fontWeight: 600, padding: "0 0.5rem" }}>Persetujuan Layanan (Consent Purposes)</legend>
+            <label className="checkbox-label" style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start", marginBottom: "0.5rem" }}>
               <input
                 type="checkbox"
                 checked={consentReminder}
@@ -268,7 +300,7 @@ export function MotherRegistrationPanel({
                 Notification (REMINDER)
               </span>
             </label>
-            <label className="checkbox-label">
+            <label className="checkbox-label" style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
               <input
                 type="checkbox"
                 checked={consentDataProcessing}
@@ -290,44 +322,40 @@ export function MotherRegistrationPanel({
       {step === "REVIEW" && (
         <div className="staff-review-box">
           <h3>Konfirmasi Tinjauan Data Pendaftaran</h3>
-          <p className="review-lead">
-            Periksa kembali ringkasan data sebelum disimpan secara permanen ke server.
+          <p className="review-lead" style={{ marginBottom: "1.5rem" }}>
+            Periksa kembali ringkasan data sebelum disimpan secara permanen ke database Supabase.
           </p>
 
-          <dl className="review-list">
+          <dl className="review-list" style={{ display: "grid", gap: "0.75rem", marginBottom: "1.5rem" }}>
             <div>
-              <dt>Nama Ibu Hamil</dt>
-              <dd>{fullName}</dd>
+              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>Nama Ibu Hamil</dt>
+              <dd style={{ fontSize: "1.1rem", fontWeight: 600 }}>{fullName}</dd>
             </div>
             <div>
-              <dt>NIK (Tampilan Tersamar)</dt>
+              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>NIK (Tersamar untuk Keamanan)</dt>
               <dd>
                 <code>{maskedNikDisplay}</code>
               </dd>
             </div>
             <div>
-              <dt>Alamat Domisili</dt>
+              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>Alamat Domisili</dt>
               <dd>{address}</dd>
             </div>
             <div>
-              <dt>Nomor Kontak Telepon/WA</dt>
+              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>Nomor Kontak WhatsApp</dt>
               <dd>{phoneNumber}</dd>
             </div>
             <div>
-              <dt>Tanggal Awal Kehamilan</dt>
+              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>Tanggal Awal Kehamilan (HPHT)</dt>
               <dd>{pregnancyStartDate}</dd>
             </div>
             <div>
-              <dt>Persetujuan Pengingat WA</dt>
-              <dd>{consentReminder ? "Disetujui (GRANTED)" : "Ditolak (WITHDRAWN)"}</dd>
-            </div>
-            <div>
-              <dt>Persetujuan Pemrosesan ANC</dt>
-              <dd>{consentDataProcessing ? "Disetujui (GRANTED)" : "Ditolak (WITHDRAWN)"}</dd>
+              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>Persetujuan Pengingat</dt>
+              <dd>{consentReminder ? "✅ Disetujui (GRANTED)" : "❌ Ditolak (WITHDRAWN)"}</dd>
             </div>
           </dl>
 
-          <div className="button-row">
+          <div style={{ display: "flex", gap: "1rem" }}>
             <button
               className="btn-secondary"
               type="button"
@@ -339,61 +367,76 @@ export function MotherRegistrationPanel({
             <button
               className="btn-primary"
               type="button"
-              onClick={handleConfirmRegistration}
+              onClick={() => void handleConfirmRegistration()}
               disabled={submitting}
             >
-              {submitting ? "Mendaftarkan ke Server…" : "Konfirmasi &amp; Simpan Registration"}
+              {submitting ? "Mendaftarkan ke Database..." : "Konfirmasi & Simpan Pendaftaran"}
             </button>
           </div>
         </div>
       )}
 
       {step === "SUCCESS" && successResult && (
-        <div className="staff-success-box">
-          <div className="success-icon">&#10003;</div>
-          <h3>Pendaftaran Ibu Hamil Berhasil Disimpan</h3>
-          <p>Data pendaftaran dan jadwal ANC awal telah dibuat di server.</p>
+        <div className="staff-success-box" style={{ padding: "1.5rem", background: "var(--color-surface)", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
+          <div style={{ fontSize: "2.5rem", color: "var(--color-primary)", marginBottom: "0.5rem" }}>✅</div>
+          <h3>Pendaftaran Ibu Hamil Berhasil Disimpan ke Supabase!</h3>
+          <p style={{ color: "var(--color-ink-muted)", marginBottom: "1.5rem" }}>
+            Data ibu hamil, kehamilan aktif, persetujuan, dan jadwal ANC (K1-K8) telah otomatis dibuat di database.
+          </p>
 
-          <dl className="review-list">
+          <dl className="review-list" style={{ display: "grid", gap: "0.75rem", marginBottom: "1.5rem" }}>
             <div>
-              <dt>Nama Ibu Hamil</dt>
-              <dd>
-                <strong>{fullName}</strong>
-              </dd>
+              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>Nama Ibu Hamil</dt>
+              <dd style={{ fontSize: "1.2rem", fontWeight: 700 }}>{fullName}</dd>
             </div>
             <div>
-              <dt>NIK Pasien (Privasi Terjaga)</dt>
-              <dd>
-                <code>{maskedNikDisplay}</code>
-              </dd>
+              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>NIK Pasien (Tersamar)</dt>
+              <dd><code>{maskedNikDisplay}</code></dd>
             </div>
             <div>
-              <dt>ID Ibu Hamil (Mother ID)</dt>
-              <dd>
-                <code>{successResult.mother_id}</code>
-              </dd>
-            </div>
-            <div>
-              <dt>ID Kehamilan Aktif (Pregnancy ID)</dt>
-              <dd>
-                <code>{successResult.pregnancy_id}</code>
-              </dd>
-            </div>
-            <div>
-              <dt>Waktu Terdaftar Server</dt>
+              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>Waktu Terdaftar</dt>
               <dd>{new Date(successResult.registered_at).toLocaleString("id-ID")}</dd>
             </div>
           </dl>
 
-          <div className="security-notice">
-            <strong>Proteksi Privasi Redaksi NIK:</strong> NIK lengkap dienkripsi secara
-            irreversibel menggunakan <code>NIK_ENCRYPTION_KEY</code> pada server. Halaman ini tidak
-            lagi menyimpan atau menampilkan plaintext NIK.
+          {/* Quick Access Code Generator Box */}
+          <div style={{ margin: "1.5rem 0", padding: "1.25rem", background: "var(--color-surface-raised, #f8fafc)", borderRadius: "8px", border: "1px solid var(--color-primary-light, #cbd5e1)" }}>
+            <h4 style={{ margin: "0 0 0.5rem 0" }}>🔑 Kode Akses Portal Ibu Hamil</h4>
+            {generatedCode ? (
+              <div>
+                <p style={{ margin: "0 0 0.75rem 0", fontSize: "0.9rem", color: "var(--color-ink-muted)" }}>
+                  Serahkan kode akses di bawah ini kepada pasien untuk login ke Portal Ibu Hamil mandiri:
+                </p>
+                <div style={{ padding: "1rem", background: "var(--color-bg, #0f172a)", color: "#38bdf8", fontSize: "1.4rem", fontWeight: "bold", fontFamily: "monospace", letterSpacing: "2px", borderRadius: "6px", textAlign: "center", marginBottom: "0.75rem" }}>
+                  {generatedCode}
+                </div>
+                <small style={{ color: "#e11d48", fontWeight: 600 }}>
+                  ⚠️ Perhatian: Kode hanya ditampilkan satu kali ini. Catat atau serahkan langsung ke pasien.
+                </small>
+              </div>
+            ) : (
+              <div>
+                <p style={{ margin: "0 0 0.75rem 0", fontSize: "0.9rem" }}>
+                  Terbitkan kode akses 16-karakter sekarang agar ibu hamil dapat langsung memantau kehamilannya di Portal Ibu Hamil.
+                </p>
+                {codeError && <p style={{ color: "#e11d48", marginBottom: "0.5rem" }}>{codeError}</p>}
+                <button
+                  className="btn-primary"
+                  type="button"
+                  onClick={() => void handleGenerateAccessCode()}
+                  disabled={generatingCode}
+                >
+                  {generatingCode ? "Menerbitkan Kode Akses..." : "⚡ Terbitkan Kode Akses Sekarang"}
+                </button>
+              </div>
+            )}
           </div>
 
-          <button className="btn-primary" type="button" onClick={handleResetForm}>
-            Daftarkan Ibu Hamil Lainnya
-          </button>
+          <div style={{ marginTop: "1rem" }}>
+            <button className="btn-secondary" type="button" onClick={handleResetForm}>
+              + Daftarkan Ibu Hamil Lainnya
+            </button>
+          </div>
         </div>
       )}
     </div>
