@@ -1,25 +1,99 @@
 "use client";
 
-import type { MilestoneCode } from "@anc/contracts";
-import { useState } from "react";
+import type {
+  Facility,
+  MotherSummary,
+  PregnancyMilestoneListResponse,
+  PregnancyMilestoneResponse,
+} from "@anc/contracts";
+import { useCallback, useEffect, useState } from "react";
 
 interface BidanVisitConfirmationPanelProps {
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
 }
 
 export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmationPanelProps) {
-  const [pregnancyId, setPregnancyId] = useState("");
-  const [milestoneCode, setMilestoneCode] = useState<MilestoneCode>("K2");
-  const [facilityId, setFacilityId] = useState("");
-  const [facilityType, setFacilityType] = useState<
-    "POSYANDU" | "PUSKESMAS" | "KLINIK_PRIVATE" | "RUMAH_SAKIT"
-  >("POSYANDU");
+  // Loaded data states
+  const [mothers, setMothers] = useState<readonly MotherSummary[]>([]);
+  const [facilities, setFacilities] = useState<readonly Facility[]>([]);
+  const [loadingInitial, setLoadingInitial] = useState(false);
+
+  // Selected state
+  const [selectedMotherId, setSelectedMotherId] = useState("");
+  const [milestones, setMilestones] = useState<readonly PregnancyMilestoneResponse[]>([]);
+  const [loadingMilestones, setLoadingMilestones] = useState(false);
+
+  const [selectedMilestoneId, setSelectedMilestoneId] = useState("");
+  const [selectedFacilityId, setSelectedFacilityId] = useState("");
   const [occurredOn, setOccurredOn] = useState(new Date().toISOString().slice(0, 10));
 
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(
     null,
   );
+
+  const fetchInitialData = useCallback(async (): Promise<void> => {
+    setLoadingInitial(true);
+    try {
+      const [mRes, fRes] = await Promise.all([
+        fetch("/api/staff-proxy/mothers"),
+        fetch("/api/staff-proxy/staff/organization/facilities"),
+      ]);
+
+      if (mRes.ok) {
+        const mData = (await mRes.json()) as { items: readonly MotherSummary[] };
+        setMothers(mData.items ?? []);
+      }
+      if (fRes.ok) {
+        const fData = (await fRes.json()) as readonly Facility[];
+        setFacilities(fData);
+        if (fData.length > 0 && !selectedFacilityId) {
+          setSelectedFacilityId(fData[0].id);
+        }
+      }
+    } catch {
+      // Best-effort load
+    } finally {
+      setLoadingInitial(false);
+    }
+  }, [selectedFacilityId]);
+
+  useEffect(() => {
+    if (userRole !== "SUPER_ADMIN") {
+      void fetchInitialData();
+    }
+  }, [userRole, fetchInitialData]);
+
+  // When mother selection changes, load pregnancy milestones
+  const handleSelectMother = async (motherId: string): Promise<void> => {
+    setSelectedMotherId(motherId);
+    setSelectedMilestoneId("");
+    setMilestones([]);
+    setFeedback(null);
+
+    const mother = mothers.find((m) => m.id === motherId);
+    if (!mother || !mother.active_pregnancy) return;
+
+    setLoadingMilestones(true);
+    try {
+      const res = await fetch(
+        `/api/staff-proxy/pregnancies/${encodeURIComponent(mother.active_pregnancy.id)}/milestones`,
+      );
+      if (res.ok) {
+        const data = (await res.json()) as PregnancyMilestoneListResponse;
+        setMilestones(data.milestones ?? []);
+        // Auto select first unconfirmed milestone
+        const firstUnconfirmed = data.milestones?.find((m) => m.visit_status !== "CONFIRMED");
+        if (firstUnconfirmed) {
+          setSelectedMilestoneId(firstUnconfirmed.id);
+        }
+      }
+    } catch {
+      setFeedback({ type: "error", message: "Gagal memuat daftar milestone ANC pasien." });
+    } finally {
+      setLoadingMilestones(false);
+    }
+  };
 
   if (userRole === "SUPER_ADMIN") {
     return (
@@ -35,24 +109,25 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
 
   async function handleConfirmVisit(e: React.FormEvent): Promise<void> {
     e.preventDefault();
-    if (!pregnancyId.trim() || !occurredOn.trim()) return;
+    if (!selectedMilestoneId.trim() || !selectedFacilityId.trim() || !occurredOn.trim()) return;
     setSubmitting(true);
     setFeedback(null);
 
     try {
-      const res = await fetch("/api/staff-proxy/visit-confirmations", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          pregnancy_id: pregnancyId.trim(),
-          milestone_code: milestoneCode,
-          facility_id: facilityId.trim() || null,
-          facility_type: facilityType,
-          occurred_on: occurredOn.trim(),
-        }),
-      });
+      const res = await fetch(
+        `/api/staff-proxy/milestones/${encodeURIComponent(selectedMilestoneId.trim())}/confirm`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            idempotency_key: crypto.randomUUID(),
+            occurred_on: occurredOn.trim(),
+            facility_id: selectedFacilityId.trim(),
+          }),
+        },
+      );
 
-      const data = await res.json().catch(() => null);
+      const data = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
       if (!res.ok) {
         setFeedback({
           type: "error",
@@ -61,10 +136,16 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
         return;
       }
 
+      const activeMilestone = milestones.find((m) => m.id === selectedMilestoneId);
       setFeedback({
         type: "success",
-        message: `Konfirmasi pemeriksaan ${milestoneCode} berhasil disimpan. Milestone diperbarui menjadi CONFIRMED.`,
+        message: `Konfirmasi pemeriksaan ${activeMilestone?.code ?? "ANC"} berhasil dicatat ke Supabase! Status milestone kini CONFIRMED.`,
       });
+
+      // Refresh milestones list
+      if (selectedMotherId) {
+        await handleSelectMother(selectedMotherId);
+      }
     } catch {
       setFeedback({ type: "error", message: "Koneksi terputus saat menghubungi server." });
     } finally {
@@ -76,94 +157,104 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
     <div className="staff-panel-card">
       <header className="staff-panel-header">
         <div>
-          <span className="staff-kicker">TASK-P3-009 / Konfirmasi Satu-Tindakan (Bidan)</span>
-          <h2>Konfirmasi Sudah Periksa (K2 / K3 / K6 / K7)</h2>
+          <span className="staff-kicker">Konfirmasi Pemeriksaan Lapangan</span>
+          <h2>Konfirmasi Sudah Periksa (K1 – K8)</h2>
         </div>
       </header>
 
       {feedback && (
         <div
           className={`staff-alert ${feedback.type === "success" ? "alert-success" : "alert-error"}`}
+          style={{ marginBottom: "1rem" }}
         >
           <p>{feedback.message}</p>
         </div>
       )}
 
-      <form className="staff-form-grid" onSubmit={handleConfirmVisit}>
+      <form onSubmit={(e) => void handleConfirmVisit(e)} className="staff-form-grid">
         <div className="form-group">
-          <label htmlFor="confirm-preg-id">ID Kehamilan (Pregnancy ID) *</label>
-          <input
-            id="confirm-preg-id"
-            type="text"
-            required
-            placeholder="UUID Kehamilan Aktif Pasien"
-            value={pregnancyId}
-            onChange={(e) => setPregnancyId(e.target.value)}
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="confirm-milestone">Milestone Yang Dikonfirmasi *</label>
+          <label htmlFor="confirm-mother">1. Pilih Ibu Hamil *</label>
           <select
-            id="confirm-milestone"
-            value={milestoneCode}
-            onChange={(e) => setMilestoneCode(e.target.value as MilestoneCode)}
+            id="confirm-mother"
+            className="staff-input"
+            value={selectedMotherId}
+            onChange={(e) => void handleSelectMother(e.target.value)}
+            required
           >
-            <option value="K2">K2 - Pemeriksaan Kunjungan Kedua (Bidan/Posyandu)</option>
-            <option value="K3">K3 - Pemeriksaan Kunjungan Ketiga (Bidan/Posyandu)</option>
-            <option value="K6">K6 - Pemeriksaan Kunjungan Keenam (Bidan/Posyandu)</option>
-            <option value="K7">K7 - Pemeriksaan Kunjungan Ketujuh (Bidan/Posyandu)</option>
+            <option value="">-- {loadingInitial ? "Memuat pasien..." : "Pilih Ibu Hamil"} --</option>
+            {mothers.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.full_name} ({m.phone_masked}) - {m.active_pregnancy?.trimester_label ?? "Kehamilan Aktif"}
+              </option>
+            ))}
           </select>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="confirm-facility-type">Tipe Fasilitas Tempat Periksa *</label>
-          <select
-            id="confirm-facility-type"
-            value={facilityType}
-            onChange={(e) =>
-              setFacilityType(
-                e.target.value as "POSYANDU" | "PUSKESMAS" | "KLINIK_PRIVATE" | "RUMAH_SAKIT",
-              )
-            }
-          >
-            <option value="POSYANDU">Posyandu / Bidan Mandiri</option>
-            <option value="PUSKESMAS">Puskesmas Pembantu / Induk</option>
-            <option value="KLINIK_PRIVATE">Klinik Swasta</option>
-            <option value="RUMAH_SAKIT">Rumah Sakit</option>
-          </select>
-        </div>
+        {selectedMotherId && (
+          <>
+            <div className="form-group">
+              <label htmlFor="confirm-milestone">2. Pilih Jadwal Milestone Kunjungan *</label>
+              {loadingMilestones ? (
+                <p className="field-hint">Memuat jadwal milestone...</p>
+              ) : milestones.length === 0 ? (
+                <p className="field-hint">Tidak ada data milestone kehamilan aktif.</p>
+              ) : (
+                <select
+                  id="confirm-milestone"
+                  className="staff-input"
+                  value={selectedMilestoneId}
+                  onChange={(e) => setSelectedMilestoneId(e.target.value)}
+                  required
+                >
+                  <option value="">-- Pilih Milestone --</option>
+                  {milestones.map((ms) => (
+                    <option key={ms.id} value={ms.id}>
+                      {ms.code} ({ms.trimester_label}) - Status: {ms.visit_status}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="confirm-facility-id">ID Fasilitas (Opsional)</label>
-          <input
-            id="confirm-facility-id"
-            type="text"
-            placeholder="UUID Fasilitas Kesehatan"
-            value={facilityId}
-            onChange={(e) => setFacilityId(e.target.value)}
-          />
-        </div>
+            <div className="form-group">
+              <label htmlFor="confirm-facility">3. Fasilitas Tempat Pemeriksaan *</label>
+              <select
+                id="confirm-facility"
+                className="staff-input"
+                value={selectedFacilityId}
+                onChange={(e) => setSelectedFacilityId(e.target.value)}
+                required
+              >
+                <option value="">-- Pilih Fasilitas Kesehatan --</option>
+                {facilities.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name} ({f.facility_type})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="confirm-occurred">Tanggal Pemeriksaan Dilakukan *</label>
-          <input
-            id="confirm-occurred"
-            type="date"
-            required
-            value={occurredOn}
-            onChange={(e) => setOccurredOn(e.target.value)}
-          />
-        </div>
+            <div className="form-group">
+              <label htmlFor="confirm-date">4. Tanggal Aktual Kunjungan *</label>
+              <input
+                id="confirm-date"
+                className="staff-input"
+                type="date"
+                required
+                value={occurredOn}
+                onChange={(e) => setOccurredOn(e.target.value)}
+              />
+            </div>
 
-        <div className="security-notice">
-          <strong>Perhatian Satu-Tindakan (DOC-PERMISSION):</strong> Menu konfirmasi ini khusus
-          mencatat fakta kehadiran/pemeriksaan tanpa input detail medis klinis.
-        </div>
-
-        <button className="btn-primary" type="submit" disabled={submitting}>
-          {submitting ? "Konfirmasi Server…" : `Simpan Konfirmasi Periksa (${milestoneCode})`}
-        </button>
+            <button
+              className="btn-primary"
+              type="submit"
+              disabled={submitting || !selectedMilestoneId || !selectedFacilityId}
+            >
+              {submitting ? "Menyimpan ke Supabase..." : "Simpan Konfirmasi Kunjungan"}
+            </button>
+          </>
+        )}
       </form>
     </div>
   );
