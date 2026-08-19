@@ -1,254 +1,273 @@
 "use client";
 
-import type { BumilDashboardResponse } from "@anc/contracts";
-import { useEffect, useState } from "react";
+import type {
+  MotherSummary,
+  PregnancyMilestoneListResponse,
+  PregnancyMilestoneResponse,
+} from "@anc/contracts";
+import { useCallback, useEffect, useState } from "react";
 
 export function BumilPatientPortal() {
-  const [data, setData] = useState<BumilDashboardResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [mothers, setMothers] = useState<readonly MotherSummary[]>([]);
+  const [selectedMotherId, setSelectedMotherId] = useState<string>("");
+  const [loadingMothers, setLoadingMothers] = useState(true);
+
+  const [milestones, setMilestones] = useState<readonly PregnancyMilestoneResponse[]>([]);
+  const [loadingMilestones, setLoadingMilestones] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    void fetchBumilDashboard();
-
-    async function fetchBumilDashboard(): Promise<void> {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const res = await fetch("/api/staff-proxy/mother/me/dashboard");
-        if (!res.ok) {
-          // Try alternative mother endpoint or show fallback
-          setError("Sesi mandiri Ibu Hamil belum terhubung.");
-          return;
+  // Load mothers list from Supabase
+  const fetchMothers = useCallback(async (): Promise<void> => {
+    setLoadingMothers(true);
+    try {
+      const res = await fetch("/api/staff-proxy/mothers");
+      if (res.ok) {
+        const data = (await res.json()) as { items: readonly MotherSummary[] };
+        const items = data.items ?? [];
+        setMothers(items);
+        if (items.length > 0) {
+          const firstWithPregnancy = items.find((m) => m.active_pregnancy) ?? items[0];
+          if (firstWithPregnancy) {
+            setSelectedMotherId(firstWithPregnancy.id);
+          }
         }
-        const parsed = (await res.json()) as BumilDashboardResponse;
-        setData(parsed);
-      } catch {
-        setError("Koneksi terputus saat memuat linimasa Ibu Hamil.");
-      } finally {
-        setLoading(false);
       }
+    } catch {
+      setError("Gagal memuat daftar ibu hamil dari database.");
+    } finally {
+      setLoadingMothers(false);
     }
   }, []);
 
-  if (loading) {
-    return (
-      <div className="staff-panel-card">
-        <p className="staff-kicker">Memuat Linimasa Ibu Hamil…</p>
-        <div className="loading-spinner" />
-      </div>
-    );
-  }
+  useEffect(() => {
+    void fetchMothers();
+  }, [fetchMothers]);
 
-  if (error || !data) {
-    return (
-      <div className="staff-panel-card bumil-portal-wrap">
-        <header className="staff-panel-header">
-          <div>
-            <span className="staff-kicker">TASK-P3-010 / Portal Mandiri Ibu Hamil</span>
-            <h2>Linimasa Pemeriksaan Kehamilan (K1–K8)</h2>
-          </div>
-        </header>
+  // When selected mother changes, load pregnancy milestones
+  useEffect(() => {
+    if (!selectedMotherId) {
+      setMilestones([]);
+      return;
+    }
 
-        <div className="staff-alert alert-info">
-          <p>
-            <strong>Portal Mandiri Ibu Hamil:</strong> Halaman ini merupakan antarmuka khusus ibu
-            hamil yang diakses secara terpisah melalui <code>/mother/login</code> menggunakan Nama
-            Lengkap dan Kode Akses 16 karakter yang diterbitkan saat pendaftaran.
-          </p>
-        </div>
+    const mother = mothers.find((m) => m.id === selectedMotherId);
+    if (!mother || !mother.active_pregnancy) {
+      setMilestones([]);
+      return;
+    }
 
-        <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "1rem" }}>
-          <a
-            className="btn-primary"
-            href="/mother/login"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}
-          >
-            <span>Buka Portal Ibu Hamil</span>
-            <span aria-hidden="true">↗</span>
-          </a>
-        </div>
+    const pregnancyId = mother.active_pregnancy.id;
 
-        {/* Informational Preview of Thin-Client Mother Portal */}
-        <section className="bumil-hero-card">
-          <div className="bumil-profile-info">
-            <h3>Contoh Tampilan Pasien Ibu Hamil</h3>
-            <p>Dusun Kuncir, Desa Kuncir (Puskesmas Kuncir)</p>
-          </div>
+    async function loadMilestones(): Promise<void> {
+      setLoadingMilestones(true);
+      setError(null);
+      try {
+        const res = await fetch(
+          `/api/staff-proxy/pregnancies/${encodeURIComponent(pregnancyId)}/milestones`,
+        );
+        if (res.ok) {
+          const data = (await res.json()) as PregnancyMilestoneListResponse;
+          setMilestones(data.milestones ?? []);
+        } else {
+          setError("Gagal memuat linimasa pemeriksaan kehamilan.");
+        }
+      } catch {
+        setError("Koneksi terputus saat memuat linimasa.");
+      } finally {
+        setLoadingMilestones(false);
+      }
+    }
 
-          <div className="gestational-badge-box">
-            <span className="trimester-badge">Trimester 2</span>
-            <div className="gestational-age">
-              <strong>18 Minggu 4 Hari</strong>
-              <small>Usia Kehamilan (Kalkulasi Otomatis Server)</small>
-            </div>
-          </div>
-        </section>
+    void loadMilestones();
+  }, [selectedMotherId, mothers]);
 
-        {/* Milestone Banner Preview */}
-        <section className="next-milestone-banner">
-          <span className="banner-kicker">Rekomendasi Jadwal Berikutnya</span>
-          <div className="banner-body">
-            <div>
-              <h4>Milestone K2 (Kunjungan Kedua)</h4>
-              <p>
-                Fasilitas Rujukan: <strong>Posyandu Melati 01 / Bidan Desa</strong>
-              </p>
-            </div>
-            <div className="banner-due">
-              <span className="due-label">Jatuh Tempo:</span>
-              <strong className="due-date">Sesuai Rekomendasi Server</strong>
-            </div>
-          </div>
-        </section>
+  const activeMother = mothers.find((m) => m.id === selectedMotherId);
+  const activePregnancy = activeMother?.active_pregnancy;
 
-        {/* Timeline Structure */}
-        <section className="milestone-timeline-section">
-          <h3>Struktur Linimasa K1 – K8 Server-Driven</h3>
-          <p className="section-help">
-            Status pemeriksaan (CONFIRMED, DUE, OVERDUE, UPCOMING) dihitung dan dikirim langsung
-            oleh server backend tanpa komputasi lokal.
-          </p>
-
-          <div className="timeline-grid">
-            {[
-              { code: "K1", name: "K1 (TM 1 - Skrining Dokter)", status: "CONFIRMED", label: "Sudah Periksa" },
-              { code: "K2", name: "K2 (TM 2 - Pemeriksaan Bidan)", status: "DUE", label: "Jatuh Tempo" },
-              { code: "K3", name: "K3 (TM 2 - Evaluasi Janin)", status: "UPCOMING", label: "Akan Datang" },
-              { code: "K4", name: "K4 (TM 3 - Pemantauan TM3)", status: "UPCOMING", label: "Akan Datang" },
-              { code: "K5", name: "K5 (TM 3 - Dokter & Persalinan)", status: "UPCOMING", label: "Akan Datang" },
-              { code: "K6", name: "K6 (TM 3 - Skrining Akhir)", status: "UPCOMING", label: "Akan Datang" },
-              { code: "K7", name: "K7 (TM 3 - Bidan/Posyandu)", status: "UPCOMING", label: "Akan Datang" },
-              { code: "K8", name: "K8 (TM 3 - Evaluasi Akhir)", status: "UPCOMING", label: "Akan Datang" },
-            ].map((m) => (
-              <div key={m.code} className={`timeline-card status-${m.status.toLowerCase()}`}>
-                <div className="timeline-code">{m.code}</div>
-                <div className="timeline-detail">
-                  <span className={`badge-status status-${m.status.toLowerCase()}`}>{m.label}</span>
-                  <small className="timeline-date">{m.name}</small>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <footer className="thin-client-footer">
-          <p>
-            <strong>Prinsip Server-Driven Thin Client (ADR Server-Driven):</strong> Seluruh
-            perhitungan usia kehamilan, tanggal rujukan, dan status K1-K8 dilakukan oleh server API.
-            Aplikasi mandiri ibu hamil tidak menyimpan atau mengubah status lokal.
-          </p>
-        </footer>
-      </div>
-    );
-  }
+  // Determine next milestone
+  const nextMilestone =
+    milestones.find((m) => m.visit_status === "DUE" || m.visit_status === "OVERDUE") ??
+    milestones.find((m) => m.visit_status === "UPCOMING");
 
   return (
     <div className="staff-panel-card bumil-portal-wrap">
       <header className="staff-panel-header">
         <div>
-          <span className="staff-kicker">TASK-P3-010 / Thin-Client Ibu Hamil</span>
-          <h2>Linimasa Pemeriksaan ANC Ibu Hamil</h2>
+          <span className="staff-kicker">Pratinjau Portal Mandiri Ibu Hamil</span>
+          <h2>Linimasa Pemeriksaan Kehamilan Pasien (K1–K8)</h2>
         </div>
       </header>
 
-      {/* Profile & Gestational Age Card */}
-      <section className="bumil-hero-card">
-        <div className="bumil-profile-info">
-          <h3>{data.mother_info.full_name}</h3>
-          <p>
-            {data.mother_info.address}{" "}
-            {data.mother_info.village_name ? `(${data.mother_info.village_name})` : ""}
-          </p>
+      {/* Patient Selector for Staff */}
+      <div style={{ marginBottom: "1.5rem", padding: "1rem", background: "var(--color-surface, #f8fafc)", borderRadius: "8px", border: "1px solid var(--color-border, #e2e8f0)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+          <div style={{ flex: 1, minWidth: "260px" }}>
+            <label htmlFor="portal-mother-select" style={{ display: "block", fontWeight: 600, marginBottom: "0.25rem" }}>
+              Pilih Pasien Ibu Hamil untuk Melihat Pratinjau Portal:
+            </label>
+            <select
+              id="portal-mother-select"
+              className="staff-input"
+              value={selectedMotherId}
+              onChange={(e) => setSelectedMotherId(e.target.value)}
+              disabled={loadingMothers}
+            >
+              {loadingMothers ? (
+                <option value="">Memuat data pasien...</option>
+              ) : mothers.length === 0 ? (
+                <option value="">Belum ada ibu hamil terdaftar</option>
+              ) : (
+                mothers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.full_name} ({m.phone_masked}) - {m.village_name ?? "Tanpa Desa"} [
+                    {m.active_pregnancy ? `${m.active_pregnancy.completed_weeks} mg ${m.active_pregnancy.completed_days} hr` : "Tidak Aktif"}
+                    ]
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+
+          <a
+            className="btn-secondary"
+            href="/mother/login"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", height: "fit-content" }}
+          >
+            <span>Buka Halaman Login Pasien</span>
+            <span aria-hidden="true">↗</span>
+          </a>
         </div>
+      </div>
 
-        {data.active_pregnancy ? (
-          <div className="gestational-badge-box">
-            <span className="trimester-badge">{data.active_pregnancy.trimester_label}</span>
-            <div className="gestational-age">
-              <strong>
-                {data.active_pregnancy.completed_weeks} Minggu{" "}
-                {data.active_pregnancy.completed_days} Hari
-              </strong>
-              <small>Usia Kehamilan (Hasil Kalkulasi Server)</small>
-            </div>
-          </div>
-        ) : (
-          <p className="empty-notice">Tidak ada kehamilan aktif terdaftar saat ini.</p>
-        )}
-      </section>
-
-      {/* Next Milestone Banner */}
-      {data.next_milestone && (
-        <section className="next-milestone-banner">
-          <span className="banner-kicker">Rekomendasi Jadwal Berikutnya</span>
-          <div className="banner-body">
-            <div>
-              <h4>Milestone {data.next_milestone.milestone_code}</h4>
-              <p>
-                Fasilitas Rujukan:{" "}
-                <strong>
-                  {data.next_milestone.recommended_facility_name ?? "Puskesmas / Posyandu"}
-                </strong>
-              </p>
-            </div>
-            <div className="banner-due">
-              <span className="due-label">Jatuh Tempo:</span>
-              <strong className="due-date">
-                {data.next_milestone.due_at ??
-                  data.next_milestone.expected_due_date ??
-                  "Sesuai Jadwal"}
-              </strong>
-            </div>
-          </div>
-        </section>
+      {error && (
+        <div className="staff-alert alert-error" style={{ marginBottom: "1rem" }}>
+          <p>{error}</p>
+        </div>
       )}
 
-      {/* Timeline K1 - K8 */}
-      <section className="milestone-timeline-section">
-        <h3>Linimasa Lengkap K1 – K8</h3>
-        <p className="section-help">
-          Status pemeriksaan diperbarui otomatis oleh bidan/petugas Puskesmas saat kunjungan.
-        </p>
+      {loadingMilestones ? (
+        <div style={{ padding: "2rem", textAlign: "center" }}>
+          <p className="staff-kicker">Memuat data linimasa kehamilan dari Supabase...</p>
+        </div>
+      ) : activeMother && activePregnancy ? (
+        <div>
+          {/* Hero Patient Card */}
+          <section className="bumil-hero-card">
+            <div className="bumil-profile-info">
+              <h3>{activeMother.full_name}</h3>
+              <p>
+                {activeMother.address} &bull; {activeMother.village_name ?? "Wilayah Puskesmas Kuncir"}
+              </p>
+              <small style={{ color: "var(--color-ink-muted)" }}>
+                HPHT: {activePregnancy.dating_date} &bull; No. Kontak: {activeMother.phone_masked}
+              </small>
+            </div>
 
-        <div className="timeline-grid">
-          {data.milestones.map((m) => (
-            <div
-              key={m.milestone_code}
-              className={`timeline-card status-${m.visit_status.toLowerCase()}`}
-            >
-              <div className="timeline-code">{m.milestone_code}</div>
-              <div className="timeline-detail">
-                <span className={`badge-status status-${m.visit_status.toLowerCase()}`}>
-                  {m.visit_status === "CONFIRMED"
-                    ? "Sudah Periksa"
-                    : m.visit_status === "DUE"
-                      ? "Jatuh Tempo"
-                      : m.visit_status === "OVERDUE"
-                        ? "Terlewat"
-                        : "Akan Datang"}
-                </span>
-                <small className="timeline-date">
-                  {m.occurred_on
-                    ? `Periksa: ${m.occurred_on}`
-                    : m.due_at
-                      ? `Jatuh Tempo: ${m.due_at}`
-                      : "Sesuai Jadwal"}
-                </small>
+            <div className="gestational-badge-box">
+              <span className="trimester-badge">{activePregnancy.trimester_label}</span>
+              <div className="gestational-age">
+                <strong>
+                  {activePregnancy.completed_weeks} Minggu {activePregnancy.completed_days} Hari
+                </strong>
+                <small>Usia Kehamilan (Server-Calculated)</small>
               </div>
             </div>
-          ))}
-        </div>
-      </section>
+          </section>
 
-      <footer className="thin-client-footer">
+          {/* Next Milestone Banner */}
+          {nextMilestone && (
+            <section className="next-milestone-banner" style={{ margin: "1.5rem 0" }}>
+              <span className="banner-kicker">Rekomendasi Jadwal Berikutnya</span>
+              <div className="banner-body">
+                <div>
+                  <h4>
+                    Milestone {nextMilestone.code} ({nextMilestone.trimester_label})
+                  </h4>
+                  <p>
+                    Tempat Pemeriksaan:{" "}
+                    <strong>
+                      {nextMilestone.required_facility_policy === "PUSKESMAS_REQUIRED"
+                        ? "Puskesmas Kuncir (Skrining Dokter Terpadu)"
+                        : "Posyandu / Praktik Bidan Desa Setempat"}
+                    </strong>
+                  </p>
+                </div>
+                <div className="banner-due">
+                  <span className="due-label">Rentang Rekomendasi:</span>
+                  <strong className="due-date">
+                    {nextMilestone.target_date_start ?? "Sesuai Jadwal"} s/d {nextMilestone.target_date_end ?? "Sesuai Jadwal"}
+                  </strong>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Live Milestone Timeline K1 - K8 */}
+          <section className="milestone-timeline-section">
+            <h3>Linimasa Lengkap K1 – K8 Pasien</h3>
+            <p className="section-help">
+              Status linimasa (CONFIRMED, DUE, OVERDUE, UPCOMING) dihitung dan dikirim langsung
+              secara real-time oleh server backend Supabase.
+            </p>
+
+            <div className="timeline-grid">
+              {milestones.map((m) => {
+                const isConfirmed = m.visit_status === "CONFIRMED";
+                const isDue = m.visit_status === "DUE";
+                const isOverdue = m.visit_status === "OVERDUE";
+
+                let statusBadge = "Akan Datang";
+                let statusClass = "upcoming";
+
+                if (isConfirmed) {
+                  statusBadge = "✓ Sudah Periksa";
+                  statusClass = "completed";
+                } else if (isOverdue) {
+                  statusBadge = "⚠️ Terlewat (Overdue)";
+                  statusClass = "overdue";
+                } else if (isDue) {
+                  statusBadge = "⚡ Waktunya Periksa";
+                  statusClass = "due";
+                }
+
+                return (
+                  <div key={m.id} className={`timeline-card status-${statusClass}`}>
+                    <div className="timeline-code">{m.code}</div>
+                    <div className="timeline-detail">
+                      <span className={`badge-status status-${statusClass}`}>{statusBadge}</span>
+                      <small className="timeline-date" style={{ fontWeight: 600, display: "block", marginTop: "0.25rem" }}>
+                        {m.trimester_label}
+                      </small>
+                      <small style={{ color: "var(--color-ink-muted)", fontSize: "0.8rem" }}>
+                        {isConfirmed
+                          ? "Tercatat di Supabase"
+                          : m.target_date_start && m.target_date_end
+                          ? `${m.target_date_start} s/d ${m.target_date_end}`
+                          : "Sesuai Usia Kehamilan"}
+                      </small>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </div>
+      ) : (
+        <div style={{ padding: "2rem", textAlign: "center", background: "var(--color-surface)", borderRadius: "8px" }}>
+          <h3>Belum Ada Data Pasien Kehamilan Aktif</h3>
+          <p style={{ color: "var(--color-ink-muted)" }}>
+            Silakan daftarkan pasien baru pada tab <strong>03 Register Bumil</strong> untuk melihat simulasi linimasa mandiri.
+          </p>
+        </div>
+      )}
+
+      <footer className="thin-client-footer" style={{ marginTop: "2rem" }}>
         <p>
-          <strong>Prinsip Server-Driven Thin Client (ADR Server-Driven):</strong> Seluruh
-          perhitungan usia kehamilan, tanggal rujukan, dan status K1-K8 dilakukan oleh server API.
-          Halaman ini tidak menyimpan atau mengubah status lokal.
+          <strong>Prinsip Server-Driven Thin Client (ADR Server-Driven):</strong> Seluruh perhitungan
+          usia kehamilan, tanggal rujukan, dan status K1-K8 dilakukan oleh server API Supabase.
+          Aplikasi mandiri ibu hamil tidak menyimpan atau mengubah status lokal.
         </p>
       </footer>
     </div>
