@@ -432,7 +432,17 @@ export class FakeOrganizationScopeRepository implements OrganizationScopeReposit
     return true;
   }
 
-  public async listAssignments(healthCenterId: string): Promise<readonly { id: string; staff_user_id: string; staff_name: string; staff_identifier: string; scope_type: "AREA" | "MOTHER"; scope_id: string; village_name?: string | null }[]> {
+  public async listAssignments(healthCenterId: string): Promise<
+    readonly {
+      id: string;
+      staff_user_id: string;
+      staff_name: string;
+      staff_identifier: string;
+      scope_type: "AREA" | "MOTHER";
+      scope_id: string;
+      village_name?: string | null;
+    }[]
+  > {
     return this.assignments
       .filter((a) => {
         const staff = this.staff.find((s) => s.id === a.staff_user_id);
@@ -457,4 +467,3 @@ export class FakeOrganizationScopeRepository implements OrganizationScopeReposit
     this.scopeCenters.set(`MOTHER:${motherId}`, healthCenterId);
   }
 }
-

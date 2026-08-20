@@ -1,14 +1,18 @@
 import { createDatabasePool } from "../packages/database/dist/index.js";
 
-
 async function checkConnection() {
   const databaseUrl = process.env.DATABASE_URL;
-  console.log("Testing connection to Database host:", databaseUrl ? databaseUrl.split("@")[1]?.split("/")[0] : "UNDEFINED");
-  
+  console.log(
+    "Testing connection to Database host:",
+    databaseUrl ? databaseUrl.split("@")[1]?.split("/")[0] : "UNDEFINED",
+  );
+
   const pool = createDatabasePool(databaseUrl);
   const client = await pool.connect();
   try {
-    const timeRes = await client.query("SELECT NOW() as server_time, current_database(), current_user, version();");
+    const timeRes = await client.query(
+      "SELECT NOW() as server_time, current_database(), current_user, version();",
+    );
     console.log("=== SUPABASE CONNECTION SUCCESS ===");
     console.log("Database:", timeRes.rows[0].current_database);
     console.log("User:", timeRes.rows[0].current_user);
@@ -16,9 +20,11 @@ async function checkConnection() {
     console.log("PostgreSQL Version:", timeRes.rows[0].version.split(",")[0]);
 
     // Check schema tables
-    const tablesRes = await client.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;");
+    const tablesRes = await client.query(
+      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    );
     console.log(`\nFound ${tablesRes.rows.length} tables in public schema:`);
-    console.log(tablesRes.rows.map(r => ` - ${r.table_name}`).join("\n"));
+    console.log(tablesRes.rows.map((r) => ` - ${r.table_name}`).join("\n"));
 
     // Check data row counts
     const countRes = await client.query(`
@@ -34,7 +40,6 @@ async function checkConnection() {
     `);
     console.log("\n=== DATA ROW COUNTS ===");
     console.log(JSON.stringify(countRes.rows[0], null, 2));
-
   } catch (error) {
     console.error("=== DATABASE CONNECTION FAILED ===");
     console.error(error);

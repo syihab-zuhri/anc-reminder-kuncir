@@ -78,10 +78,7 @@ export class OrganizationScopeController {
     @Req() request: AuthenticatedRequest,
     @Param("id") id: string,
   ): Promise<void> {
-    await this.service.deleteVillage(
-      requireActor(request),
-      parseRequest(uuidPathSchema, id),
-    );
+    await this.service.deleteVillage(requireActor(request), parseRequest(uuidPathSchema, id));
   }
 
   @Get("organization/facilities")
@@ -119,10 +116,7 @@ export class OrganizationScopeController {
     @Req() request: AuthenticatedRequest,
     @Param("id") id: string,
   ): Promise<void> {
-    await this.service.deleteFacility(
-      requireActor(request),
-      parseRequest(uuidPathSchema, id),
-    );
+    await this.service.deleteFacility(requireActor(request), parseRequest(uuidPathSchema, id));
   }
 
   @Get("users")
@@ -160,10 +154,7 @@ export class OrganizationScopeController {
     @Req() request: AuthenticatedRequest,
     @Param("id") id: string,
   ): Promise<void> {
-    await this.service.deleteStaff(
-      requireActor(request),
-      parseRequest(uuidPathSchema, id),
-    );
+    await this.service.deleteStaff(requireActor(request), parseRequest(uuidPathSchema, id));
   }
 
   @Patch("users/:id/status")

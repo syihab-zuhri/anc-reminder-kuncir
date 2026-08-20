@@ -148,17 +148,17 @@ Buat tiga secret hex yang berbeda untuk `SESSION_SECRET`, `MOTHER_SESSION_SECRET
 
 Nilai rahasia minimal yang harus tersedia adalah:
 
-| Variabel | Dipakai oleh | Catatan |
-| --- | --- | --- |
-| `DATABASE_URL` | API, worker | URL PostgreSQL aplikasi; TLS untuk database non-local. |
-| `DATABASE_DIRECT_URL` | migrasi saja | Koneksi langsung database; jangan dipakai runtime bila memakai pooler. |
-| `SESSION_SECRET` | API | Minimal 32 karakter, berbeda dari secret lain. |
-| `MOTHER_SESSION_SECRET` | API | Minimal 32 karakter, berbeda. |
-| `IDEMPOTENCY_SECRET` | API | Minimal 32 karakter, berbeda. |
-| `NIK_ENCRYPTION_KEY` | API | Base64 dari tepat 32 byte. |
-| `PUSH_TOKEN_ENCRYPTION_KEY` | API, worker | Base64 dari tepat 32 byte dan berbeda. |
-| `FCM_PROJECT_ID` | worker | ID proyek Firebase. |
-| `FCM_SERVICE_ACCOUNT_JSON` | worker | JSON service account Firebase utuh, disimpan sebagai secret. |
+| Variabel                    | Dipakai oleh | Catatan                                                                |
+| --------------------------- | ------------ | ---------------------------------------------------------------------- |
+| `DATABASE_URL`              | API, worker  | URL PostgreSQL aplikasi; TLS untuk database non-local.                 |
+| `DATABASE_DIRECT_URL`       | migrasi saja | Koneksi langsung database; jangan dipakai runtime bila memakai pooler. |
+| `SESSION_SECRET`            | API          | Minimal 32 karakter, berbeda dari secret lain.                         |
+| `MOTHER_SESSION_SECRET`     | API          | Minimal 32 karakter, berbeda.                                          |
+| `IDEMPOTENCY_SECRET`        | API          | Minimal 32 karakter, berbeda.                                          |
+| `NIK_ENCRYPTION_KEY`        | API          | Base64 dari tepat 32 byte.                                             |
+| `PUSH_TOKEN_ENCRYPTION_KEY` | API, worker  | Base64 dari tepat 32 byte dan berbeda.                                 |
+| `FCM_PROJECT_ID`            | worker       | ID proyek Firebase.                                                    |
+| `FCM_SERVICE_ACCOUNT_JSON`  | worker       | JSON service account Firebase utuh, disimpan sebagai secret.           |
 
 ## 6. Environment setiap proses
 
@@ -167,11 +167,11 @@ menaruh secret dalam `package.json`, konfigurasi Nginx, atau source code.
 
 ### 6.1 Web (`anc-web`)
 
-| Variabel | Nilai contoh |
-| --- | --- |
-| `NODE_ENV` | `production` |
-| `HOSTNAME` | `127.0.0.1` |
-| `PORT` | `3000` |
+| Variabel       | Nilai contoh                   |
+| -------------- | ------------------------------ |
+| `NODE_ENV`     | `production`                   |
+| `HOSTNAME`     | `127.0.0.1`                    |
+| `PORT`         | `3000`                         |
 | `API_BASE_URL` | `https://anc.contoh.id/api/v1` |
 
 `API_BASE_URL` adalah variabel server-side untuk route proxy Next.js. Gunakan nama ini, bukan
@@ -179,16 +179,16 @@ sekadar `NEXT_PUBLIC_API_URL`.
 
 ### 6.2 API (`anc-api`)
 
-| Variabel | Nilai contoh |
-| --- | --- |
-| `NODE_ENV` | `production` |
-| `API_HOST` | `127.0.0.1` |
-| `API_PORT` | `3001` |
-| `APP_BASE_URL` | `https://anc.contoh.id` |
-| `API_BASE_URL` | `https://anc.contoh.id/api/v1` |
-| `PRIMARY_TIMEZONE` | `Asia/Jakarta` |
-| `SCHEDULER_ENABLED` | `false` |
-| `DATABASE_URL` dan seluruh secret API | sesuai tabel langkah 5 |
+| Variabel                              | Nilai contoh                   |
+| ------------------------------------- | ------------------------------ |
+| `NODE_ENV`                            | `production`                   |
+| `API_HOST`                            | `127.0.0.1`                    |
+| `API_PORT`                            | `3001`                         |
+| `APP_BASE_URL`                        | `https://anc.contoh.id`        |
+| `API_BASE_URL`                        | `https://anc.contoh.id/api/v1` |
+| `PRIMARY_TIMEZONE`                    | `Asia/Jakarta`                 |
+| `SCHEDULER_ENABLED`                   | `false`                        |
+| `DATABASE_URL` dan seluruh secret API | sesuai tabel langkah 5         |
 
 `SCHEDULER_ENABLED=false` diperlukan karena worker pada langkah berikut menjadi satu-satunya
 proses yang membuat/mengirim siklus pengingat. Jangan menjalankan scheduler API dan worker loop
@@ -196,12 +196,12 @@ bersamaan.
 
 ### 6.3 Worker (`anc-worker`)
 
-| Variabel | Nilai contoh |
-| --- | --- |
-| `NODE_ENV` | `production` |
-| `WORKER_MODE` | `loop` |
-| `WORKER_POLL_INTERVAL_SECONDS` | `300` |
-| `PRIMARY_TIMEZONE` | `Asia/Jakarta` |
+| Variabel                                                                                  | Nilai contoh           |
+| ----------------------------------------------------------------------------------------- | ---------------------- |
+| `NODE_ENV`                                                                                | `production`           |
+| `WORKER_MODE`                                                                             | `loop`                 |
+| `WORKER_POLL_INTERVAL_SECONDS`                                                            | `300`                  |
+| `PRIMARY_TIMEZONE`                                                                        | `Asia/Jakarta`         |
 | `DATABASE_URL`, `PUSH_TOKEN_ENCRYPTION_KEY`, `FCM_PROJECT_ID`, `FCM_SERVICE_ACCOUNT_JSON` | sesuai tabel langkah 5 |
 
 ## 7. Menjalankan tiga Node Project
@@ -209,11 +209,11 @@ bersamaan.
 Di **Website → Node Project**, buat tiga proses menggunakan Node `24.x`, user `www`, direktori kerja
 `/www/wwwroot/anc-reminder`, dan satu instance/cluster untuk masing-masing proses.
 
-| Nama | Perintah start kustom | Port |
-| --- | --- | --- |
-| `anc-web` | `npm run start --workspace=@anc/web` | `3000` |
-| `anc-api` | `node apps/api/dist/main.js` | `3001` |
-| `anc-worker` | `node apps/worker/dist/main.js` | tidak ada |
+| Nama         | Perintah start kustom                | Port      |
+| ------------ | ------------------------------------ | --------- |
+| `anc-web`    | `npm run start --workspace=@anc/web` | `3000`    |
+| `anc-api`    | `node apps/api/dist/main.js`         | `3001`    |
+| `anc-worker` | `node apps/worker/dist/main.js`      | tidak ada |
 
 Pastikan environment dari langkah 6 dimasukkan pada proses yang tepat sebelum menekan **Start**.
 Jika versi aaPanel Anda hanya menerima startup file, gunakan mode **PM2 Project** dan masukkan file

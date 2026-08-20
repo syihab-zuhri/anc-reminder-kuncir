@@ -140,7 +140,7 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
   // Filter tabs strictly by user's permitted capabilities/roles
   const visibleTabs = TAB_DEFINITIONS.filter((tab) => tab.allowedRoles.includes(staff.role));
   const isTabAllowed = visibleTabs.some((t) => t.id === activeTab);
-  const effectiveTab = isTabAllowed ? activeTab : visibleTabs[0]?.id ?? "summary";
+  const effectiveTab = isTabAllowed ? activeTab : (visibleTabs[0]?.id ?? "summary");
 
   return (
     <div className="staff-workspace">
@@ -195,14 +195,17 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
             <section className="staff-session-card" aria-labelledby="session-title">
               <div className="staff-session-header">
                 <div>
-                  <h3 id="session-title">
-                    Informasi Sesi Petugas
-                  </h3>
-                  <p style={{ fontSize: "0.82rem", color: "var(--ink-muted)", margin: "0.2rem 0 0" }}>
+                  <h3 id="session-title">Informasi Sesi Petugas</h3>
+                  <p
+                    style={{ fontSize: "0.82rem", color: "var(--ink-muted)", margin: "0.2rem 0 0" }}
+                  >
                     Sesi terhubung aman dan terverifikasi oleh server.
                   </p>
                 </div>
-                <span className="badge-status status-confirmed" style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem" }}>
+                <span
+                  className="badge-status status-confirmed"
+                  style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem" }}
+                >
                   ● Sesi Aktif
                 </span>
               </div>
@@ -219,7 +222,11 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
                 </div>
                 <div>
                   <dt>Wilayah Fasilitas</dt>
-                  <dd>{staff.health_center_id ? "Puskesmas Kuncir" : "Seluruh Wilayah (Puskesmas Induk)"}</dd>
+                  <dd>
+                    {staff.health_center_id
+                      ? "Puskesmas Kuncir"
+                      : "Seluruh Wilayah (Puskesmas Induk)"}
+                  </dd>
                 </div>
                 <div>
                   <dt>Status Akun</dt>
@@ -254,9 +261,7 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
           <PuskesmasClinicalRecordPanel userRole={staff.role} />
         )}
 
-        {effectiveTab === "confirm" && (
-          <BidanVisitConfirmationPanel userRole={staff.role} />
-        )}
+        {effectiveTab === "confirm" && <BidanVisitConfirmationPanel userRole={staff.role} />}
 
         {effectiveTab === "bumil" && <BumilPatientPortal />}
 

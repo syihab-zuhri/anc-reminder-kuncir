@@ -223,7 +223,9 @@ export class OrganizationScopeService {
       throw forbidden();
     }
 
-    const passwordHash = input.password ? await this.passwordHasher.hash(input.password) : undefined;
+    const passwordHash = input.password
+      ? await this.passwordHasher.hash(input.password)
+      : undefined;
     const updated = await this.repository.updateStaff(healthCenterId, staffUserId, {
       ...(input.display_name !== undefined ? { displayName: input.display_name } : {}),
       ...(passwordHash !== undefined ? { passwordHash } : {}),

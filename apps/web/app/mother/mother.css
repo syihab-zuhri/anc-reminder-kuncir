@@ -196,7 +196,9 @@
   color: var(--ink, #163d37);
   opacity: 0.75;
   text-decoration: none;
-  transition: opacity 0.15s ease, color 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease;
 }
 
 .mother-login-links a:hover {
