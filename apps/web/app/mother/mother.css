@@ -1,4 +1,4 @@
-﻿/* Mother Portal - Mobile-First Stylesheet */
+/* Mother Portal - Mobile-First Stylesheet */
 /* Reuses design tokens from globals.css (paper, ink, accent, ochre) */
 
 .mother-shell {
@@ -16,6 +16,19 @@
   padding: 1rem 1.25rem;
   border-bottom: 1px solid rgba(22 61 55 / 0.08);
   background: var(--raised, #fbf8f1);
+}
+
+.mother-brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.15s ease;
+}
+
+.mother-brand-link:hover {
+  opacity: 0.85;
 }
 
 .mother-header-label {
@@ -166,6 +179,31 @@
 .mother-error-card .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.mother-login-links {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(22 61 55 / 0.08);
+  font-size: 0.8125rem;
+}
+
+.mother-login-links a {
+  color: var(--ink, #163d37);
+  opacity: 0.75;
+  text-decoration: none;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease;
+}
+
+.mother-login-links a:hover {
+  opacity: 1;
+  color: var(--accent, #c96349);
 }
 
 .btn-logout {

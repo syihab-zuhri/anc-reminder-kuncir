@@ -13,9 +13,21 @@ import { useEffect, useState } from "react";
 interface RoleDashboardShellProps {
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
   readonly healthCenterId: string | null;
+  readonly onNavigateTab?: (
+    tab:
+      | "summary"
+      | "mothers"
+      | "register"
+      | "access"
+      | "clinical"
+      | "confirm"
+      | "bumil"
+      | "admin"
+      | "content",
+  ) => void;
 }
 
-export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
+export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShellProps) {
   const [puskesmasData, setPuskesmasData] = useState<PuskesmasDashboardResponse | null>(null);
   const [bidanData, setBidanData] = useState<BidanDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,7 +67,8 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
         if (userRole === "PUSKESMAS") {
           const res = await fetch("/api/staff-proxy/dashboard/puskesmas");
           if (!res.ok) {
-            setError("Gagal memuat dashboard Puskesmas.");
+            const data = await res.json().catch(() => null);
+            setError(data?.error?.message ?? data?.message ?? "Gagal memuat dashboard Puskesmas.");
             return;
           }
           const data = (await res.json()) as PuskesmasDashboardResponse;
@@ -63,7 +76,8 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
         } else if (userRole === "BIDAN") {
           const res = await fetch("/api/staff-proxy/dashboard/bidan");
           if (!res.ok) {
-            setError("Gagal memuat dashboard Bidan.");
+            const data = await res.json().catch(() => null);
+            setError(data?.error?.message ?? data?.message ?? "Gagal memuat dashboard Bidan.");
             return;
           }
           const data = (await res.json()) as BidanDashboardResponse;
@@ -206,11 +220,11 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
       <div className="staff-panel-card">
         <div className="staff-alert alert-warning">
           <p>
-            <strong>Pemberitahuan Akses Terisolasi Super Admin (TASK-P3-007):</strong>
+            <strong>Pemberitahuan Akses Terisolasi Super Admin:</strong>
             <br />
-            Sesuai kebijakan keamanan dan privasi data (PRD-SECURITY, ADR-004), akun Super Admin
-            diberi hak akses <em>deny-by-default</em> dan dilarang melihat data kesehatan
-            operasional rutin ibu hamil.
+            Sesuai kebijakan keamanan dan privasi data, akun Super Admin diberi hak akses{" "}
+            <em>deny-by-default</em> dan dilarang melihat data kesehatan operasional rutin ibu
+            hamil.
           </p>
         </div>
       </div>
@@ -242,7 +256,7 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
     <div className="staff-panel-card">
       <header className="staff-panel-header">
         <div>
-          <span className="staff-kicker">TASK-P3-006 / Dashboard Operasional Server-Driven</span>
+          <span className="staff-kicker">Dashboard Operasional</span>
           <h2>
             {userRole === "PUSKESMAS"
               ? "Ringkasan Wilayah Kerja Puskesmas"
@@ -498,7 +512,7 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
                           <td>{reminderFailureLabel(item.push_failure_summary)}</td>
                           <td>
                             {item.fallback_age_hours} jam
-                            {item.escalated && <span className="badge-action"> Eskalasi</span>}
+                            {item.escalated && <span className="badge-action">Eskalasi</span>}
                           </td>
                           <td>{item.fallback_status}</td>
                           <td>
@@ -541,13 +555,13 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
         </div>
       )}
 
-      {/* TASK-P5-004: Organization Summary Reports per Village */}
+      {/* Organization Summary Reports per Village */}
       {userRole === "PUSKESMAS" && (
         <div className="queue-section" style={{ marginTop: "2rem" }}>
           <header
             style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
           >
-            <h3>Laporan Ringkasan Aggregat Wilayah Per Desa (TASK-P5-004)</h3>
+            <h3>Laporan Ringkasan Agregat Wilayah Per Desa</h3>
             <button
               className="btn-secondary"
               type="button"
@@ -594,10 +608,10 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
         </div>
       )}
 
-      {/* TASK-P4-013: WhatsApp Fallback Actions Queue */}
+      {/* WhatsApp Fallback Actions Queue */}
       <div className="queue-section" style={{ marginTop: "2rem" }}>
         <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h3>Antrean Tindak Lanjut WhatsApp (TASK-P4-013)</h3>
+          <h3>Antrean Tindak Lanjut WhatsApp</h3>
           <button className="btn-secondary" type="button" onClick={() => void fetchWaQueue()}>
             {waLoading ? "Memuat..." : "Refresh Queue"}
           </button>
@@ -681,7 +695,27 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
 
       {/* Scoped Operational Search */}
       <div className="search-section" style={{ marginTop: "2rem" }}>
-        <h3>Cari Ibu Hamil Terdaftar</h3>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "0.5rem",
+          }}
+        >
+          <h3 style={{ margin: 0 }}>Cari Ibu Hamil Terdaftar</h3>
+          {onNavigateTab && (
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ fontSize: "0.8rem", padding: "0.4rem 0.8rem" }}
+              onClick={() => onNavigateTab("mothers")}
+            >
+              Buka Halaman Data Bumil Lengkap &rarr;
+            </button>
+          )}
+        </div>
         <form onSubmit={(e) => void handleSearchMothers(e)} className="search-form">
           <input
             className="staff-input"

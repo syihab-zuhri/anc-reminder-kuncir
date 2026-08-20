@@ -15,7 +15,14 @@ out/
 *.jks
 *.keystore
 *service-account*.json
+*firebase-adminsdk*.json
+*-adminsdk-*.json
+*-fbsvc-*.json
 supabase.config.md
+supabase/.temp/*
+supabase/.environment
+*.env.production
+# 🔑 Protect production environment files only
 
 # Runtime files
 *.log
@@ -51,4 +58,9 @@ test-results/
 human.md
 run.md
 sesion-agent.md
+ibumil.md
 
+# Local source-package exports
+posyandu-kuncir-source-*.zip
+
+ANC_Reminder_Blueprint_v1.1.0

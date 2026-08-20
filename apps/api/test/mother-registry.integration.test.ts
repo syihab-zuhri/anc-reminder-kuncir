@@ -17,9 +17,12 @@ import { ApiException } from "../src/errors/api.exception.js";
 import type { IdempotencyService } from "../src/idempotency/idempotency.service.js";
 import {
   ActiveAncPlanUnavailableError,
+  MotherRecordHasActivePregnancyError,
   maskPhone,
+  type ArchiveMotherRecordInput,
   type CreateMotherRegistrationInput,
   type MotherRegistryRepository,
+  type UpdateMotherRecordInput,
 } from "../src/registry/mother-registry.repository.js";
 import { NikCipher } from "../src/registry/nik-cipher.js";
 import { JsonLogger } from "../src/observability/json-logger.js";
@@ -34,6 +37,7 @@ import {
 const centerId = "30000000-0000-4000-8000-000000000001";
 const puskesmasId = "40000000-0000-4000-8000-000000000001";
 const bidanId = "40000000-0000-4000-8000-000000000002";
+const superAdminId = "40000000-0000-4000-8000-000000000003";
 const password = "AmanSekali2026";
 const now = new Date("2026-08-10T09:00:00.000Z");
 
@@ -49,13 +53,14 @@ describe("mother registry API", () => {
     idempotency = new FakeIdempotencyService();
     audit = new FakeAuditRepository();
     const passwordHash = await new PasswordHasher().hash(password);
-    for (const [id, role, loginIdentifier] of [
-      [puskesmasId, "PUSKESMAS", "puskesmas"],
-      [bidanId, "BIDAN", "bidan"],
+    for (const [id, role, loginIdentifier, hcId] of [
+      [puskesmasId, "PUSKESMAS", "puskesmas", centerId],
+      [bidanId, "BIDAN", "bidan", centerId],
+      [superAdminId, "SUPER_ADMIN", "super_admin", null],
     ] as const) {
       auth.seedUser({
         id,
-        healthCenterId: centerId,
+        healthCenterId: hcId,
         displayName: role,
         role,
         status: "ACTIVE",
@@ -149,13 +154,21 @@ describe("mother registry API", () => {
       .set("authorization", `Bearer ${puskesmasToken}`)
       .send({ ...registrationRequest(), pregnancy_start_date: "2026-08-11" })
       .expect(422);
+    const superAdminToken = await login("super_admin");
+    await request(server())
+      .post("/api/v1/mothers")
+      .set("authorization", `Bearer ${superAdminToken}`)
+      .send(registrationRequest())
+      .expect(403);
+    expect(registry.created).toHaveLength(0);
+
     const bidanToken = await login("bidan");
     await request(server())
       .post("/api/v1/mothers")
       .set("authorization", `Bearer ${bidanToken}`)
       .send(registrationRequest())
-      .expect(403);
-    expect(registry.created).toHaveLength(0);
+      .expect(201);
+    expect(registry.created).toHaveLength(1);
   });
 
   it("fails safely when no approved active ANC plan can be selected", async () => {
@@ -168,6 +181,55 @@ describe("mother registry API", () => {
       .expect(409);
     expect(errorCode(response)).toBe("REGISTRATION_NOT_READY");
     expect(registry.created).toHaveLength(0);
+  });
+
+  it("updates patient administration data and archives only a closed record for Puskesmas", async () => {
+    const token = await login("puskesmas");
+    const update = await request(server())
+      .patch("/api/v1/mothers/50000000-0000-4000-8000-000000000001")
+      .set("authorization", `Bearer ${token}`)
+      .send({
+        idempotency_key: "8b26fdbd-6306-4bbf-9765-3fd620888e7d",
+        full_name: "Siti Aminah Diperbarui",
+        address: "Jl. Mawar Nomor 2, Kuncir",
+        phone_number: "0812-3456-789",
+        reason: "Koreksi data administrasi",
+      })
+      .expect(200);
+    expect(update.body).toMatchObject({
+      id: "50000000-0000-4000-8000-000000000001",
+      full_name: "Siti Aminah Diperbarui",
+    });
+
+    registry.hasActivePregnancy = true;
+    await request(server())
+      .delete("/api/v1/mothers/50000000-0000-4000-8000-000000000001")
+      .set("authorization", `Bearer ${token}`)
+      .send({
+        idempotency_key: "8b26fdbd-6306-4bbf-9765-3fd620888e7e",
+        reason: "Data pendaftaran duplikat",
+      })
+      .expect(409);
+
+    registry.hasActivePregnancy = false;
+    await request(server())
+      .delete("/api/v1/mothers/50000000-0000-4000-8000-000000000001")
+      .set("authorization", `Bearer ${token}`)
+      .send({
+        idempotency_key: "8b26fdbd-6306-4bbf-9765-3fd620888e7f",
+        reason: "Data pendaftaran duplikat",
+      })
+      .expect(200);
+
+    const bidanToken = await login("bidan");
+    await request(server())
+      .delete("/api/v1/mothers/50000000-0000-4000-8000-000000000001")
+      .set("authorization", `Bearer ${bidanToken}`)
+      .send({
+        idempotency_key: "8b26fdbd-6306-4bbf-9765-3fd620888e80",
+        reason: "Data pendaftaran duplikat",
+      })
+      .expect(403);
   });
 
   async function login(identifier: string): Promise<string> {
@@ -218,6 +280,7 @@ class FakeMotherRegistryRepository implements MotherRegistryRepository {
   public readonly created: CreateMotherRegistrationInput[] = [];
   public readonly registrations = new Map<string, MotherRegistrationResponse>();
   public failWithoutActivePlan = false;
+  public hasActivePregnancy = false;
 
   public async create(
     client: TransactionClient,
@@ -260,6 +323,49 @@ class FakeMotherRegistryRepository implements MotherRegistryRepository {
   ): Promise<MotherRegistrationResponse | null> {
     void client;
     return this.registrations.get(motherId) ?? null;
+  }
+
+  public async updateRecord(
+    client: TransactionClient,
+    input: UpdateMotherRecordInput,
+  ): Promise<{ id: string; full_name: string; address: string; phone_masked: string }> {
+    void client;
+    return {
+      id: input.motherId,
+      full_name: input.fullName,
+      address: input.address,
+      phone_masked: maskPhone(input.phoneNormalized ?? "628123456789"),
+    };
+  }
+
+  public async findRecordUpdate(
+    client: TransactionClient,
+    motherId: string,
+  ): Promise<{ id: string; full_name: string; address: string; phone_masked: string } | null> {
+    void client;
+    return {
+      id: motherId,
+      full_name: "Siti Aminah Diperbarui",
+      address: "Jl. Mawar Nomor 2, Kuncir",
+      phone_masked: maskPhone("628123456789"),
+    };
+  }
+
+  public async archiveRecord(
+    client: TransactionClient,
+    input: ArchiveMotherRecordInput,
+  ): Promise<{ id: string; archived_at: string }> {
+    void client;
+    if (this.hasActivePregnancy) throw new MotherRecordHasActivePregnancyError();
+    return { id: input.motherId, archived_at: input.archivedAt.toISOString() };
+  }
+
+  public async findArchivedRecord(
+    client: TransactionClient,
+    motherId: string,
+  ): Promise<{ id: string; archived_at: string } | null> {
+    void client;
+    return { id: motherId, archived_at: now.toISOString() };
   }
 }
 

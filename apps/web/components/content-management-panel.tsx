@@ -290,7 +290,7 @@ function ContentWorkspace() {
     <section className="content-studio" aria-labelledby="content-studio-title">
       <header className="content-studio-hero">
         <div>
-          <p className="staff-kicker">TASK-P4-010 / Meja editorial klinis</p>
+          <p className="staff-kicker">Meja editorial klinis</p>
           <h2 id="content-studio-title">Naskah yang aman, jejak persetujuan yang jelas.</h2>
           <p>
             Susun template tanpa data pasien, tinjau hasil substitusi sintetis, lalu terbitkan
@@ -344,7 +344,7 @@ function ContentWorkspace() {
           className={`content-feedback ${feedback.type === "success" ? "is-success" : "is-error"}`}
           role={feedback.type === "error" ? "alert" : "status"}
         >
-          <span aria-hidden="true">{feedback.type === "success" ? "✓" : "!"}</span>
+          <span aria-hidden="true">{feedback.type === "success" ? "" : "!"}</span>
           <p>{feedback.message}</p>
         </div>
       ) : null}
@@ -714,7 +714,7 @@ function GovernanceActions({
   if (version.status === "ARCHIVED") {
     return (
       <div className="content-governance-note">
-        <span aria-hidden="true">✓</span>
+        <span aria-hidden="true"></span>
         <div>
           <strong>Versi ini telah diarsipkan.</strong>
           <p>Snapshot historis tetap tersedia, tetapi tidak dipilih untuk siklus baru.</p>

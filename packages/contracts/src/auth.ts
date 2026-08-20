@@ -6,7 +6,7 @@ const loginIdentifierSchema = z.string().trim().min(3).max(120);
 const loginPasswordSchema = z.string().min(1).max(512);
 export const newStaffPasswordSchema = z
   .string()
-  .min(12)
+  .min(8)
   .max(128)
   .refine((value) => /[A-Za-z]/.test(value) && /\d/.test(value), {
     message: "Password must contain letters and numbers",
@@ -65,7 +65,7 @@ export const staffCreateRequestSchema = z
   .object({
     login_identifier: loginIdentifierSchema,
     display_name: z.string().trim().min(2).max(160),
-    role: z.literal("BIDAN"),
+    role: z.enum(["BIDAN", "PUSKESMAS"]),
     password: newStaffPasswordSchema,
   })
   .strict();
@@ -78,6 +78,14 @@ export const staffStatusUpdateRequestSchema = z
   })
   .strict();
 export type StaffStatusUpdateRequest = z.infer<typeof staffStatusUpdateRequestSchema>;
+
+export const staffUpdateRequestSchema = z
+  .object({
+    display_name: z.string().trim().min(2).max(160).optional(),
+    password: newStaffPasswordSchema.optional(),
+  })
+  .strict();
+export type StaffUpdateRequest = z.infer<typeof staffUpdateRequestSchema>;
 
 export const staffSummarySchema = z
   .object({

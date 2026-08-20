@@ -69,6 +69,43 @@ export type MotherRegistrationResponse = z.infer<typeof motherRegistrationRespon
 
 const mutationReasonSchema = z.string().trim().min(3).max(200);
 
+export const motherRecordUpdateRequestSchema = z
+  .object({
+    idempotency_key: idempotencyKeySchema,
+    full_name: z.string().trim().min(2).max(160),
+    address: z.string().trim().min(5).max(500),
+    phone_number: z.string().trim().min(5).max(32).optional(),
+    reason: mutationReasonSchema,
+  })
+  .strict();
+export type MotherRecordUpdateRequest = z.infer<typeof motherRecordUpdateRequestSchema>;
+
+export const motherRecordUpdateResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    full_name: z.string().min(1),
+    address: z.string().min(1),
+    phone_masked: z.string().min(1),
+  })
+  .strict();
+export type MotherRecordUpdateResponse = z.infer<typeof motherRecordUpdateResponseSchema>;
+
+export const motherRecordArchiveRequestSchema = z
+  .object({
+    idempotency_key: idempotencyKeySchema,
+    reason: mutationReasonSchema,
+  })
+  .strict();
+export type MotherRecordArchiveRequest = z.infer<typeof motherRecordArchiveRequestSchema>;
+
+export const motherRecordArchiveResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    archived_at: z.string().datetime({ offset: true }),
+  })
+  .strict();
+export type MotherRecordArchiveResponse = z.infer<typeof motherRecordArchiveResponseSchema>;
+
 export const pregnancyCreateRequestSchema = z
   .object({
     idempotency_key: idempotencyKeySchema,

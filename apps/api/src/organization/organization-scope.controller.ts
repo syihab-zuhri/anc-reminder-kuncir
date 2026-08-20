@@ -8,18 +8,23 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Req,
   UseGuards,
 } from "@nestjs/common";
 import {
   assignmentRevokeRequestSchema,
   facilityCreateRequestSchema,
+  facilityUpdateRequestSchema,
   staffAssignmentCreateRequestSchema,
   staffCreateRequestSchema,
   staffStatusUpdateRequestSchema,
+  staffUpdateRequestSchema,
   villageCreateRequestSchema,
+  villageUpdateRequestSchema,
   type Facility,
   type StaffAssignment,
+  type StaffAssignmentDetail,
   type StaffSummary,
   type Village,
 } from "@anc/contracts";
@@ -54,6 +59,28 @@ export class OrganizationScopeController {
     );
   }
 
+  @Put("organization/villages/:id")
+  public updateVillage(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ): Promise<Village> {
+    return this.service.updateVillage(
+      requireActor(request),
+      parseRequest(uuidPathSchema, id),
+      parseRequest(villageUpdateRequestSchema, body),
+    );
+  }
+
+  @Delete("organization/villages/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  public async deleteVillage(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+  ): Promise<void> {
+    await this.service.deleteVillage(requireActor(request), parseRequest(uuidPathSchema, id));
+  }
+
   @Get("organization/facilities")
   public listFacilities(@Req() request: AuthenticatedRequest): Promise<readonly Facility[]> {
     return this.service.listFacilities(requireActor(request));
@@ -68,6 +95,28 @@ export class OrganizationScopeController {
       requireActor(request),
       parseRequest(facilityCreateRequestSchema, body),
     );
+  }
+
+  @Put("organization/facilities/:id")
+  public updateFacility(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ): Promise<Facility> {
+    return this.service.updateFacility(
+      requireActor(request),
+      parseRequest(uuidPathSchema, id),
+      parseRequest(facilityUpdateRequestSchema, body),
+    );
+  }
+
+  @Delete("organization/facilities/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  public async deleteFacility(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+  ): Promise<void> {
+    await this.service.deleteFacility(requireActor(request), parseRequest(uuidPathSchema, id));
   }
 
   @Get("users")
@@ -86,6 +135,28 @@ export class OrganizationScopeController {
     );
   }
 
+  @Put("users/:id")
+  public updateStaff(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ): Promise<StaffSummary> {
+    return this.service.updateStaff(
+      requireActor(request),
+      parseRequest(uuidPathSchema, id),
+      parseRequest(staffUpdateRequestSchema, body),
+    );
+  }
+
+  @Delete("users/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  public async deleteStaff(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+  ): Promise<void> {
+    await this.service.deleteStaff(requireActor(request), parseRequest(uuidPathSchema, id));
+  }
+
   @Patch("users/:id/status")
   @HttpCode(HttpStatus.NO_CONTENT)
   public async updateStaffStatus(
@@ -98,6 +169,13 @@ export class OrganizationScopeController {
       parseRequest(uuidPathSchema, id),
       parseRequest(staffStatusUpdateRequestSchema, body),
     );
+  }
+
+  @Get("assignments")
+  public listAssignments(
+    @Req() request: AuthenticatedRequest,
+  ): Promise<readonly StaffAssignmentDetail[]> {
+    return this.service.listAssignments(requireActor(request));
   }
 
   @Post("assignments")

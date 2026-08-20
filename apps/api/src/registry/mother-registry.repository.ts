@@ -1,5 +1,9 @@
 import type { TransactionClient } from "@anc/database";
-import type { MotherRegistrationResponse } from "@anc/contracts";
+import type {
+  MotherRecordArchiveResponse,
+  MotherRecordUpdateResponse,
+  MotherRegistrationResponse,
+} from "@anc/contracts";
 import type { QueryResultRow } from "pg";
 
 import {
@@ -25,6 +29,22 @@ export interface CreateMotherRegistrationInput {
   readonly recordedAt: Date;
 }
 
+export interface UpdateMotherRecordInput {
+  readonly motherId: string;
+  readonly healthCenterId: string;
+  readonly fullName: string;
+  readonly address: string;
+  readonly phoneNormalized: string | null;
+}
+
+export interface ArchiveMotherRecordInput {
+  readonly motherId: string;
+  readonly healthCenterId: string;
+  readonly actorStaffUserId: string;
+  readonly reason: string;
+  readonly archivedAt: Date;
+}
+
 export interface MotherRegistryRepository {
   create(
     client: TransactionClient,
@@ -34,6 +54,38 @@ export interface MotherRegistryRepository {
     client: TransactionClient,
     motherId: string,
   ): Promise<MotherRegistrationResponse | null>;
+  updateRecord(
+    client: TransactionClient,
+    input: UpdateMotherRecordInput,
+  ): Promise<MotherRecordUpdateResponse>;
+  findRecordUpdate(
+    client: TransactionClient,
+    motherId: string,
+    healthCenterId: string,
+  ): Promise<MotherRecordUpdateResponse | null>;
+  archiveRecord(
+    client: TransactionClient,
+    input: ArchiveMotherRecordInput,
+  ): Promise<MotherRecordArchiveResponse>;
+  findArchivedRecord(
+    client: TransactionClient,
+    motherId: string,
+    healthCenterId: string,
+  ): Promise<MotherRecordArchiveResponse | null>;
+}
+
+export class MotherRecordUnavailableError extends Error {
+  public constructor() {
+    super("Mother record is unavailable for this mutation");
+    this.name = "MotherRecordUnavailableError";
+  }
+}
+
+export class MotherRecordHasActivePregnancyError extends Error {
+  public constructor() {
+    super("Mother record has an active pregnancy");
+    this.name = "MotherRecordHasActivePregnancyError";
+  }
 }
 
 interface RegistrationLookupRow extends QueryResultRow {
@@ -50,6 +102,18 @@ interface RegistrationLookupRow extends QueryResultRow {
   readonly consent_status: "GRANTED" | "WITHDRAWN";
   readonly consent_source: "STAFF_REGISTRATION";
   readonly consent_recorded_at: Date;
+}
+
+interface MotherRecordRow extends QueryResultRow {
+  readonly id: string;
+  readonly full_name: string;
+  readonly address: string;
+  readonly phone_normalized: string;
+}
+
+interface ArchivedMotherRecordRow extends QueryResultRow {
+  readonly id: string;
+  readonly archived_at: Date;
 }
 
 export class PostgresMotherRegistryRepository implements MotherRegistryRepository {
@@ -148,6 +212,126 @@ export class PostgresMotherRegistryRepository implements MotherRegistryRepositor
     const row = result.rows[0];
     return row === undefined ? null : toRegistrationResponse(row);
   }
+
+  public async updateRecord(
+    client: TransactionClient,
+    input: UpdateMotherRecordInput,
+  ): Promise<MotherRecordUpdateResponse> {
+    const result = await client.query<MotherRecordRow>(
+      `UPDATE mothers
+          SET full_name = $3,
+              address = $4,
+              phone_normalized = COALESCE($5, phone_normalized)
+        WHERE id = $1
+          AND health_center_id = $2
+          AND archived_at IS NULL
+      RETURNING id, full_name, address, phone_normalized`,
+      [input.motherId, input.healthCenterId, input.fullName, input.address, input.phoneNormalized],
+    );
+    const row = result.rows[0];
+    if (row === undefined) throw new MotherRecordUnavailableError();
+    return toMotherRecordUpdateResponse(row);
+  }
+
+  public async findRecordUpdate(
+    client: TransactionClient,
+    motherId: string,
+    healthCenterId: string,
+  ): Promise<MotherRecordUpdateResponse | null> {
+    const result = await client.query<MotherRecordRow>(
+      `SELECT id, full_name, address, phone_normalized
+         FROM mothers
+        WHERE id = $1
+          AND health_center_id = $2
+          AND archived_at IS NULL
+        LIMIT 1`,
+      [motherId, healthCenterId],
+    );
+    const row = result.rows[0];
+    return row === undefined ? null : toMotherRecordUpdateResponse(row);
+  }
+
+  public async archiveRecord(
+    client: TransactionClient,
+    input: ArchiveMotherRecordInput,
+  ): Promise<MotherRecordArchiveResponse> {
+    const mother = await client.query<{ readonly id: string }>(
+      `SELECT id
+         FROM mothers
+        WHERE id = $1
+          AND health_center_id = $2
+          AND archived_at IS NULL
+        FOR UPDATE`,
+      [input.motherId, input.healthCenterId],
+    );
+    if (mother.rows[0] === undefined) throw new MotherRecordUnavailableError();
+
+    const activePregnancy = await client.query<{ readonly id: string }>(
+      `SELECT id
+         FROM pregnancies
+        WHERE mother_id = $1
+          AND status = 'ACTIVE'
+        LIMIT 1
+        FOR KEY SHARE`,
+      [input.motherId],
+    );
+    if (activePregnancy.rows[0] !== undefined) throw new MotherRecordHasActivePregnancyError();
+
+    await client.query(
+      `UPDATE mother_access_credentials
+          SET status = 'REVOKED', revoked_at = $2
+        WHERE mother_id = $1 AND status = 'ACTIVE'`,
+      [input.motherId, input.archivedAt],
+    );
+    await client.query(
+      `UPDATE mother_sessions
+          SET revoked_at = $2
+        WHERE mother_id = $1 AND revoked_at IS NULL`,
+      [input.motherId, input.archivedAt],
+    );
+    await client.query(
+      `UPDATE devices
+          SET status = 'REVOKED'
+        WHERE mother_id = $1 AND status = 'ACTIVE'`,
+      [input.motherId],
+    );
+    const archived = await client.query<ArchivedMotherRecordRow>(
+      `UPDATE mothers
+          SET archived_at = $3,
+              archived_by_staff_user_id = $4,
+              archive_reason = $5
+        WHERE id = $1 AND health_center_id = $2
+      RETURNING id, archived_at`,
+      [
+        input.motherId,
+        input.healthCenterId,
+        input.archivedAt,
+        input.actorStaffUserId,
+        input.reason,
+      ],
+    );
+    const row = archived.rows[0];
+    if (row === undefined) throw new MotherRecordUnavailableError();
+    return { id: row.id, archived_at: row.archived_at.toISOString() };
+  }
+
+  public async findArchivedRecord(
+    client: TransactionClient,
+    motherId: string,
+    healthCenterId: string,
+  ): Promise<MotherRecordArchiveResponse | null> {
+    const result = await client.query<ArchivedMotherRecordRow>(
+      `SELECT id, archived_at
+         FROM mothers
+        WHERE id = $1
+          AND health_center_id = $2
+          AND archived_at IS NOT NULL
+        LIMIT 1`,
+      [motherId, healthCenterId],
+    );
+    const row = result.rows[0];
+    return row === undefined ? null : { id: row.id, archived_at: row.archived_at.toISOString() };
+  }
 }
 
 function toRegistrationResponse(row: RegistrationLookupRow): MotherRegistrationResponse {
@@ -174,6 +358,15 @@ function toRegistrationResponse(row: RegistrationLookupRow): MotherRegistrationR
       source: row.consent_source,
       recorded_at: row.consent_recorded_at.toISOString(),
     },
+  };
+}
+
+function toMotherRecordUpdateResponse(row: MotherRecordRow): MotherRecordUpdateResponse {
+  return {
+    id: row.id,
+    full_name: row.full_name,
+    address: row.address,
+    phone_masked: maskPhone(row.phone_normalized),
   };
 }
 
