@@ -1,6 +1,7 @@
-# Panduan Deployment Manual ke aaPanel (Tanpa GitHub)
+# Panduan Deployment aaPanel dengan GitHub dan Cloudflare Tunnel
 
 Panduan ini untuk menjalankan Sistem Pengingat ANC pada server yang dikelola dengan aaPanel.
+Kode produksi diambil dari branch `main` repository public GitHub, bukan dari ZIP manual.
 Proyek terdiri dari tiga proses Node.js:
 
 - `@anc/web`: aplikasi web Next.js pada port internal `3000`.
@@ -10,9 +11,23 @@ Proyek terdiri dari tiga proses Node.js:
 Nginx aaPanel adalah satu-satunya layanan yang menerima trafik publik. PostgreSQL tidak boleh
 dibuka ke internet.
 
-> Gunakan contoh domain `anc.contoh.id` di bawah. Ganti seluruhnya dengan domain Anda sendiri.
-> Jangan menaruh NIK, data pasien, password, file Firebase, atau file `.env` ke ZIP upload maupun
+> Panduan lama yang memakai ZIP pada bagian 3 dan 13 telah diganti dengan alur GitHub.
+> Jangan menaruh NIK, data pasien, password, file Firebase, file `.env`, atau credential Cloudflare
 > ke Git.
+
+## Nilai produksi untuk server Anda
+
+| Item          | Nilai                                                     |
+| ------------- | --------------------------------------------------------- |
+| Repository    | `https://github.com/syihab-zuhri/anc-reminder-kuncir.git` |
+| Branch rilis  | `main`                                                    |
+| Domain web    | `https://posyandu.zuhri.my.id`                            |
+| Domain API    | `https://posyandu.zuhri.my.id/api/v1`                     |
+| Folder proyek | `/www/wwwroot/posyandu.zuhri.my.id`                       |
+| Tunnel origin | `http://127.0.0.1:80`                                     |
+
+Karena repository bersifat public, `git clone` tidak memerlukan password GitHub atau personal access
+token. Secret produksi tetap diisi melalui environment aaPanel dan tidak ada di repository.
 
 ## 0. Gambaran arsitektur
 
@@ -32,20 +47,27 @@ Worker Node.js ─────────────────────�
 
 Satu domain digunakan untuk web dan API. Ini menyederhanakan cookie, CORS, dan Android:
 
-- Web: `https://anc.contoh.id`
-- API: `https://anc.contoh.id/api/v1`
+- Web: `https://posyandu.zuhri.my.id`
+- API: `https://posyandu.zuhri.my.id/api/v1`
 
 ## 1. Yang perlu disiapkan sebelum menyentuh aaPanel
 
-### WAJIB! Domain dan DNS
+### WAJIB! Domain, Cloudflare Tunnel, dan DNS
 
-1. Siapkan domain/subdomain, misalnya `anc.contoh.id`.
-2. Buat DNS record `A` yang menunjuk ke IP publik server aaPanel.
-3. Tunggu hingga resolusi DNS selesai sebelum meminta sertifikat SSL.
+1. Gunakan domain `posyandu.zuhri.my.id`.
+2. Pada Cloudflare DNS, pastikan CNAME `posyandu` mengarah ke
+   `3865ffdc-d9d4-4eb6-87bb-cacd9a537256.cfargotunnel.com` dengan status **Proxied**.
+3. Pada `/etc/cloudflared/config.yml`, tambahkan sebelum catch-all `service: http_status:404`:
 
-Jika server hanya berada di jaringan lokal, domain tersebut harus dapat di-resolve oleh semua
-perangkat yang akan mengaksesnya. Let's Encrypt memerlukan domain yang dapat diverifikasi dari
-internet; untuk jaringan tertutup gunakan sertifikat dari CA internal yang dipercaya perangkat.
+   ```yaml
+   - hostname: posyandu.zuhri.my.id
+     service: http://127.0.0.1:80
+   ```
+
+4. Jalankan `sudo cloudflared tunnel ingress validate`, lalu `sudo systemctl restart cloudflared`.
+
+Cloudflare Tunnel menangani HTTPS publik. Jangan arahkan hostname ini langsung ke port `3000`,
+karena Nginx harus membagi trafik web dan API.
 
 ### WAJIB! Database
 
@@ -71,53 +93,50 @@ Pada produksi untuk database non-local, `DATABASE_URL` wajib menggunakan TLS, mi
 1. Di **App Store**, instal Nginx, Node.js Version Manager, dan Node Project/PM2.
 2. Melalui Node Version Manager, instal Node `24.x` dan jadikan versi tersebut tersedia untuk
    proyek.
-3. Di **Website**, buat site untuk `anc.contoh.id` dengan Nginx. Jangan menggunakan PHP untuk site
+3. Di **Website**, buat site untuk `posyandu.zuhri.my.id` dengan Nginx. Jangan menggunakan PHP untuk site
    ini.
-4. Pada Firewall/security group, buka `80/tcp` dan `443/tcp`; jangan membuka `3000`, `3001`,
-   `5432`, atau port worker ke publik.
-5. Setelah DNS siap, buka site tersebut di aaPanel, pilih **SSL**, lalu terbitkan sertifikat Let's
-   Encrypt dan aktifkan force HTTPS.
+4. Jangan membuka `3000`, `3001`, `5432`, atau port worker ke publik. Cloudflared cukup mencapai
+   Nginx lokal pada `127.0.0.1:80`.
+5. Tidak perlu menerbitkan Let's Encrypt di aaPanel untuk hostname yang hanya diakses melalui
+   Cloudflare Tunnel; HTTPS publik disediakan oleh Cloudflare.
 
 aaPanel mendukung Node Project/PM2, domain binding, reverse proxy, dan SSL dari panel. Referensi:
 [Node.js Project aaPanel](https://www.aapanel.com/docs/Function/Node.html) dan
 [Proxy Project aaPanel](https://www.aapanel.com/docs/Function/proxy.html).
 
-## 3. Menyiapkan paket upload dari komputer pengembang
+## 3. Clone kode dari GitHub pada deploy pertama
 
-Jalankan dari PowerShell di komputer Anda, di folder proyek:
+Masuk ke **Terminal** aaPanel atau SSH. Jalankan perintah ini di server:
 
-```powershell
-Set-Location "D:\posyandu kuncir"
-npm.cmd run build:packages
-npm.cmd run lint
-npm.cmd run typecheck
-npm.cmd run test:ci
-npm.cmd run security:secrets
+```bash
+cd /www/wwwroot/posyandu.zuhri.my.id
+ls -la                         # folder harus kosong sebelum clone
+sudo git clone --branch main --single-branch \
+  https://github.com/syihab-zuhri/anc-reminder-kuncir.git .
+git branch --show-current       # harus menampilkan: main
+git log -1 --oneline            # catat commit rilis yang dipakai
 ```
 
-Buat ZIP manual dari source code. Jangan ikutkan item berikut:
+Perintah `git clone ... .` hanya berhasil pada folder kosong. Jika aaPanel membuat file halaman
+default seperti `index.html`, pindahkan terlebih dahulu melalui File Manager aaPanel ke folder backup
+di luar root site. Jangan hapus source aplikasi atau file environment yang sudah dipakai.
 
-- `node_modules/`
-- `.git/`
-- `.env`, `.env.*`, file service account Firebase
-- `apps/android/android/app/google-services.json`
-- `coverage/`, `build/`, `.next/`, APK, dan file log
+Jangan membuat atau mengubah source code langsung di folder server. Semua perubahan dibuat di
+komputer pengembang, diuji, dipush, lalu di-merge ke `main`. File `.env`, `google-services.json`,
+service account Firebase, dan credential Cloudflare tidak ada di repository.
 
-Upload ZIP melalui **Files** aaPanel ke folder baru, misalnya:
+Jika proses Node aaPanel menggunakan user `www`, berikan hak baca folder proyek kepadanya:
 
-```text
-/www/wwwroot/anc-reminder
+```bash
+sudo chown -R www:www /www/wwwroot/posyandu.zuhri.my.id
 ```
-
-Ekstrak di folder tersebut. Pemilik file proses sebaiknya user `www`, tetapi file rahasia pada
-langkah berikut harus hanya dapat dibaca administrator/proses yang diperlukan.
 
 ## 4. Install dependency dan build di server
 
 Masuk ke **Terminal** aaPanel atau SSH, lalu:
 
 ```bash
-cd /www/wwwroot/anc-reminder
+cd /www/wwwroot/posyandu.zuhri.my.id
 node --version    # harus 24.x
 npm --version     # harus 11.x
 npm ci
@@ -167,28 +186,28 @@ menaruh secret dalam `package.json`, konfigurasi Nginx, atau source code.
 
 ### 6.1 Web (`anc-web`)
 
-| Variabel       | Nilai contoh                   |
-| -------------- | ------------------------------ |
-| `NODE_ENV`     | `production`                   |
-| `HOSTNAME`     | `127.0.0.1`                    |
-| `PORT`         | `3000`                         |
-| `API_BASE_URL` | `https://anc.contoh.id/api/v1` |
+| Variabel       | Nilai contoh                          |
+| -------------- | ------------------------------------- |
+| `NODE_ENV`     | `production`                          |
+| `HOSTNAME`     | `127.0.0.1`                           |
+| `PORT`         | `3000`                                |
+| `API_BASE_URL` | `https://posyandu.zuhri.my.id/api/v1` |
 
 `API_BASE_URL` adalah variabel server-side untuk route proxy Next.js. Gunakan nama ini, bukan
 sekadar `NEXT_PUBLIC_API_URL`.
 
 ### 6.2 API (`anc-api`)
 
-| Variabel                              | Nilai contoh                   |
-| ------------------------------------- | ------------------------------ |
-| `NODE_ENV`                            | `production`                   |
-| `API_HOST`                            | `127.0.0.1`                    |
-| `API_PORT`                            | `3001`                         |
-| `APP_BASE_URL`                        | `https://anc.contoh.id`        |
-| `API_BASE_URL`                        | `https://anc.contoh.id/api/v1` |
-| `PRIMARY_TIMEZONE`                    | `Asia/Jakarta`                 |
-| `SCHEDULER_ENABLED`                   | `false`                        |
-| `DATABASE_URL` dan seluruh secret API | sesuai tabel langkah 5         |
+| Variabel                              | Nilai contoh                          |
+| ------------------------------------- | ------------------------------------- |
+| `NODE_ENV`                            | `production`                          |
+| `API_HOST`                            | `127.0.0.1`                           |
+| `API_PORT`                            | `3001`                                |
+| `APP_BASE_URL`                        | `https://posyandu.zuhri.my.id`        |
+| `API_BASE_URL`                        | `https://posyandu.zuhri.my.id/api/v1` |
+| `PRIMARY_TIMEZONE`                    | `Asia/Jakarta`                        |
+| `SCHEDULER_ENABLED`                   | `false`                               |
+| `DATABASE_URL` dan seluruh secret API | sesuai tabel langkah 5                |
 
 `SCHEDULER_ENABLED=false` diperlukan karena worker pada langkah berikut menjadi satu-satunya
 proses yang membuat/mengirim siklus pengingat. Jangan menjalankan scheduler API dan worker loop
@@ -207,7 +226,7 @@ bersamaan.
 ## 7. Menjalankan tiga Node Project
 
 Di **Website → Node Project**, buat tiga proses menggunakan Node `24.x`, user `www`, direktori kerja
-`/www/wwwroot/anc-reminder`, dan satu instance/cluster untuk masing-masing proses.
+`/www/wwwroot/posyandu.zuhri.my.id`, dan satu instance/cluster untuk masing-masing proses.
 
 | Nama         | Perintah start kustom                | Port      |
 | ------------ | ------------------------------------ | --------- |
@@ -226,7 +245,7 @@ log.
 
 ## 8. Atur reverse proxy Nginx
 
-Biarkan domain utama `anc.contoh.id` diteruskan oleh Node Project `anc-web` ke `127.0.0.1:3000`.
+Biarkan domain utama `posyandu.zuhri.my.id` diteruskan oleh Node Project `anc-web` ke `127.0.0.1:3000`.
 Lalu tambahkan proxy khusus **hanya** untuk `/api/v1/` ke API.
 
 Di konfigurasi Nginx site aaPanel, tambahkan location berikut (sesuaikan melalui menu URL Proxy atau
@@ -267,7 +286,7 @@ Lalu jalankan:
 
 ```bash
 chmod 600 /root/anc-migrate.env
-cd /www/wwwroot/anc-reminder
+cd /www/wwwroot/posyandu.zuhri.my.id
 set -a
 . /root/anc-migrate.env
 set +a
@@ -285,7 +304,7 @@ Setelah API, database, dan migrasi sehat, buat akun pertama dengan identitas yan
 terminal dengan environment API yang sama. Jangan gunakan data dummy untuk produksi.
 
 ```bash
-cd /www/wwwroot/anc-reminder
+cd /www/wwwroot/posyandu.zuhri.my.id
 export PROVISION_CONFIRM='CREATE_INITIAL_PUSKESMAS'
 export PROVISION_HEALTH_CENTER_CODE='KODE-PUSKESMAS-ASLI'
 export PROVISION_HEALTH_CENTER_NAME='Nama Puskesmas Asli'
@@ -301,14 +320,14 @@ unset PROVISION_PASSWORD
 
 Lakukan berurutan:
 
-1. Buka `https://anc.contoh.id` dan `https://anc.contoh.id/staff/login` dari jaringan luar.
+1. Buka `https://posyandu.zuhri.my.id` dan `https://posyandu.zuhri.my.id/staff/login` dari jaringan luar.
 2. Login menggunakan akun Puskesmas yang baru dibuat.
 3. Pastikan halaman Data Bumil, pendaftaran, dan portal Bumil dapat dibuka.
 4. Cek status tiga proses di aaPanel/PM2: web, API, dan worker harus `running`.
 5. Cek log API dan worker untuk error koneksi database atau Firebase.
 6. Uji dengan data sintetis: daftar Bumil dummy, terbitkan kode akses, lalu hapus data dummy sesuai
    prosedur arsip. Jangan uji dengan data pasien asli pada tahap ini.
-7. Cek bahwa `https://anc.contoh.id/api/v1/...` berfungsi melalui domain, sedangkan port `3001`
+7. Cek bahwa `https://posyandu.zuhri.my.id/api/v1/...` berfungsi melalui domain, sedangkan port `3001`
    tidak dapat diakses langsung dari perangkat luar.
 
 ## 12. Sinkronkan Android setelah domain aktif
@@ -317,35 +336,63 @@ Di komputer pengembang (bukan server aaPanel), jalankan dari PowerShell:
 
 ```powershell
 Set-Location "D:\posyandu kuncir"
-$env:CAPACITOR_SERVER_URL = "https://anc.contoh.id"
+$env:CAPACITOR_SERVER_URL = "https://posyandu.zuhri.my.id"
 npm.cmd run cap:sync --workspace=@anc/android
 ```
 
 Lalu build ulang Android di Android Studio. Gunakan domain HTTPS yang sama dengan langkah 11.
 
-## 13. Update manual berikutnya (tanpa GitHub)
+## 13. Update berikutnya dari GitHub
 
-1. Aktifkan maintenance window dan backup database.
-2. Upload ZIP rilis baru ke folder baru, misalnya `/www/wwwroot/anc-reminder-releases/2026-08-20`.
-3. Jalankan `npm ci`, build, dan pemeriksaan pada folder rilis baru.
-4. Jalankan migrasi database bila ada migration baru.
-5. Ubah direktori kerja tiga Node Project ke rilis baru, atau ganti symlink `current` secara atomik.
-6. Restart worker lebih dulu, API kedua, lalu web terakhir.
-7. Jalankan verifikasi langkah 11.
-8. Simpan rilis sebelumnya sampai rilis baru stabil.
+### WAJIB! Sebelum update
 
-Untuk rollback kode, arahkan kembali tiga proses ke rilis sebelumnya dan restart. Jangan rollback
-schema database secara terburu-buru; gunakan backup/restore yang telah diuji bila diperlukan.
+1. Pastikan seluruh perubahan sudah di-merge ke `main` dan pemeriksaan CI GitHub `verify` hijau.
+2. Backup database bila rilis membawa migration baru.
+3. Gunakan maintenance window jika aplikasi telah menyimpan data nyata.
+
+Di Terminal aaPanel atau SSH, jalankan:
+
+```bash
+cd /www/wwwroot/posyandu.zuhri.my.id
+git status --short               # harus kosong; source server tidak boleh diedit manual
+git fetch origin
+git pull --ff-only origin main   # berhenti aman jika riwayat tidak sesuai
+git log -1 --oneline             # catat commit rilis terbaru
+npm ci
+npm run build:packages
+npm run build --workspace=@anc/api
+npm run build --workspace=@anc/web
+npm run build --workspace=@anc/worker
+```
+
+Jika ada migration baru, jalankan langkah 9 **setelah backup database**. Setelah itu restart di
+aaPanel dengan urutan: **worker**, **API**, lalu **web**. Terakhir, lakukan verifikasi langkah 11.
+
+### Rollback kode
+
+Jangan menjalankan `git reset --hard` di server produksi. Catat commit terakhir yang sehat, lalu
+checkout commit itu saat maintenance window, install dependency dan build ulang, kemudian restart
+tiga proses:
+
+```bash
+cd /www/wwwroot/posyandu.zuhri.my.id
+git checkout <commit-rilis-sehat>
+npm ci
+# jalankan kembali tiga perintah build dari blok update di atas
+```
+
+Rollback kode tidak membatalkan migration database. Jika migration sudah diterapkan, gunakan
+backup/restore yang telah diuji dan jangan rollback schema secara terburu-buru.
 
 ## 14. Checklist selesai
 
-- [ ] DNS domain mengarah ke server.
-- [ ] HTTPS aktif dan redirect HTTP ke HTTPS.
+- [ ] CNAME `posyandu` mengarah ke Cloudflare Tunnel dan Tunnel sehat.
+- [ ] `posyandu.zuhri.my.id` terbuka melalui HTTPS Cloudflare.
 - [ ] Node 24/npm 11 dipakai oleh ketiga proses.
 - [ ] Web, API, worker berjalan sebagai proses berbeda.
 - [ ] Hanya Nginx menerima trafik publik; port 3000/3001/database privat.
 - [ ] Migrasi database selesai dan backup tersimpan.
 - [ ] `SCHEDULER_ENABLED=false` pada API; hanya worker loop yang aktif.
-- [ ] Semua secret berbeda, tidak ada di Git/ZIP/log.
+- [ ] Semua secret berbeda, tidak ada di Git/log.
 - [ ] `google-services.json` Android dan service-account Firebase tidak diunggah ke Git.
 - [ ] Android telah disinkronkan menggunakan URL HTTPS produksi.
