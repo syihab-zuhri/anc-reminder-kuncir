@@ -21,6 +21,8 @@ type SessionState =
   | { readonly kind: "ready"; readonly staff: StaffMeResponse }
   | { readonly kind: "unavailable" };
 
+import type { StaffRole } from "@anc/contracts";
+
 export type ModuleTab =
   | "summary"
   | "mothers"
@@ -31,6 +33,24 @@ export type ModuleTab =
   | "bumil"
   | "admin"
   | "content";
+
+interface TabDefinition {
+  readonly id: ModuleTab;
+  readonly label: string;
+  readonly allowedRoles: readonly StaffRole[];
+}
+
+const TAB_DEFINITIONS: readonly TabDefinition[] = [
+  { id: "summary", label: "Dashboard", allowedRoles: ["PUSKESMAS", "BIDAN", "SUPER_ADMIN"] },
+  { id: "mothers", label: "Data Bumil", allowedRoles: ["PUSKESMAS", "BIDAN"] },
+  { id: "register", label: "Register Bumil", allowedRoles: ["PUSKESMAS", "BIDAN"] },
+  { id: "access", label: "Kode Akses", allowedRoles: ["PUSKESMAS"] },
+  { id: "clinical", label: "Detail K1–K6", allowedRoles: ["PUSKESMAS"] },
+  { id: "confirm", label: "Konfirmasi Periksa", allowedRoles: ["PUSKESMAS", "BIDAN"] },
+  { id: "bumil", label: "Portal Bumil", allowedRoles: ["PUSKESMAS", "BIDAN"] },
+  { id: "admin", label: "Administrasi", allowedRoles: ["PUSKESMAS"] },
+  { id: "content", label: "Konten Reminder", allowedRoles: ["PUSKESMAS"] },
+];
 
 const roleCopy = {
   BIDAN: {
@@ -116,6 +136,12 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
 
   const { staff } = session;
   const currentRole = roleCopy[staff.role];
+
+  // Filter tabs strictly by user's permitted capabilities/roles
+  const visibleTabs = TAB_DEFINITIONS.filter((tab) => tab.allowedRoles.includes(staff.role));
+  const isTabAllowed = visibleTabs.some((t) => t.id === activeTab);
+  const effectiveTab = isTabAllowed ? activeTab : visibleTabs[0]?.id ?? "summary";
+
   return (
     <div className="staff-workspace">
       <aside className="staff-rail">
@@ -123,69 +149,20 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
           <BrandMark />
         </Link>
         <nav aria-label="Navigasi ruang petugas">
-          <button
-            type="button"
-            className={activeTab === "summary" ? "is-current" : ""}
-            onClick={() => setActiveTab("summary")}
-          >
-            <span>01</span> Dashboard
-          </button>
-          <button
-            type="button"
-            className={activeTab === "mothers" ? "is-current" : ""}
-            onClick={() => setActiveTab("mothers")}
-          >
-            <span>02</span> Data Bumil
-          </button>
-          <button
-            type="button"
-            className={activeTab === "register" ? "is-current" : ""}
-            onClick={() => setActiveTab("register")}
-          >
-            <span>03</span> Register Bumil
-          </button>
-          <button
-            type="button"
-            className={activeTab === "access" ? "is-current" : ""}
-            onClick={() => setActiveTab("access")}
-          >
-            <span>04</span> Kode Akses
-          </button>
-          <button
-            type="button"
-            className={activeTab === "clinical" ? "is-current" : ""}
-            onClick={() => setActiveTab("clinical")}
-          >
-            <span>05</span> Detail K1–K6
-          </button>
-          <button
-            type="button"
-            className={activeTab === "confirm" ? "is-current" : ""}
-            onClick={() => setActiveTab("confirm")}
-          >
-            <span>06</span> Konfirmasi Periksa
-          </button>
-          <button
-            type="button"
-            className={activeTab === "bumil" ? "is-current" : ""}
-            onClick={() => setActiveTab("bumil")}
-          >
-            <span>07</span> Portal Bumil
-          </button>
-          <button
-            type="button"
-            className={activeTab === "admin" ? "is-current" : ""}
-            onClick={() => setActiveTab("admin")}
-          >
-            <span>08</span> Administrasi
-          </button>
-          <button
-            type="button"
-            className={activeTab === "content" ? "is-current" : ""}
-            onClick={() => setActiveTab("content")}
-          >
-            <span>09</span> Konten Reminder
-          </button>
+          {visibleTabs.map((tab, index) => {
+            const tabNumber = String(index + 1).padStart(2, "0");
+            const isCurrent = effectiveTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                className={isCurrent ? "is-current" : ""}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <span>{tabNumber}</span> {tab.label}
+              </button>
+            );
+          })}
         </nav>
         <button className="staff-rail-logout" type="button" onClick={logout} disabled={loggingOut}>
           {loggingOut ? "Keluar…" : "Keluar"}
@@ -207,7 +184,7 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
           </div>
         </header>
 
-        {activeTab === "summary" && (
+        {effectiveTab === "summary" && (
           <>
             <RoleDashboardShell
               userRole={staff.role}
@@ -216,26 +193,33 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
             />
 
             <section className="staff-session-card" aria-labelledby="session-title">
-              <div>
-                <p className="staff-kicker">Keamanan Sesi</p>
-                <h2 id="session-title">
-                  Token akses dikelola server secara HTTP-only (BFF Pattern).
-                </h2>
+              <div className="staff-session-header">
+                <div>
+                  <h3 id="session-title">
+                    Informasi Sesi Petugas
+                  </h3>
+                  <p style={{ fontSize: "0.82rem", color: "var(--ink-muted)", margin: "0.2rem 0 0" }}>
+                    Sesi terhubung aman dan terverifikasi oleh server.
+                  </p>
+                </div>
+                <span className="badge-status status-confirmed" style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem" }}>
+                  ● Sesi Aktif
+                </span>
               </div>
               <dl>
                 <div>
-                  <dt>Peran Aktif</dt>
+                  <dt>Peran</dt>
                   <dd>{currentRole.label}</dd>
                 </div>
                 <div>
-                  <dt>ID Petugas</dt>
+                  <dt>Nama Petugas</dt>
                   <dd>
-                    <code>{staff.id}</code>
+                    <strong>{staff.display_name}</strong>
                   </dd>
                 </div>
                 <div>
-                  <dt>Fasilitas Utama</dt>
-                  <dd>{staff.health_center_id ?? "Seluruh Wilayah (Puskesmas)"}</dd>
+                  <dt>Wilayah Fasilitas</dt>
+                  <dd>{staff.health_center_id ? "Puskesmas Kuncir" : "Seluruh Wilayah (Puskesmas Induk)"}</dd>
                 </div>
                 <div>
                   <dt>Status Akun</dt>
@@ -246,7 +230,7 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
           </>
         )}
 
-        {activeTab === "mothers" && (
+        {effectiveTab === "mothers" && (
           <RegisteredMothersPanel
             userRole={staff.role}
             healthCenterId={staff.health_center_id}
@@ -254,11 +238,7 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
           />
         )}
 
-        {activeTab === "admin" && (
-          <OrganizationAdminPanel userRole={staff.role} healthCenterId={staff.health_center_id} />
-        )}
-
-        {activeTab === "register" && (
+        {effectiveTab === "register" && staff.role !== "SUPER_ADMIN" && (
           <MotherRegistrationPanel
             userRole={staff.role}
             healthCenterId={staff.health_center_id}
@@ -266,15 +246,27 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
           />
         )}
 
-        {activeTab === "access" && <MotherAccessPanel userRole={staff.role} />}
+        {effectiveTab === "access" && staff.role === "PUSKESMAS" && (
+          <MotherAccessPanel userRole={staff.role} />
+        )}
 
-        {activeTab === "clinical" && <PuskesmasClinicalRecordPanel userRole={staff.role} />}
+        {effectiveTab === "clinical" && staff.role === "PUSKESMAS" && (
+          <PuskesmasClinicalRecordPanel userRole={staff.role} />
+        )}
 
-        {activeTab === "confirm" && <BidanVisitConfirmationPanel userRole={staff.role} />}
+        {effectiveTab === "confirm" && (
+          <BidanVisitConfirmationPanel userRole={staff.role} />
+        )}
 
-        {activeTab === "bumil" && <BumilPatientPortal />}
+        {effectiveTab === "bumil" && <BumilPatientPortal />}
 
-        {activeTab === "content" && <ContentManagementPanel userRole={staff.role} />}
+        {effectiveTab === "admin" && staff.role === "PUSKESMAS" && (
+          <OrganizationAdminPanel userRole={staff.role} healthCenterId={staff.health_center_id} />
+        )}
+
+        {effectiveTab === "content" && staff.role === "PUSKESMAS" && (
+          <ContentManagementPanel userRole={staff.role} />
+        )}
       </main>
     </div>
   );

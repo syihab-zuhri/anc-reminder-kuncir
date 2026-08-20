@@ -5,7 +5,7 @@ import type {
   PregnancyMilestoneListResponse,
   PregnancyMilestoneResponse,
 } from "@anc/contracts";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 export function BumilPatientPortal() {
   const [mothers, setMothers] = useState<readonly MotherSummary[]>([]);
@@ -17,53 +17,59 @@ export function BumilPatientPortal() {
   const [error, setError] = useState<string | null>(null);
 
   // Load mothers list from Supabase
-  const fetchMothers = useCallback(async (): Promise<void> => {
-    setLoadingMothers(true);
-    try {
-      const res = await fetch("/api/staff-proxy/mothers");
-      if (res.ok) {
-        const data = (await res.json()) as { items: readonly MotherSummary[] };
-        const items = data.items ?? [];
-        setMothers(items);
-        if (items.length > 0) {
-          const firstWithPregnancy = items.find((m) => m.active_pregnancy) ?? items[0];
-          if (firstWithPregnancy) {
-            setSelectedMotherId(firstWithPregnancy.id);
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadMothers(controller.signal);
+    return () => controller.abort();
+
+    async function loadMothers(signal: AbortSignal): Promise<void> {
+      setLoadingMothers(true);
+      try {
+        const res = await fetch("/api/staff-proxy/mothers", { signal });
+        if (res.ok) {
+          const data = (await res.json()) as { items: readonly MotherSummary[] };
+          const items = data.items ?? [];
+          setMothers(items);
+          if (items.length > 0) {
+            const firstWithPregnancy = items.find((m) => m.active_pregnancy) ?? items[0];
+            if (firstWithPregnancy) {
+              setSelectedMotherId(firstWithPregnancy.id);
+            }
           }
         }
+      } catch (err) {
+        if (!(err instanceof DOMException && err.name === "AbortError")) {
+          setError("Gagal memuat daftar ibu hamil dari database.");
+        }
+      } finally {
+        setLoadingMothers(false);
       }
-    } catch {
-      setError("Gagal memuat daftar ibu hamil dari database.");
-    } finally {
-      setLoadingMothers(false);
     }
   }, []);
 
-  useEffect(() => {
-    void fetchMothers();
-  }, [fetchMothers]);
-
   // When selected mother changes, load pregnancy milestones
   useEffect(() => {
-    if (!selectedMotherId) {
-      setMilestones([]);
-      return;
-    }
-
     const mother = mothers.find((m) => m.id === selectedMotherId);
     if (!mother || !mother.active_pregnancy) {
-      setMilestones([]);
+      async function clearMilestones(): Promise<void> {
+        setMilestones([]);
+      }
+      void clearMilestones();
       return;
     }
 
     const pregnancyId = mother.active_pregnancy.id;
+    const controller = new AbortController();
+    void loadMilestones(controller.signal);
+    return () => controller.abort();
 
-    async function loadMilestones(): Promise<void> {
+    async function loadMilestones(signal: AbortSignal): Promise<void> {
       setLoadingMilestones(true);
       setError(null);
       try {
         const res = await fetch(
           `/api/staff-proxy/pregnancies/${encodeURIComponent(pregnancyId)}/milestones`,
+          { signal },
         );
         if (res.ok) {
           const data = (await res.json()) as PregnancyMilestoneListResponse;
@@ -71,14 +77,14 @@ export function BumilPatientPortal() {
         } else {
           setError("Gagal memuat linimasa pemeriksaan kehamilan.");
         }
-      } catch {
-        setError("Koneksi terputus saat memuat linimasa.");
+      } catch (err) {
+        if (!(err instanceof DOMException && err.name === "AbortError")) {
+          setError("Koneksi terputus saat memuat linimasa.");
+        }
       } finally {
         setLoadingMilestones(false);
       }
     }
-
-    void loadMilestones();
   }, [selectedMotherId, mothers]);
 
   const activeMother = mothers.find((m) => m.id === selectedMotherId);
@@ -200,7 +206,8 @@ export function BumilPatientPortal() {
             <div className="bumil-profile-info">
               <h3>{activeMother.full_name}</h3>
               <p>
-                {activeMother.address} &bull; {activeMother.village_name ?? "Wilayah Puskesmas Kuncir"}
+                {activeMother.address} &bull;{" "}
+                {activeMother.village_name ?? "Wilayah Puskesmas Kuncir"}
               </p>
               <small style={{ color: "var(--color-ink-muted)" }}>
                 HPHT: {activePregnancy.dating_date} &bull; No. Kontak: {activeMother.phone_masked}
@@ -239,7 +246,8 @@ export function BumilPatientPortal() {
                 <div className="banner-due">
                   <span className="due-label">Rentang Rekomendasi:</span>
                   <strong className="due-date">
-                    {nextMilestone.target_date_start ?? "Sesuai Jadwal"} s/d {nextMilestone.target_date_end ?? "Sesuai Jadwal"}
+                    {nextMilestone.target_date_start ?? "Sesuai Jadwal"} s/d{" "}
+                    {nextMilestone.target_date_end ?? "Sesuai Jadwal"}
                   </strong>
                 </div>
               </div>
@@ -260,17 +268,17 @@ export function BumilPatientPortal() {
                 const isDue = m.visit_status === "DUE";
                 const isOverdue = m.visit_status === "OVERDUE";
 
-                let statusBadge = "Akan Datang";
+                let statusBadge: React.ReactNode = "Akan Datang";
                 let statusClass = "upcoming";
 
                 if (isConfirmed) {
-                  statusBadge = "✓ Sudah Periksa";
+                  statusBadge = " Sudah Periksa";
                   statusClass = "completed";
                 } else if (isOverdue) {
-                  statusBadge = "⚠️ Terlewat (Overdue)";
+                  statusBadge = " Terlewat (Overdue)";
                   statusClass = "overdue";
                 } else if (isDue) {
-                  statusBadge = "⚡ Waktunya Periksa";
+                  statusBadge = " Waktunya Periksa";
                   statusClass = "due";
                 }
 
@@ -279,15 +287,18 @@ export function BumilPatientPortal() {
                     <div className="timeline-code">{m.code}</div>
                     <div className="timeline-detail">
                       <span className={`badge-status status-${statusClass}`}>{statusBadge}</span>
-                      <small className="timeline-date" style={{ fontWeight: 600, display: "block", marginTop: "0.25rem" }}>
+                      <small
+                        className="timeline-date"
+                        style={{ fontWeight: 600, display: "block", marginTop: "0.25rem" }}
+                      >
                         {m.trimester_label}
                       </small>
                       <small style={{ color: "var(--color-ink-muted)", fontSize: "0.8rem" }}>
                         {isConfirmed
                           ? "Tercatat di Supabase"
                           : m.target_date_start && m.target_date_end
-                          ? `${m.target_date_start} s/d ${m.target_date_end}`
-                          : "Sesuai Usia Kehamilan"}
+                            ? `${m.target_date_start} s/d ${m.target_date_end}`
+                            : "Sesuai Usia Kehamilan"}
                       </small>
                     </div>
                   </div>
@@ -297,19 +308,27 @@ export function BumilPatientPortal() {
           </section>
         </div>
       ) : (
-        <div style={{ padding: "2rem", textAlign: "center", background: "var(--color-surface)", borderRadius: "8px" }}>
+        <div
+          style={{
+            padding: "2rem",
+            textAlign: "center",
+            background: "var(--color-surface)",
+            borderRadius: "8px",
+          }}
+        >
           <h3>Belum Ada Data Pasien Kehamilan Aktif</h3>
           <p style={{ color: "var(--color-ink-muted)" }}>
-            Silakan daftarkan pasien baru pada tab <strong>03 Register Bumil</strong> untuk melihat simulasi linimasa mandiri.
+            Silakan daftarkan pasien baru pada tab <strong>03 Register Bumil</strong> untuk melihat
+            simulasi linimasa mandiri.
           </p>
         </div>
       )}
 
       <footer className="thin-client-footer" style={{ marginTop: "2rem" }}>
         <p>
-          <strong>Prinsip Server-Driven Thin Client (ADR Server-Driven):</strong> Seluruh perhitungan
-          usia kehamilan, tanggal rujukan, dan status K1-K8 dilakukan oleh server API Supabase.
-          Aplikasi mandiri ibu hamil tidak menyimpan atau mengubah status lokal.
+          <strong>Prinsip Server-Driven Thin Client (ADR Server-Driven):</strong> Seluruh
+          perhitungan usia kehamilan, tanggal rujukan, dan status K1-K8 dilakukan oleh server API
+          Supabase. Aplikasi mandiri ibu hamil tidak menyimpan atau mengubah status lokal.
         </p>
       </footer>
     </div>

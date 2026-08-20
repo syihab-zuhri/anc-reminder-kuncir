@@ -680,7 +680,9 @@
   color: var(--ink);
   background: var(--paper);
   border: 1px solid var(--line-strong);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .staff-field input:focus {
@@ -703,7 +705,9 @@
   font-weight: 750;
   letter-spacing: 0.02em;
   cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.15s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.15s ease;
 }
 
 .staff-submit svg {
@@ -856,51 +860,62 @@
 /* Staff Session Card */
 .staff-session-card {
   margin-top: 2rem;
-  padding: 1.75rem 2rem;
-  background: var(--paper-raised);
+  padding: 1.25rem 1.75rem;
+  background: var(--paper);
   border: 1px solid var(--line);
-  border-left: 4px solid var(--ink);
+  border-radius: 4px;
 }
 
-.staff-session-card h2 {
-  font-family: var(--display);
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin: 0.25rem 0 1.25rem;
+.staff-session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.staff-session-card h2,
+.staff-session-card h3 {
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0;
   color: var(--ink);
 }
 
 .staff-session-card dl {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 1rem;
   margin: 0;
-  padding-top: 1.25rem;
+  padding-top: 1rem;
   border-top: 1px solid var(--line);
 }
 
 .staff-session-card dt {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--ink-faint);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.2rem;
 }
 
 .staff-session-card dd {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 600;
   color: var(--ink);
 }
 
 .staff-session-card code {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 0.85rem;
-  background: var(--paper);
-  padding: 0.2rem 0.4rem;
+  font-size: 0.82rem;
+  background: var(--paper-raised);
+  padding: 0.15rem 0.35rem;
   border: 1px solid var(--line);
+  border-radius: 3px;
 }
 
 /* Form & Utility Enhancements */
@@ -912,7 +927,9 @@
   color: var(--ink);
   background: var(--paper);
   border: 1px solid var(--line);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .staff-input:focus {
@@ -2447,9 +2464,159 @@
   background: rgba(18, 56, 50, 0.025);
 }
 
+.staff-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  overflow-y: auto;
+  background: rgba(10, 25, 22, 0.65);
+  backdrop-filter: blur(3px);
+}
+
+.staff-modal-backdrop .staff-panel-card {
+  display: grid;
+  gap: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
 @media (max-width: 768px) {
   .mothers-filter-card form {
     grid-template-columns: 1fr !important;
   }
+
+  .mothers-filter-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mothers-filter-actions .btn-primary,
+  .mothers-filter-actions .btn-secondary {
+    min-height: 2.75rem;
+  }
+
+  .mothers-table-responsive {
+    overflow: visible;
+  }
+
+  .mothers-table,
+  .mothers-table tbody,
+  .mothers-table tr,
+  .mothers-table td {
+    display: block;
+    width: 100% !important;
+  }
+
+  .mothers-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .mothers-table tbody {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .mothers-table tr {
+    overflow: hidden;
+    border: 1px solid var(--line-strong);
+    background: var(--paper-raised);
+    box-shadow: 0 8px 24px rgba(18, 56, 50, 0.06);
+  }
+
+  .mothers-table td {
+    display: grid;
+    grid-template-columns: minmax(6.75rem, 0.72fr) minmax(0, 1.28fr);
+    align-items: start;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    text-align: left !important;
+  }
+
+  .mothers-table td::before {
+    content: attr(data-label);
+    color: var(--ink-muted);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    line-height: 1.35;
+    text-transform: uppercase;
+  }
+
+  .mothers-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .mothers-table .mothers-action-cell {
+    align-items: center;
+    background: rgba(18, 56, 50, 0.025);
+  }
+
+  .mothers-action-group {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .mothers-action-group .btn-secondary {
+    min-height: 2.7rem;
+    padding-inline: 0.5rem !important;
+    white-space: normal;
+  }
+
+  .staff-modal-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .staff-modal-backdrop .staff-panel-card {
+    width: 100% !important;
+    max-height: min(90vh, 48rem);
+    padding: 1.25rem;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+  }
+
+  .mothers-modal-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mothers-modal-actions button {
+    min-height: 2.85rem;
+  }
 }
 
+@media (max-width: 390px) {
+  .mothers-table td {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+
+  .mothers-action-group,
+  .mothers-modal-actions {
+    grid-template-columns: 1fr;
+  }
+}
+.ui-icon {
+  display: inline-block;
+  flex: 0 0 auto;
+  vertical-align: -0.16em;
+}
+
+.icon-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}

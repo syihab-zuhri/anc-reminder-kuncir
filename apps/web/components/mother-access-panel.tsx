@@ -55,12 +55,15 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
     }
   }, [userRole]);
 
-  if (userRole === "SUPER_ADMIN") {
+  if (userRole !== "PUSKESMAS") {
     return (
       <div className="staff-panel-card staff-panel-restricted">
-        <span className="staff-panel-badge badge-warning">Deny by Default</span>
-        <h3>Pengelolaan Kode Akses Tidak Tersedia untuk Super Admin</h3>
-        <p>Akses pasien tidak dapat diberikan atau diperbarui oleh peran Super Admin.</p>
+        <span className="staff-panel-badge badge-warning">Akses Terbatas</span>
+        <h3>Pengelolaan Kode Akses Hanya Tersedia untuk Petugas Puskesmas</h3>
+        <p>
+          Penerbitan dan pencabutan kode akses portal mandiri pasien dikelola oleh operator
+          Puskesmas.
+        </p>
       </div>
     );
   }
@@ -86,9 +89,7 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
       );
 
       const data = (await res.json().catch(() => null)) as
-        | MotherAccessCredentialIssueResponse
-        | { error?: { message?: string } }
-        | null;
+        MotherAccessCredentialIssueResponse | { error?: { message?: string } } | null;
 
       if (!res.ok || !data || "error" in data || !("one_time_code" in data)) {
         setErrorFeedback(
@@ -132,9 +133,7 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
       );
 
       const data = (await res.json().catch(() => null)) as
-        | MotherAccessCredentialIssueResponse
-        | { error?: { message?: string } }
-        | null;
+        MotherAccessCredentialIssueResponse | { error?: { message?: string } } | null;
 
       if (!res.ok || !data || "error" in data || !("one_time_code" in data)) {
         setErrorFeedback(
@@ -178,7 +177,9 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
       );
 
       if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+        const data = (await res.json().catch(() => null)) as {
+          error?: { message?: string };
+        } | null;
         setErrorFeedback(data?.error?.message ?? "Gagal mencabut kode akses.");
         return;
       }
@@ -273,7 +274,8 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
           </div>
           <h3>Serahkan Kode Akses kepada Ibu Hamil</h3>
           <p style={{ color: "var(--color-ink-muted)", marginBottom: "1rem" }}>
-            Tunjukkan atau cetak kode di bawah ini untuk diserahkan secara pribadi kepada pasien saat pemeriksaan:
+            Tunjukkan atau cetak kode di bawah ini untuk diserahkan secara pribadi kepada pasien
+            saat pemeriksaan:
           </p>
 
           <div
@@ -304,8 +306,9 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
               marginBottom: "1.25rem",
             }}
           >
-            <strong>PERHATIAN KEAMANAN KETAT:</strong> Kode di atas <u>HANYA DITAMPILKAN SEKALI INI</u>.
-            Server hanya menyimpan verifikasi salted scrypt hash dan tidak dapat menampilkan kembali teks jernih kode ini setelah ditutup.
+            <strong>PERHATIAN KEAMANAN KETAT:</strong> Kode di atas{" "}
+            <u>HANYA DITAMPILKAN SEKALI INI</u>. Server hanya menyimpan verifikasi salted scrypt
+            hash dan tidak dapat menampilkan kembali teks jernih kode ini setelah ditutup.
           </div>
 
           <button className="btn-primary" type="button" onClick={() => setIssuedCodeResult(null)}>
@@ -316,15 +319,22 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
 
       {revokedSuccess && (
         <div className="staff-alert alert-success" style={{ marginBottom: "1rem" }}>
-          <p>Akses ibu hamil berhasil dicabut. Seluruh sesi aktif pasien telah dinonaktifkan di database Supabase.</p>
+          <p>
+            Akses ibu hamil berhasil dicabut. Seluruh sesi aktif pasien telah dinonaktifkan di
+            database Supabase.
+          </p>
         </div>
       )}
 
       {!issuedCodeResult && activeTab === "issue" && (
         <form className="staff-form-grid" onSubmit={(e) => void handleIssueCredential(e)}>
           <h3>Penerbitan Kode Akses Pasien</h3>
-          <p className="form-lead" style={{ color: "var(--color-ink-muted)", marginBottom: "1rem" }}>
-            Terbitkan kode akses 16-karakter format Crockford Base32 untuk ibu hamil yang terdaftar di Supabase.
+          <p
+            className="form-lead"
+            style={{ color: "var(--color-ink-muted)", marginBottom: "1rem" }}
+          >
+            Terbitkan kode akses 16-karakter format Crockford Base32 untuk ibu hamil yang terdaftar
+            di Supabase.
           </p>
 
           <div className="form-group">
@@ -336,7 +346,9 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
               onChange={(e) => setSelectedMotherId(e.target.value)}
               required
             >
-              <option value="">-- {loadingMothers ? "Memuat data ibu hamil..." : "Pilih Pasien Terdaftar"} --</option>
+              <option value="">
+                -- {loadingMothers ? "Memuat data ibu hamil..." : "Pilih Pasien Terdaftar"} --
+              </option>
               {mothers.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.full_name} ({m.phone_masked}) - {m.village_name ?? "Tanpa Desa"}
@@ -354,8 +366,12 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
       {!issuedCodeResult && activeTab === "reissue" && (
         <form className="staff-form-grid" onSubmit={(e) => void handleReissueCredential(e)}>
           <h3>Penerbitan Ulang Kode Akses (Reissue)</h3>
-          <p className="form-lead" style={{ color: "var(--color-ink-muted)", marginBottom: "1rem" }}>
-            Gunakan menu ini jika kode pasien hilang atau lupa. Kode lama akan otomatis dicabut di Supabase.
+          <p
+            className="form-lead"
+            style={{ color: "var(--color-ink-muted)", marginBottom: "1rem" }}
+          >
+            Gunakan menu ini jika kode pasien hilang atau lupa. Kode lama akan otomatis dicabut di
+            Supabase.
           </p>
 
           <div className="form-group">
@@ -398,7 +414,10 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
       {!issuedCodeResult && activeTab === "revoke" && (
         <form className="staff-form-grid" onSubmit={(e) => void handleRevokeCredential(e)}>
           <h3>Pencabutan Akses Pasien (Revoke)</h3>
-          <p className="form-lead" style={{ color: "var(--color-ink-muted)", marginBottom: "1rem" }}>
+          <p
+            className="form-lead"
+            style={{ color: "var(--color-ink-muted)", marginBottom: "1rem" }}
+          >
             Mencabut kredensial dan menghentikan seluruh sesi mandiri ibu hamil secara permanen.
           </p>
 

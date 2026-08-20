@@ -6,7 +6,7 @@ import type {
   PregnancyMilestoneListResponse,
   PregnancyMilestoneResponse,
 } from "@anc/contracts";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface PuskesmasClinicalRecordPanelProps {
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
@@ -39,26 +39,43 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
     null,
   );
 
-  const fetchMothers = useCallback(async (): Promise<void> => {
-    setLoadingInitial(true);
-    try {
-      const res = await fetch("/api/staff-proxy/mothers");
-      if (res.ok) {
-        const data = (await res.json()) as { items: readonly MotherSummary[] };
-        setMothers(data.items ?? []);
-      }
-    } catch {
-      // Best-effort load
-    } finally {
-      setLoadingInitial(false);
-    }
-  }, []);
-
   useEffect(() => {
-    if (userRole === "PUSKESMAS") {
-      void fetchMothers();
+    if (userRole !== "PUSKESMAS") return;
+
+    const controller = new AbortController();
+    void loadMothers(controller.signal);
+    return () => controller.abort();
+
+    async function loadMothers(signal: AbortSignal): Promise<void> {
+      setLoadingInitial(true);
+      try {
+        const res = await fetch("/api/staff-proxy/mothers", { signal });
+        if (res.ok) {
+          const data = (await res.json()) as { items: readonly MotherSummary[] };
+          setMothers(data.items ?? []);
+        }
+      } catch (err) {
+        if (!(err instanceof DOMException && err.name === "AbortError")) {
+          // Best-effort load
+        }
+      } finally {
+        setLoadingInitial(false);
+      }
     }
-  }, [userRole, fetchMothers]);
+  }, [userRole]);
+
+  if (userRole !== "PUSKESMAS") {
+    return (
+      <div className="staff-panel-card staff-panel-restricted">
+        <span className="staff-panel-badge badge-warning">Akses Terbatas</span>
+        <h3>Pencatatan Rekam Medis Klinis Hanya Tersedia untuk Petugas Puskesmas</h3>
+        <p>
+          Entri data klinis dokter (Hb, tekanan darah, berat badan) dilakukan di fasilitas
+          Puskesmas.
+        </p>
+      </div>
+    );
+  }
 
   const handleSelectMother = async (motherId: string): Promise<void> => {
     setSelectedMotherId(motherId);
@@ -101,7 +118,9 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
 
     setLoadingRecord(true);
     try {
-      const res = await fetch(`/api/staff-proxy/milestones/${encodeURIComponent(milestoneId)}/record`);
+      const res = await fetch(
+        `/api/staff-proxy/milestones/${encodeURIComponent(milestoneId)}/record`,
+      );
       if (res.ok) {
         const data = (await res.json()) as ClinicalRecordResponse;
         setExistingRecord(data);
@@ -113,10 +132,14 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
           if (typeof payload.weight_kg === "number") {
             setWeightKg(String(payload.weight_kg));
           }
-          const bp = payload.blood_pressure as { systolic_mm_hg?: number; diastolic_mm_hg?: number } | null;
+          const bp = payload.blood_pressure as {
+            systolic_mm_hg?: number;
+            diastolic_mm_hg?: number;
+          } | null;
           if (bp) {
             if (typeof bp.systolic_mm_hg === "number") setSystolicMmHg(String(bp.systolic_mm_hg));
-            if (typeof bp.diastolic_mm_hg === "number") setDiastolicMmHg(String(bp.diastolic_mm_hg));
+            if (typeof bp.diastolic_mm_hg === "number")
+              setDiastolicMmHg(String(bp.diastolic_mm_hg));
           }
           if (typeof payload.notes === "string") setNotes(payload.notes);
         }
@@ -134,8 +157,8 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
         <span className="staff-panel-badge badge-warning">Hak Akses Dibatasi</span>
         <h3>Pengelolaan Detail Klinis K1–K6 Khusus Puskesmas</h3>
         <p>
-          Sesuai standar operasional, input dan validasi detail rekam medis fisik &amp; lab K1–K6 dilakukan
-          oleh tenaga medis terotorisasi di Puskesmas.
+          Sesuai standar operasional, input dan validasi detail rekam medis fisik &amp; lab K1–K6
+          dilakukan oleh tenaga medis terotorisasi di Puskesmas.
         </p>
       </div>
     );
@@ -171,9 +194,7 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
       );
 
       const data = (await res.json().catch(() => null)) as
-        | ClinicalRecordResponse
-        | { error?: { message?: string } }
-        | null;
+        ClinicalRecordResponse | { error?: { message?: string } } | null;
 
       if (!res.ok || !data || "error" in data) {
         setFeedback({
@@ -217,9 +238,7 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
       );
 
       const data = (await res.json().catch(() => null)) as
-        | ClinicalRecordResponse
-        | { error?: { message?: string } }
-        | null;
+        ClinicalRecordResponse | { error?: { message?: string } } | null;
 
       if (!res.ok || !data || "error" in data) {
         setFeedback({
@@ -272,10 +291,13 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
           onChange={(e) => void handleSelectMother(e.target.value)}
           required
         >
-          <option value="">-- {loadingInitial ? "Memuat data pasien..." : "Pilih Ibu Hamil"} --</option>
+          <option value="">
+            -- {loadingInitial ? "Memuat data pasien..." : "Pilih Ibu Hamil"} --
+          </option>
           {mothers.map((m) => (
             <option key={m.id} value={m.id}>
-              {m.full_name} ({m.phone_masked}) - {m.active_pregnancy?.trimester_label ?? "Kehamilan Aktif"}
+              {m.full_name} ({m.phone_masked}) -{" "}
+              {m.active_pregnancy?.trimester_label ?? "Kehamilan Aktif"}
             </option>
           ))}
         </select>
@@ -309,11 +331,29 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
           {loadingRecord ? (
             <p className="field-hint">Memeriksa rekam klinis yang tersimpan...</p>
           ) : (
-            <div style={{ marginBottom: "1.5rem", padding: "1rem", background: "var(--color-surface)", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+            <div
+              style={{
+                marginBottom: "1.5rem",
+                padding: "1rem",
+                background: "var(--color-surface)",
+                borderRadius: "8px",
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "0.5rem",
+                }}
+              >
                 <div>
                   <strong>Milestone: {currentMilestone?.code}</strong> | Status Validasi:{" "}
-                  <span className={`badge-status status-${existingRecord?.record_validation_status === "VALIDATED" ? "completed" : "upcoming"}`}>
+                  <span
+                    className={`badge-status status-${existingRecord?.record_validation_status === "VALIDATED" ? "completed" : "upcoming"}`}
+                  >
                     {existingRecord?.record_validation_status ?? "BELUM TERCATAT"}
                   </span>
                 </div>
@@ -324,7 +364,7 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
                     onClick={() => void handleValidateRecord()}
                     disabled={submitting}
                   >
-                    ✓ Validasi Resmi Rekam Medis
+                    Validasi Resmi Rekam Medis
                   </button>
                 )}
               </div>
@@ -348,7 +388,8 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
                 onChange={(e) => setHemoglobinGdl(e.target.value)}
               />
               <small className="field-help" style={{ color: "var(--color-ink-muted)" }}>
-                Standar anemia &lt; 11.0 g/dL pada trimester 1 &amp; 3; &lt; 10.5 g/dL pada trimester 2.
+                Standar anemia &lt; 11.0 g/dL pada trimester 1 &amp; 3; &lt; 10.5 g/dL pada
+                trimester 2.
               </small>
             </div>
 

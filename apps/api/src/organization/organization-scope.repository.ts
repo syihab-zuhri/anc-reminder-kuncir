@@ -64,7 +64,7 @@ export interface CreateStaffRecordInput {
   readonly healthCenterId: string;
   readonly loginIdentifier: string;
   readonly displayName: string;
-  readonly role: "BIDAN";
+  readonly role: "BIDAN" | "PUSKESMAS";
   readonly passwordHash: string;
 }
 
@@ -287,14 +287,8 @@ export class PostgresOrganizationScopeRepository implements OrganizationScopeRep
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");
-      await client.query(
-        `DELETE FROM staff_assignments WHERE staff_user_id = $1`,
-        [staffUserId],
-      );
-      await client.query(
-        `DELETE FROM staff_sessions WHERE staff_user_id = $1`,
-        [staffUserId],
-      );
+      await client.query(`DELETE FROM staff_assignments WHERE staff_user_id = $1`, [staffUserId]);
+      await client.query(`DELETE FROM staff_sessions WHERE staff_user_id = $1`, [staffUserId]);
       const result = await client.query(
         `DELETE FROM staff_users WHERE id = $1 AND health_center_id = $2 AND role = 'BIDAN'`,
         [staffUserId, healthCenterId],
@@ -381,7 +375,9 @@ export class PostgresOrganizationScopeRepository implements OrganizationScopeRep
   }
 
   public async listAssignments(healthCenterId: string): Promise<readonly StaffAssignmentDetail[]> {
-    const result = await this.pool.query<AssignmentRow & { staff_name: string; staff_identifier: string; village_name: string | null }>(
+    const result = await this.pool.query<
+      AssignmentRow & { staff_name: string; staff_identifier: string; village_name: string | null }
+    >(
       `SELECT
          a.id,
          a.staff_user_id,

@@ -1,6 +1,9 @@
 "use client";
 
-import type { MotherRegistrationResponse, MotherAccessCredentialIssueResponse } from "@anc/contracts";
+import type {
+  MotherRegistrationResponse,
+  MotherAccessCredentialIssueResponse,
+} from "@anc/contracts";
 import { useState } from "react";
 
 interface MotherRegistrationPanelProps {
@@ -22,10 +25,7 @@ interface MotherRegistrationPanelProps {
 
 type RegistrationStep = "FORM" | "REVIEW" | "SUCCESS";
 
-export function MotherRegistrationPanel({
-  userRole,
-  onNavigateTab,
-}: MotherRegistrationPanelProps) {
+export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegistrationPanelProps) {
   const [step, setStep] = useState<RegistrationStep>("FORM");
 
   // Form State - 5 Required Fields
@@ -59,8 +59,8 @@ export function MotherRegistrationPanel({
         <span className="staff-panel-badge badge-warning">Deny by Default</span>
         <h3>Pendaftaran Ibu Hamil Tidak Tersedia untuk Super Admin</h3>
         <p>
-          Sesuai kebijakan keamanan, Super Admin tidak diperkenankan mendaftarkan atau membaca data
-          kesehatan pasien secara rutin.
+          Sesuai kebijakan keamanan data, peran Super Admin tidak diperkenankan mendaftarkan atau
+          mengelola data rekam medis ibu hamil secara rutin.
         </p>
       </div>
     );
@@ -124,9 +124,7 @@ export function MotherRegistrationPanel({
       });
 
       const data = (await res.json().catch(() => null)) as
-        | MotherRegistrationResponse
-        | { error?: { message?: string } }
-        | null;
+        MotherRegistrationResponse | { error?: { message?: string } } | null;
 
       if (!res.ok || !data || !("mother" in data)) {
         const errorMsg =
@@ -170,9 +168,7 @@ export function MotherRegistrationPanel({
       );
 
       const data = (await res.json().catch(() => null)) as
-        | MotherAccessCredentialIssueResponse
-        | { error?: { message?: string } }
-        | null;
+        MotherAccessCredentialIssueResponse | { error?: { message?: string } } | null;
 
       if (!res.ok || !data || "error" in data || !("one_time_code" in data)) {
         setCodeError(
@@ -254,8 +250,12 @@ export function MotherRegistrationPanel({
               value={nik}
               onChange={(e) => setNik(e.target.value.replace(/\D/gu, ""))}
             />
-            <small className="field-help" style={{ display: "block", marginTop: "0.25rem", color: "var(--color-ink-muted)" }}>
-              NIK dienkripsi kuat di server dengan kunci base64 dan tidak pernah disimpan dalam bentuk teks jernih.
+            <small
+              className="field-help"
+              style={{ display: "block", marginTop: "0.25rem", color: "var(--color-ink-muted)" }}
+            >
+              NIK dienkripsi kuat di server dengan kunci base64 dan tidak pernah disimpan dalam
+              bentuk teks jernih.
             </small>
           </div>
 
@@ -295,14 +295,35 @@ export function MotherRegistrationPanel({
               value={pregnancyStartDate}
               onChange={(e) => setPregnancyStartDate(e.target.value)}
             />
-            <small className="field-help" style={{ display: "block", marginTop: "0.25rem", color: "var(--color-ink-muted)" }}>
+            <small
+              className="field-help"
+              style={{ display: "block", marginTop: "0.25rem", color: "var(--color-ink-muted)" }}
+            >
               Digunakan oleh server untuk menghitung usia kehamilan dan jadwal K1-K8 otomatis.
             </small>
           </div>
 
-          <fieldset className="consent-fieldset" style={{ padding: "1rem", border: "1px solid var(--color-border)", borderRadius: "8px", margin: "1rem 0" }}>
-            <legend style={{ fontWeight: 600, padding: "0 0.5rem" }}>Persetujuan Layanan (Consent Purposes)</legend>
-            <label className="checkbox-label" style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start", marginBottom: "0.5rem" }}>
+          <fieldset
+            className="consent-fieldset"
+            style={{
+              padding: "1rem",
+              border: "1px solid var(--color-border)",
+              borderRadius: "8px",
+              margin: "1rem 0",
+            }}
+          >
+            <legend style={{ fontWeight: 600, padding: "0 0.5rem" }}>
+              Persetujuan Layanan (Consent Purposes)
+            </legend>
+            <label
+              className="checkbox-label"
+              style={{
+                display: "flex",
+                gap: "0.5rem",
+                alignItems: "flex-start",
+                marginBottom: "0.5rem",
+              }}
+            >
               <input
                 type="checkbox"
                 checked={consentReminder}
@@ -313,7 +334,10 @@ export function MotherRegistrationPanel({
                 Notification (REMINDER)
               </span>
             </label>
-            <label className="checkbox-label" style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
+            <label
+              className="checkbox-label"
+              style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}
+            >
               <input
                 type="checkbox"
                 checked={consentDataProcessing}
@@ -339,13 +363,18 @@ export function MotherRegistrationPanel({
             Periksa kembali ringkasan data sebelum disimpan secara permanen ke database Supabase.
           </p>
 
-          <dl className="review-list" style={{ display: "grid", gap: "0.75rem", marginBottom: "1.5rem" }}>
+          <dl
+            className="review-list"
+            style={{ display: "grid", gap: "0.75rem", marginBottom: "1.5rem" }}
+          >
             <div>
               <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>Nama Ibu Hamil</dt>
               <dd style={{ fontSize: "1.1rem", fontWeight: 600 }}>{fullName}</dd>
             </div>
             <div>
-              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>NIK (Tersamar untuk Keamanan)</dt>
+              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>
+                NIK (Tersamar untuk Keamanan)
+              </dt>
               <dd>
                 <code>{maskedNikDisplay}</code>
               </dd>
@@ -355,16 +384,22 @@ export function MotherRegistrationPanel({
               <dd>{address}</dd>
             </div>
             <div>
-              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>Nomor Kontak WhatsApp</dt>
+              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>
+                Nomor Kontak WhatsApp
+              </dt>
               <dd>{phoneNumber}</dd>
             </div>
             <div>
-              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>Tanggal Awal Kehamilan (HPHT)</dt>
+              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>
+                Tanggal Awal Kehamilan (HPHT)
+              </dt>
               <dd>{pregnancyStartDate}</dd>
             </div>
             <div>
-              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>Persetujuan Pengingat</dt>
-              <dd>{consentReminder ? "✅ Disetujui (GRANTED)" : "❌ Ditolak (WITHDRAWN)"}</dd>
+              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>
+                Persetujuan Pengingat
+              </dt>
+              <dd>{consentReminder ? "Disetujui (GRANTED)" : "Ditolak (WITHDRAWN)"}</dd>
             </div>
           </dl>
 
@@ -390,21 +425,39 @@ export function MotherRegistrationPanel({
       )}
 
       {step === "SUCCESS" && successResult && (
-        <div className="staff-success-box" style={{ padding: "1.5rem", background: "var(--color-surface)", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
-          <div style={{ fontSize: "2.5rem", color: "var(--color-primary)", marginBottom: "0.5rem" }}>✅</div>
+        <div
+          className="staff-success-box"
+          style={{
+            padding: "1.5rem",
+            background: "var(--color-surface)",
+            borderRadius: "8px",
+            border: "1px solid var(--color-border)",
+          }}
+        >
+          <div
+            style={{ fontSize: "2.5rem", color: "var(--color-primary)", marginBottom: "0.5rem" }}
+          ></div>
           <h3>Pendaftaran Ibu Hamil Berhasil Disimpan ke Supabase!</h3>
           <p style={{ color: "var(--color-ink-muted)", marginBottom: "1.5rem" }}>
-            Data ibu hamil, kehamilan aktif, persetujuan, dan jadwal ANC (K1-K8) telah otomatis dibuat di database.
+            Data ibu hamil, kehamilan aktif, persetujuan, dan jadwal ANC (K1-K8) telah otomatis
+            dibuat di database.
           </p>
 
-          <dl className="review-list" style={{ display: "grid", gap: "0.75rem", marginBottom: "1.5rem" }}>
+          <dl
+            className="review-list"
+            style={{ display: "grid", gap: "0.75rem", marginBottom: "1.5rem" }}
+          >
             <div>
               <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>Nama Ibu Hamil</dt>
               <dd style={{ fontSize: "1.2rem", fontWeight: 700 }}>{fullName}</dd>
             </div>
             <div>
-              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>NIK Pasien (Tersamar)</dt>
-              <dd><code>{maskedNikDisplay}</code></dd>
+              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>
+                NIK Pasien (Tersamar)
+              </dt>
+              <dd>
+                <code>{maskedNikDisplay}</code>
+              </dd>
             </div>
             <div>
               <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>Waktu Terdaftar</dt>
@@ -413,33 +466,65 @@ export function MotherRegistrationPanel({
           </dl>
 
           {/* Quick Access Code Generator Box */}
-          <div style={{ margin: "1.5rem 0", padding: "1.25rem", background: "var(--color-surface-raised, #f8fafc)", borderRadius: "8px", border: "1px solid var(--color-primary-light, #cbd5e1)" }}>
-            <h4 style={{ margin: "0 0 0.5rem 0" }}>🔑 Kode Akses Portal Ibu Hamil</h4>
+          <div
+            style={{
+              margin: "1.5rem 0",
+              padding: "1.25rem",
+              background: "var(--color-surface-raised, #f8fafc)",
+              borderRadius: "8px",
+              border: "1px solid var(--color-primary-light, #cbd5e1)",
+            }}
+          >
+            <h4 style={{ margin: "0 0 0.5rem 0" }}>Kode Akses Portal Ibu Hamil</h4>
             {generatedCode ? (
               <div>
-                <p style={{ margin: "0 0 0.75rem 0", fontSize: "0.9rem", color: "var(--color-ink-muted)" }}>
-                  Serahkan kode akses di bawah ini kepada pasien untuk login ke Portal Ibu Hamil mandiri:
+                <p
+                  style={{
+                    margin: "0 0 0.75rem 0",
+                    fontSize: "0.9rem",
+                    color: "var(--color-ink-muted)",
+                  }}
+                >
+                  Serahkan kode akses di bawah ini kepada pasien untuk login ke Portal Ibu Hamil
+                  mandiri:
                 </p>
-                <div style={{ padding: "1rem", background: "var(--color-bg, #0f172a)", color: "#38bdf8", fontSize: "1.4rem", fontWeight: "bold", fontFamily: "monospace", letterSpacing: "2px", borderRadius: "6px", textAlign: "center", marginBottom: "0.75rem" }}>
+                <div
+                  style={{
+                    padding: "1rem",
+                    background: "var(--color-bg, #0f172a)",
+                    color: "#38bdf8",
+                    fontSize: "1.4rem",
+                    fontWeight: "bold",
+                    fontFamily: "monospace",
+                    letterSpacing: "2px",
+                    borderRadius: "6px",
+                    textAlign: "center",
+                    marginBottom: "0.75rem",
+                  }}
+                >
                   {generatedCode}
                 </div>
                 <small style={{ color: "#e11d48", fontWeight: 600 }}>
-                  ⚠️ Perhatian: Kode hanya ditampilkan satu kali ini. Catat atau serahkan langsung ke pasien.
+                  Perhatian: Kode hanya ditampilkan satu kali ini. Catat atau serahkan langsung ke
+                  pasien.
                 </small>
               </div>
             ) : (
               <div>
                 <p style={{ margin: "0 0 0.75rem 0", fontSize: "0.9rem" }}>
-                  Terbitkan kode akses 16-karakter sekarang agar ibu hamil dapat langsung memantau kehamilannya di Portal Ibu Hamil.
+                  Terbitkan kode akses 16-karakter sekarang agar ibu hamil dapat langsung memantau
+                  kehamilannya di Portal Ibu Hamil.
                 </p>
-                {codeError && <p style={{ color: "#e11d48", marginBottom: "0.5rem" }}>{codeError}</p>}
+                {codeError && (
+                  <p style={{ color: "#e11d48", marginBottom: "0.5rem" }}>{codeError}</p>
+                )}
                 <button
                   className="btn-primary"
                   type="button"
                   onClick={() => void handleGenerateAccessCode()}
                   disabled={generatingCode}
                 >
-                  {generatingCode ? "Menerbitkan Kode Akses..." : "⚡ Terbitkan Kode Akses Sekarang"}
+                  {generatingCode ? "Menerbitkan Kode Akses..." : "Terbitkan Kode Akses Sekarang"}
                 </button>
               </div>
             )}
@@ -452,7 +537,7 @@ export function MotherRegistrationPanel({
                 type="button"
                 onClick={() => onNavigateTab("mothers")}
               >
-                👥 Lihat di Daftar Ibu Hamil
+                Lihat di Daftar Ibu Hamil
               </button>
             )}
             <button className="btn-secondary" type="button" onClick={handleResetForm}>

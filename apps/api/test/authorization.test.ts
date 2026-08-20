@@ -16,6 +16,8 @@ describe("central authorization policy", () => {
     const puskesmas = actor("PUSKESMAS");
     expect(policy.hasCapability(bidan, "MOTHER_BASIC_READ")).toBe(true);
     expect(policy.hasCapability(puskesmas, "MOTHER_BASIC_READ")).toBe(true);
+    expect(policy.hasCapability(bidan, "MOTHER_REGISTRY_MANAGE")).toBe(true);
+    expect(policy.hasCapability(puskesmas, "MOTHER_REGISTRY_MANAGE")).toBe(true);
     expect(policy.hasCapability(bidan, "CLINICAL_RECORD_WRITE")).toBe(false);
     expect(policy.hasCapability(puskesmas, "CLINICAL_RECORD_WRITE")).toBe(true);
     expect(policy.hasCapability(bidan, "MILESTONE_SCHEDULE")).toBe(false);

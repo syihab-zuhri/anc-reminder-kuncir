@@ -25,10 +25,7 @@ interface RegisteredMothersPanelProps {
   ) => void;
 }
 
-export function RegisteredMothersPanel({
-  userRole,
-  onNavigateTab,
-}: RegisteredMothersPanelProps) {
+export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMothersPanelProps) {
   const searchInputId = useId();
   const villageFilterId = useId();
   const statusFilterId = useId();
@@ -61,6 +58,18 @@ export function RegisteredMothersPanel({
   const [issuingCode, setIssuingCode] = useState(false);
   const [accessCodeError, setAccessCodeError] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
+
+  const [editingMother, setEditingMother] = useState<MotherSummary | null>(null);
+  const [editFullName, setEditFullName] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editReason, setEditReason] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [archiveMother, setArchiveMother] = useState<MotherSummary | null>(null);
+  const [archiveReason, setArchiveReason] = useState("");
+  const [archiving, setArchiving] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
 
   // Load Villages for Filter
   useEffect(() => {
@@ -286,9 +295,7 @@ export function RegisteredMothersPanel({
       );
 
       const data = (await res.json().catch(() => null)) as
-        | MotherAccessCredentialIssueResponse
-        | { error?: { message?: string } }
-        | null;
+        MotherAccessCredentialIssueResponse | { error?: { message?: string } } | null;
 
       if (!res.ok || !data || "error" in data || !("one_time_code" in data)) {
         setAccessCodeError(
@@ -318,15 +325,117 @@ export function RegisteredMothersPanel({
     }
   }
 
+  function handleOpenEdit(mother: MotherSummary): void {
+    setEditingMother(mother);
+    setEditFullName(mother.full_name);
+    setEditAddress(mother.address);
+    setEditPhone("");
+    setEditReason("");
+    setEditError(null);
+  }
+
+  async function handleSaveEdit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    if (!editingMother) return;
+    setSavingEdit(true);
+    setEditError(null);
+    try {
+      const response = await fetch(
+        `/api/staff-proxy/mothers/${encodeURIComponent(editingMother.id)}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            idempotency_key: crypto.randomUUID(),
+            full_name: editFullName.trim(),
+            address: editAddress.trim(),
+            ...(editPhone.trim() ? { phone_number: editPhone.trim() } : {}),
+            reason: editReason.trim(),
+          }),
+        },
+      );
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        setEditError(data?.error?.message ?? "Data Ibu Hamil belum dapat diperbarui.");
+        return;
+      }
+      setEditingMother(null);
+      await fetchMothers();
+    } catch {
+      setEditError("Koneksi terputus saat menyimpan perubahan data.");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  function handleOpenArchive(mother: MotherSummary): void {
+    setArchiveMother(mother);
+    setArchiveReason("");
+    setArchiveError(null);
+  }
+
+  async function handleArchive(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    if (!archiveMother) return;
+    setArchiving(true);
+    setArchiveError(null);
+    try {
+      const activePregnancy = archiveMother.active_pregnancy;
+      if (activePregnancy !== null) {
+        const closeResponse = await fetch(
+          `/api/staff-proxy/pregnancies/${encodeURIComponent(activePregnancy.id)}/close`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              idempotency_key: crypto.randomUUID(),
+              reason: `Pengarsipan data Ibu Hamil: ${archiveReason.trim()}`,
+            }),
+          },
+        );
+        if (!closeResponse.ok) {
+          const data = await closeResponse.json().catch(() => null);
+          setArchiveError(
+            data?.error?.message ?? "Kehamilan aktif belum dapat ditutup untuk pengarsipan.",
+          );
+          return;
+        }
+        setArchiveMother({ ...archiveMother, active_pregnancy: null });
+      }
+
+      const response = await fetch(
+        `/api/staff-proxy/mothers/${encodeURIComponent(archiveMother.id)}`,
+        {
+          method: "DELETE",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            idempotency_key: crypto.randomUUID(),
+            reason: archiveReason.trim(),
+          }),
+        },
+      );
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        setArchiveError(data?.error?.message ?? "Data Ibu Hamil belum dapat diarsipkan.");
+        return;
+      }
+      setArchiveMother(null);
+      await fetchMothers();
+    } catch {
+      setArchiveError("Koneksi terputus saat mengarsipkan data.");
+    } finally {
+      setArchiving(false);
+    }
+  }
+
   if (userRole === "SUPER_ADMIN") {
     return (
       <div className="staff-panel-card staff-panel-restricted">
         <span className="staff-panel-badge badge-warning">Deny by Default</span>
         <h3>Data Ibu Hamil Terdaftar Tidak Tersedia untuk Super Admin</h3>
         <p>
-          Sesuai kebijakan keamanan dan privasi data kesehatan pasien (PRD-SECURITY, ADR-004), akun
-          Super Admin dibatasi secara ketat dan tidak diperkenankan membaca data medis operasional
-          pasien.
+          Sesuai kebijakan keamanan dan privasi data kesehatan pasien, akun Super Admin dibatasi
+          secara ketat dan tidak diperkenankan membaca data medis operasional pasien.
         </p>
       </div>
     );
@@ -335,13 +444,23 @@ export function RegisteredMothersPanel({
   // Compute Summary Counters from loaded items
   const totalLoaded = mothers.length;
   const activeCount = mothers.filter((m) => m.active_pregnancy?.status === "ACTIVE").length;
-  const closedCount = mothers.filter((m) => !m.active_pregnancy || m.active_pregnancy.status === "CLOSED").length;
+  const closedCount = mothers.filter(
+    (m) => !m.active_pregnancy || m.active_pregnancy.status === "CLOSED",
+  ).length;
 
   return (
     <div className="staff-panel-card mothers-registry-panel">
       {/* Header */}
       <header className="staff-panel-header">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "1rem",
+          }}
+        >
           <div>
             <span className="staff-kicker">Data Pasien Terdaftar / Registry Wilayah</span>
             <h2>Daftar Ibu Hamil Terdaftar</h2>
@@ -357,7 +476,7 @@ export function RegisteredMothersPanel({
               onClick={() => void fetchMothers()}
               disabled={loading}
             >
-              {loading ? "Memuat..." : "🔄 Segarkan Data"}
+              {loading ? "Memuat..." : "Segarkan Data"}
             </button>
             {onNavigateTab && (
               <button
@@ -392,7 +511,10 @@ export function RegisteredMothersPanel({
         </div>
         <div className="metric-card">
           <span className="metric-label">Cakupan Wilayah</span>
-          <strong className="metric-value" style={{ fontSize: "1.4rem", alignSelf: "center", margin: "auto 0" }}>
+          <strong
+            className="metric-value"
+            style={{ fontSize: "1.4rem", alignSelf: "center", margin: "auto 0" }}
+          >
             {villages.length > 0 ? `${villages.length} Desa Binaan` : "Wilayah Puskesmas"}
           </strong>
         </div>
@@ -455,9 +577,7 @@ export function RegisteredMothersPanel({
               id={statusFilterId}
               className="staff-input"
               value={selectedStatus}
-              onChange={(e) =>
-                setSelectedStatus(e.target.value as "ALL" | "ACTIVE" | "CLOSED")
-              }
+              onChange={(e) => setSelectedStatus(e.target.value as "ALL" | "ACTIVE" | "CLOSED")}
             >
               <option value="ALL">Semua Status</option>
               <option value="ACTIVE">Kehamilan Aktif Saja</option>
@@ -466,7 +586,7 @@ export function RegisteredMothersPanel({
           </div>
 
           {/* Action Buttons */}
-          <div style={{ display: "flex", gap: "0.5rem" }}>
+          <div className="mothers-filter-actions" style={{ display: "flex", gap: "0.5rem" }}>
             <button className="btn-primary" type="submit" disabled={loading}>
               Cari
             </button>
@@ -512,21 +632,24 @@ export function RegisteredMothersPanel({
             borderRadius: "4px",
           }}
         >
-          <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🤰</div>
+          <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>Data</div>
           <h3 style={{ fontSize: "1.25rem", fontWeight: 700, margin: "0 0 0.5rem" }}>
             Belum Ada Data Ibu Hamil yang Ditemukan
           </h3>
-          <p style={{ color: "var(--ink-muted)", fontSize: "0.9rem", maxWidth: "28rem", margin: "0 auto 1.5rem" }}>
+          <p
+            style={{
+              color: "var(--ink-muted)",
+              fontSize: "0.9rem",
+              maxWidth: "28rem",
+              margin: "0 auto 1.5rem",
+            }}
+          >
             {searchQuery || selectedVillageId || selectedStatus !== "ALL"
               ? "Tidak ada pasien yang sesuai dengan kata kunci pencarian atau filter yang dipilih."
               : "Belum ada ibu hamil yang terdaftar di sistem. Mulai dengan mendaftarkan ibu hamil baru."}
           </p>
           {onNavigateTab && (
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => onNavigateTab("register")}
-            >
+            <button type="button" className="btn-primary" onClick={() => onNavigateTab("register")}>
               + Daftarkan Ibu Hamil Sekarang
             </button>
           )}
@@ -535,8 +658,8 @@ export function RegisteredMothersPanel({
 
       {/* Mothers Table */}
       {!loading && mothers.length > 0 && (
-        <div className="table-responsive">
-          <table className="staff-table" style={{ width: "100%" }}>
+        <div className="table-responsive mothers-table-responsive">
+          <table className="staff-table mothers-table" style={{ width: "100%" }}>
             <thead>
               <tr>
                 <th style={{ minWidth: "12rem" }}>Nama &amp; Identitas</th>
@@ -554,7 +677,7 @@ export function RegisteredMothersPanel({
                 return (
                   <tr key={mother.id} style={{ transition: "background 0.15s ease" }}>
                     {/* Column 1: Identity */}
-                    <td>
+                    <td data-label="Nama & Identitas">
                       <div style={{ display: "grid", gap: "0.2rem" }}>
                         <strong style={{ fontSize: "1rem", color: "var(--ink)" }}>
                           {mother.full_name}
@@ -571,13 +694,13 @@ export function RegisteredMothersPanel({
                     </td>
 
                     {/* Column 2: Contact & Address */}
-                    <td>
+                    <td data-label="Kontak & Wilayah">
                       <div style={{ display: "grid", gap: "0.25rem", fontSize: "0.86rem" }}>
                         <div>
-                          <strong style={{ color: "#0369a1" }}>📱 {mother.phone_masked}</strong>
+                          <strong style={{ color: "#0369a1" }}> {mother.phone_masked}</strong>
                         </div>
                         <div style={{ color: "var(--ink-muted)", fontSize: "0.82rem" }}>
-                          📍 {mother.village_name ? `Desa ${mother.village_name}` : "Tanpa Desa"}
+                          {mother.village_name ? `Desa ${mother.village_name}` : "Tanpa Desa"}
                         </div>
                         <small style={{ color: "var(--ink-faint)", lineHeight: 1.3 }}>
                           {mother.address}
@@ -586,7 +709,7 @@ export function RegisteredMothersPanel({
                     </td>
 
                     {/* Column 3: Gestational Age & Trimester */}
-                    <td>
+                    <td data-label="Kehamilan">
                       {preg ? (
                         <div style={{ display: "grid", gap: "0.3rem" }}>
                           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
@@ -611,14 +734,20 @@ export function RegisteredMothersPanel({
                           </small>
                         </div>
                       ) : (
-                        <span style={{ color: "var(--ink-faint)", fontStyle: "italic", fontSize: "0.85rem" }}>
+                        <span
+                          style={{
+                            color: "var(--ink-faint)",
+                            fontStyle: "italic",
+                            fontSize: "0.85rem",
+                          }}
+                        >
                           Tidak ada kehamilan aktif
                         </span>
                       )}
                     </td>
 
                     {/* Column 4: Registration Date */}
-                    <td>
+                    <td data-label="Terdaftar">
                       <span style={{ fontSize: "0.85rem", color: "var(--ink-muted)" }}>
                         {new Date(mother.created_at).toLocaleDateString("id-ID", {
                           day: "numeric",
@@ -629,8 +758,13 @@ export function RegisteredMothersPanel({
                     </td>
 
                     {/* Column 5: Actions */}
-                    <td style={{ textAlign: "right" }}>
+                    <td
+                      className="mothers-action-cell"
+                      data-label="Aksi"
+                      style={{ textAlign: "right" }}
+                    >
                       <div
+                        className="mothers-action-group"
                         style={{
                           display: "inline-flex",
                           gap: "0.4rem",
@@ -646,19 +780,51 @@ export function RegisteredMothersPanel({
                           onClick={() => void handleOpenDetail(mother)}
                           title="Lihat Linimasa ANC K1–K8"
                         >
-                          👁️ Linimasa K1–K8
+                          Linimasa K1–K8
                         </button>
 
-                        {/* Access Code Button */}
                         <button
                           type="button"
                           className="btn-secondary"
                           style={{ padding: "0.45rem 0.75rem", fontSize: "0.78rem" }}
-                          onClick={() => handleOpenAccessCode(mother)}
-                          title="Terbitkan Kode Akses Pasien"
+                          onClick={() => handleOpenEdit(mother)}
+                          title="Edit data administrasi Ibu Hamil"
                         >
-                          🔑 Kode Akses
+                          Edit Data
                         </button>
+
+                        {/* Access Code Button - Puskesmas Only */}
+                        {userRole === "PUSKESMAS" && (
+                          <>
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              style={{ padding: "0.45rem 0.75rem", fontSize: "0.78rem" }}
+                              onClick={() => handleOpenAccessCode(mother)}
+                              title="Terbitkan Kode Akses Pasien"
+                            >
+                              Kode Akses
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              style={{
+                                padding: "0.45rem 0.75rem",
+                                fontSize: "0.78rem",
+                                color: "#b91c1c",
+                                borderColor: "#fecaca",
+                              }}
+                              onClick={() => handleOpenArchive(mother)}
+                              title={
+                                mother.active_pregnancy
+                                  ? "Tutup kehamilan aktif lalu arsipkan data."
+                                  : "Arsipkan data Ibu Hamil"
+                              }
+                            >
+                              Hapus Data
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -666,6 +832,150 @@ export function RegisteredMothersPanel({
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {editingMother && (
+        <div className="staff-modal-backdrop" role="presentation">
+          <form
+            className="staff-panel-card"
+            onSubmit={handleSaveEdit}
+            style={{ width: "min(100%, 36rem)" }}
+          >
+            <span className="staff-kicker">Koreksi Data Administrasi</span>
+            <h3 style={{ marginTop: "0.25rem" }}>Edit Data: {editingMother.full_name}</h3>
+            <p style={{ color: "var(--ink-muted)", fontSize: "0.88rem" }}>
+              NIK tidak ditampilkan atau diubah di formulir ini. Kosongkan nomor telepon bila tidak
+              berubah.
+            </p>
+            {editError && (
+              <div className="staff-alert alert-error">
+                <p>{editError}</p>
+              </div>
+            )}
+            <div className="form-group">
+              <label htmlFor="edit-mother-name">Nama lengkap</label>
+              <input
+                id="edit-mother-name"
+                className="staff-input"
+                value={editFullName}
+                onChange={(event) => setEditFullName(event.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="edit-mother-address">Alamat</label>
+              <textarea
+                id="edit-mother-address"
+                className="staff-input"
+                value={editAddress}
+                onChange={(event) => setEditAddress(event.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="edit-mother-phone">Nomor telepon baru (opsional)</label>
+              <input
+                id="edit-mother-phone"
+                className="staff-input"
+                inputMode="tel"
+                value={editPhone}
+                onChange={(event) => setEditPhone(event.target.value)}
+                placeholder="Contoh: 0812 3456 7890"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="edit-mother-reason">Alasan perubahan</label>
+              <input
+                id="edit-mother-reason"
+                className="staff-input"
+                value={editReason}
+                onChange={(event) => setEditReason(event.target.value)}
+                minLength={3}
+                required
+              />
+            </div>
+            <div
+              className="mothers-modal-actions"
+              style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}
+            >
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setEditingMother(null)}
+                disabled={savingEdit}
+              >
+                Batal
+              </button>
+              <button type="submit" className="btn-primary" disabled={savingEdit}>
+                {savingEdit ? "Menyimpan..." : "Simpan Perubahan"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {archiveMother && (
+        <div className="staff-modal-backdrop" role="presentation">
+          <form
+            className="staff-panel-card"
+            onSubmit={handleArchive}
+            style={{ width: "min(100%, 36rem)" }}
+          >
+            <span className="staff-kicker">Arsip Rekam Pasien</span>
+            <h3 style={{ marginTop: "0.25rem" }}>Hapus Data: {archiveMother.full_name}</h3>
+            <div className="staff-alert alert-error">
+              <p>
+                Data tidak dimusnahkan. Rekam dan jejak audit dipertahankan, sedangkan akses portal
+                dan perangkat pasien dicabut.
+              </p>
+            </div>
+            {archiveMother.active_pregnancy && (
+              <div className="staff-alert alert-info">
+                <p>
+                  Kehamilan aktif akan ditutup terlebih dahulu. Pengingat yang belum selesai akan
+                  dibatalkan secara tercatat sebelum data diarsipkan.
+                </p>
+              </div>
+            )}
+            {archiveError && (
+              <div className="staff-alert alert-error">
+                <p>{archiveError}</p>
+              </div>
+            )}
+            <div className="form-group">
+              <label htmlFor="archive-mother-reason">Alasan pengarsipan</label>
+              <textarea
+                id="archive-mother-reason"
+                className="staff-input"
+                value={archiveReason}
+                onChange={(event) => setArchiveReason(event.target.value)}
+                minLength={3}
+                required
+              />
+            </div>
+            <div
+              className="mothers-modal-actions"
+              style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}
+            >
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setArchiveMother(null)}
+                disabled={archiving}
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                className="btn-primary"
+                style={{ background: "#b91c1c" }}
+                disabled={archiving}
+              >
+                {archiving ? "Mengarsipkan..." : "Arsipkan Data"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
@@ -731,14 +1041,27 @@ export function RegisteredMothersPanel({
               }}
             >
               <div>
-                <span style={{ fontSize: "0.72rem", letterSpacing: "0.08em", color: "#e1b45c", textTransform: "uppercase", fontWeight: 800 }}>
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    letterSpacing: "0.08em",
+                    color: "#e1b45c",
+                    textTransform: "uppercase",
+                    fontWeight: 800,
+                  }}
+                >
                   Detail Rekam Ibu Hamil &amp; Linimasa
                 </span>
-                <h3 id="detail-modal-title" style={{ fontSize: "1.5rem", margin: "0.25rem 0 0", color: "#fbf8f1" }}>
+                <h3
+                  id="detail-modal-title"
+                  style={{ fontSize: "1.5rem", margin: "0.25rem 0 0", color: "#fbf8f1" }}
+                >
                   {detailMother.full_name}
                 </h3>
                 <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", opacity: 0.85 }}>
-                  📱 {detailMother.phone_masked} · 📍 {detailMother.village_name ? `Desa ${detailMother.village_name}` : "Tanpa Desa"} · {detailMother.address}
+                  {detailMother.phone_masked} ·{" "}
+                  {detailMother.village_name ? `Desa ${detailMother.village_name}` : "Tanpa Desa"} ·{" "}
+                  {detailMother.address}
                 </p>
               </div>
               <button
@@ -757,7 +1080,7 @@ export function RegisteredMothersPanel({
                 }}
                 aria-label="Tutup Detail"
               >
-                ✕
+                ×
               </button>
             </header>
 
@@ -778,10 +1101,24 @@ export function RegisteredMothersPanel({
                   }}
                 >
                   <div>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--ink-muted)", textTransform: "uppercase" }}>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        color: "var(--ink-muted)",
+                        textTransform: "uppercase",
+                      }}
+                    >
                       Usia Kehamilan (Server-Driven)
                     </span>
-                    <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--ink)", marginTop: "0.2rem" }}>
+                    <div
+                      style={{
+                        fontSize: "1.4rem",
+                        fontWeight: 800,
+                        color: "var(--ink)",
+                        marginTop: "0.2rem",
+                      }}
+                    >
                       {detailMother.active_pregnancy.completed_weeks} Minggu{" "}
                       {detailMother.active_pregnancy.completed_days} Hari
                     </div>
@@ -803,7 +1140,13 @@ export function RegisteredMothersPanel({
                     >
                       {detailMother.active_pregnancy.trimester_label}
                     </span>
-                    <div style={{ marginTop: "0.3rem", fontSize: "0.78rem", color: "var(--ink-muted)" }}>
+                    <div
+                      style={{
+                        marginTop: "0.3rem",
+                        fontSize: "0.78rem",
+                        color: "var(--ink-muted)",
+                      }}
+                    >
                       Status: <strong>{detailMother.active_pregnancy.status}</strong>
                     </div>
                   </div>
@@ -816,13 +1159,20 @@ export function RegisteredMothersPanel({
 
               {/* Milestones K1-K8 Section */}
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "0.75rem" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "baseline",
+                    marginBottom: "0.75rem",
+                  }}
+                >
                   <h4 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800 }}>
                     Linimasa Paket ANC (K1 – K8)
                   </h4>
                   {milestones?.next_milestone_code && (
                     <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#d97706" }}>
-                      🎯 Target Berikutnya: Milestone {milestones.next_milestone_code}
+                      Target Berikutnya: Milestone {milestones.next_milestone_code}
                     </span>
                   )}
                 </div>
@@ -880,7 +1230,13 @@ export function RegisteredMothersPanel({
                             gap: "0.4rem",
                           }}
                         >
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
+                          >
                             <span
                               style={{
                                 fontFamily: "monospace",
@@ -899,22 +1255,35 @@ export function RegisteredMothersPanel({
                             </span>
                           </div>
 
-                          <div style={{ fontSize: "0.75rem", color: "var(--ink-muted)", fontWeight: 600 }}>
+                          <div
+                            style={{
+                              fontSize: "0.75rem",
+                              color: "var(--ink-muted)",
+                              fontWeight: 600,
+                            }}
+                          >
                             {m.trimester_label}
                           </div>
 
                           <div style={{ fontSize: "0.75rem", color: "var(--ink)" }}>
                             {m.due_at ? (
-                              <span>Jatuh Tempo: <strong>{m.due_at.slice(0, 10)}</strong></span>
+                              <span>
+                                Jatuh Tempo: <strong>{m.due_at.slice(0, 10)}</strong>
+                              </span>
                             ) : m.target_date_start && m.target_date_end ? (
-                              <span>Rentang: {m.target_date_start} s/d {m.target_date_end}</span>
+                              <span>
+                                Rentang: {m.target_date_start} s/d {m.target_date_end}
+                              </span>
                             ) : (
                               <span>Sesuai Rekomendasi</span>
                             )}
                           </div>
 
                           <div style={{ fontSize: "0.7rem", color: "var(--ink-faint)" }}>
-                            Fasilitas: {m.required_facility_policy === "PUSKESMAS_REQUIRED" ? "🏥 Puskesmas" : "🏡 Posyandu / Bidan"}
+                            Fasilitas:{" "}
+                            {m.required_facility_policy === "PUSKESMAS_REQUIRED"
+                              ? " Puskesmas"
+                              : " Posyandu / Bidan"}
                           </div>
                         </div>
                       );
@@ -936,17 +1305,19 @@ export function RegisteredMothersPanel({
                 }}
               >
                 <div style={{ display: "flex", gap: "0.5rem" }}>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => {
-                      const target = detailMother;
-                      setDetailMother(null);
-                      handleOpenAccessCode(target);
-                    }}
-                  >
-                    🔑 Terbitkan Kode Akses Pasien
-                  </button>
+                  {userRole === "PUSKESMAS" && (
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => {
+                        const target = detailMother;
+                        setDetailMother(null);
+                        handleOpenAccessCode(target);
+                      }}
+                    >
+                      Terbitkan Kode Akses Pasien
+                    </button>
+                  )}
                   {onNavigateTab && (
                     <button
                       type="button"
@@ -956,16 +1327,12 @@ export function RegisteredMothersPanel({
                         onNavigateTab("confirm");
                       }}
                     >
-                      ✓ Konfirmasi Periksa
+                      Konfirmasi Periksa
                     </button>
                   )}
                 </div>
 
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={() => setDetailMother(null)}
-                >
+                <button type="button" className="btn-primary" onClick={() => setDetailMother(null)}>
                   Tutup
                 </button>
               </div>
@@ -1054,7 +1421,7 @@ export function RegisteredMothersPanel({
                     lineHeight: 1.45,
                   }}
                 >
-                  <strong>⚠️ PERHATIAN KEAMANAN:</strong> Kode ini <u>HANYA DITAMPILKAN SATU KALI</u>.
+                  <strong>PERHATIAN KEAMANAN:</strong> Kode ini <u>HANYA DITAMPILKAN SATU KALI</u>.
                   Server mengenkripsi kunci menggunakan salted scrypt hash. Segera serahkan atau
                   catat kode ini sebelum menutup jendela.
                 </div>
@@ -1065,7 +1432,7 @@ export function RegisteredMothersPanel({
                     className="btn-primary"
                     onClick={() => void handleCopyCode()}
                   >
-                    {copiedCode ? "✓ Kode Tersalin!" : "📋 Salin Kode Akses"}
+                    {copiedCode ? "Kode Tersalin!" : "Salin Kode Akses"}
                   </button>
                   <button
                     type="button"
@@ -1081,8 +1448,7 @@ export function RegisteredMothersPanel({
               <div style={{ display: "grid", gap: "1rem" }}>
                 <p style={{ fontSize: "0.9rem", color: "var(--ink)" }}>
                   Terbitkan kode akses 16-karakter format Crockford Base32 baru untuk{" "}
-                  <strong>{accessCodeMother.full_name}</strong> (
-                  {accessCodeMother.phone_masked}).
+                  <strong>{accessCodeMother.full_name}</strong> ({accessCodeMother.phone_masked}).
                 </p>
 
                 <div style={{ display: "flex", gap: "0.75rem" }}>
@@ -1092,7 +1458,7 @@ export function RegisteredMothersPanel({
                     onClick={() => void handleGenerateCode()}
                     disabled={issuingCode}
                   >
-                    {issuingCode ? "Menerbitkan Kode…" : "⚡ Terbitkan Kode Akses Sekarang"}
+                    {issuingCode ? "Menerbitkan Kode…" : "Terbitkan Kode Akses Sekarang"}
                   </button>
                   <button
                     type="button"

@@ -42,6 +42,7 @@ const otherMotherId = "50000000-0000-4000-8000-000000000002";
 const inactivePregnancyMotherId = "50000000-0000-4000-8000-000000000003";
 const puskesmasId = "40000000-0000-4000-8000-000000000001";
 const bidanId = "40000000-0000-4000-8000-000000000002";
+const superAdminId = "40000000-0000-4000-8000-000000000003";
 const password = "AmanSekali2026";
 const now = new Date("2026-08-10T09:00:00.000Z");
 
@@ -64,13 +65,14 @@ describe("mother access credential staff API", () => {
     credentials.seedMother(inactivePregnancyMotherId, centerId, false);
     credentials.activeSessions.set(motherId, 2);
 
-    for (const [id, role, loginIdentifier] of [
-      [puskesmasId, "PUSKESMAS", "puskesmas"],
-      [bidanId, "BIDAN", "bidan"],
+    for (const [id, role, loginIdentifier, hcId] of [
+      [puskesmasId, "PUSKESMAS", "puskesmas", centerId],
+      [bidanId, "BIDAN", "bidan", centerId],
+      [superAdminId, "SUPER_ADMIN", "super_admin", null],
     ] as const) {
       auth.seedUser({
         id,
-        healthCenterId: centerId,
+        healthCenterId: hcId,
         displayName: role,
         role,
         status: "ACTIVE",
@@ -224,11 +226,11 @@ describe("mother access credential staff API", () => {
         .expect(403);
     }
 
-    const bidanToken = await login("bidan");
+    const superAdminToken = await login("super_admin");
     await request(server())
       .post(`/api/v1/mothers/${motherId}/access-code/reissue`)
-      .set("authorization", `Bearer ${bidanToken}`)
-      .send(mutationRequest("80000000-0000-4000-8000-000000000009", "Bidan tidak berwenang"))
+      .set("authorization", `Bearer ${superAdminToken}`)
+      .send(mutationRequest("80000000-0000-4000-8000-000000000009", "Super Admin tidak berwenang"))
       .expect(403);
     await request(server())
       .post(`/api/v1/mothers/${motherId}/access-code/reissue`)

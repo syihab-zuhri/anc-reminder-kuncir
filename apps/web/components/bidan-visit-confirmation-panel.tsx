@@ -6,7 +6,7 @@ import type {
   PregnancyMilestoneListResponse,
   PregnancyMilestoneResponse,
 } from "@anc/contracts";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface BidanVisitConfirmationPanelProps {
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
@@ -42,37 +42,41 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
   );
   const [successData, setSuccessData] = useState<ConfirmationSuccessData | null>(null);
 
-  const fetchInitialData = useCallback(async (): Promise<void> => {
-    setLoadingInitial(true);
-    try {
-      const [mRes, fRes] = await Promise.all([
-        fetch("/api/staff-proxy/mothers"),
-        fetch("/api/staff-proxy/staff/organization/facilities"),
-      ]);
-
-      if (mRes.ok) {
-        const mData = (await mRes.json()) as { items: readonly MotherSummary[] };
-        setMothers(mData.items ?? []);
-      }
-      if (fRes.ok) {
-        const fData = (await fRes.json()) as readonly Facility[];
-        setFacilities(fData);
-        if (fData.length > 0 && !selectedFacilityId) {
-          setSelectedFacilityId(fData[0].id);
-        }
-      }
-    } catch {
-      // Best-effort load
-    } finally {
-      setLoadingInitial(false);
-    }
-  }, [selectedFacilityId]);
-
   useEffect(() => {
-    if (userRole !== "SUPER_ADMIN") {
-      void fetchInitialData();
+    if (userRole === "SUPER_ADMIN") return;
+
+    const controller = new AbortController();
+    void loadData(controller.signal);
+    return () => controller.abort();
+
+    async function loadData(signal: AbortSignal): Promise<void> {
+      setLoadingInitial(true);
+      try {
+        const [mRes, fRes] = await Promise.all([
+          fetch("/api/staff-proxy/mothers", { signal }),
+          fetch("/api/staff-proxy/staff/organization/facilities", { signal }),
+        ]);
+
+        if (mRes.ok) {
+          const mData = (await mRes.json()) as { items: readonly MotherSummary[] };
+          setMothers(mData.items ?? []);
+        }
+        if (fRes.ok) {
+          const fData = (await fRes.json()) as readonly Facility[];
+          setFacilities(fData);
+          if (fData.length > 0 && !selectedFacilityId) {
+            setSelectedFacilityId(fData[0].id);
+          }
+        }
+      } catch (err) {
+        if (!(err instanceof DOMException && err.name === "AbortError")) {
+          // Best-effort load
+        }
+      } finally {
+        setLoadingInitial(false);
+      }
     }
-  }, [userRole, fetchInitialData]);
+  }, [userRole, selectedFacilityId]);
 
   // When mother selection changes, load pregnancy milestones
   const handleSelectMother = async (motherId: string): Promise<void> => {
@@ -181,7 +185,9 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
         if (refreshRes.ok) {
           const refreshData = (await refreshRes.json()) as PregnancyMilestoneListResponse;
           setMilestones(refreshData.milestones ?? []);
-          const nextUnconfirmed = refreshData.milestones?.find((m) => m.visit_status !== "CONFIRMED");
+          const nextUnconfirmed = refreshData.milestones?.find(
+            (m) => m.visit_status !== "CONFIRMED",
+          );
           setSelectedMilestoneId(nextUnconfirmed ? nextUnconfirmed.id : "");
         }
       }
@@ -237,9 +243,7 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
                 fontWeight: "bold",
                 flexShrink: 0,
               }}
-            >
-              ✓
-            </div>
+            ></div>
             <div style={{ flex: 1 }}>
               <div
                 style={{
@@ -260,7 +264,8 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
                 Pemeriksaan ANC {successData.milestoneCode} Berhasil Dicatat!
               </h3>
               <p style={{ margin: "0 0 1rem 0", color: "#15803d", fontSize: "0.95rem" }}>
-                Status kunjungan untuk <strong>{successData.motherName}</strong> telah resmi diperbarui menjadi{" "}
+                Status kunjungan untuk <strong>{successData.motherName}</strong> telah resmi
+                diperbarui menjadi{" "}
                 <span className="badge-status status-completed" style={{ fontWeight: 700 }}>
                   CONFIRMED
                 </span>
@@ -340,10 +345,13 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
             onChange={(e) => void handleSelectMother(e.target.value)}
             required
           >
-            <option value="">-- {loadingInitial ? "Memuat pasien..." : "Pilih Ibu Hamil"} --</option>
+            <option value="">
+              -- {loadingInitial ? "Memuat pasien..." : "Pilih Ibu Hamil"} --
+            </option>
             {mothers.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.full_name} ({m.phone_masked}) - {m.active_pregnancy?.trimester_label ?? "Kehamilan Aktif"}
+                {m.full_name} ({m.phone_masked}) -{" "}
+                {m.active_pregnancy?.trimester_label ?? "Kehamilan Aktif"}
               </option>
             ))}
           </select>

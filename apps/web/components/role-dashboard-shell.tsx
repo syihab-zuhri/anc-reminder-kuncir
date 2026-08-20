@@ -220,11 +220,11 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
       <div className="staff-panel-card">
         <div className="staff-alert alert-warning">
           <p>
-            <strong>Pemberitahuan Akses Terisolasi Super Admin (TASK-P3-007):</strong>
+            <strong>Pemberitahuan Akses Terisolasi Super Admin:</strong>
             <br />
-            Sesuai kebijakan keamanan dan privasi data (PRD-SECURITY, ADR-004), akun Super Admin
-            diberi hak akses <em>deny-by-default</em> dan dilarang melihat data kesehatan
-            operasional rutin ibu hamil.
+            Sesuai kebijakan keamanan dan privasi data, akun Super Admin diberi hak akses{" "}
+            <em>deny-by-default</em> dan dilarang melihat data kesehatan operasional rutin ibu
+            hamil.
           </p>
         </div>
       </div>
@@ -256,7 +256,7 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
     <div className="staff-panel-card">
       <header className="staff-panel-header">
         <div>
-          <span className="staff-kicker">TASK-P3-006 / Dashboard Operasional Server-Driven</span>
+          <span className="staff-kicker">Dashboard Operasional</span>
           <h2>
             {userRole === "PUSKESMAS"
               ? "Ringkasan Wilayah Kerja Puskesmas"
@@ -512,7 +512,7 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
                           <td>{reminderFailureLabel(item.push_failure_summary)}</td>
                           <td>
                             {item.fallback_age_hours} jam
-                            {item.escalated && <span className="badge-action"> Eskalasi</span>}
+                            {item.escalated && <span className="badge-action">Eskalasi</span>}
                           </td>
                           <td>{item.fallback_status}</td>
                           <td>
@@ -555,13 +555,13 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
         </div>
       )}
 
-      {/* TASK-P5-004: Organization Summary Reports per Village */}
+      {/* Organization Summary Reports per Village */}
       {userRole === "PUSKESMAS" && (
         <div className="queue-section" style={{ marginTop: "2rem" }}>
           <header
             style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
           >
-            <h3>Laporan Ringkasan Aggregat Wilayah Per Desa (TASK-P5-004)</h3>
+            <h3>Laporan Ringkasan Agregat Wilayah Per Desa</h3>
             <button
               className="btn-secondary"
               type="button"
@@ -608,10 +608,10 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
         </div>
       )}
 
-      {/* TASK-P4-013: WhatsApp Fallback Actions Queue */}
+      {/* WhatsApp Fallback Actions Queue */}
       <div className="queue-section" style={{ marginTop: "2rem" }}>
         <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h3>Antrean Tindak Lanjut WhatsApp (TASK-P4-013)</h3>
+          <h3>Antrean Tindak Lanjut WhatsApp</h3>
           <button className="btn-secondary" type="button" onClick={() => void fetchWaQueue()}>
             {waLoading ? "Memuat..." : "Refresh Queue"}
           </button>
@@ -695,7 +695,15 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
 
       {/* Scoped Operational Search */}
       <div className="search-section" style={{ marginTop: "2rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "0.5rem",
+          }}
+        >
           <h3 style={{ margin: 0 }}>Cari Ibu Hamil Terdaftar</h3>
           {onNavigateTab && (
             <button
@@ -704,7 +712,7 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
               style={{ fontSize: "0.8rem", padding: "0.4rem 0.8rem" }}
               onClick={() => onNavigateTab("mothers")}
             >
-              👥 Buka Halaman Data Bumil Lengkap &rarr;
+              Buka Halaman Data Bumil Lengkap &rarr;
             </button>
           )}
         </div>
