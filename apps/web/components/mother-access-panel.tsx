@@ -197,8 +197,9 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
     <div className="staff-panel-card">
       <header className="staff-panel-header">
         <div>
-          <span className="staff-kicker">Akses Pasien Mandiri</span>
-          <h2>Penyerahan Kode Akses Ibu Hamil (Handoff &amp; Reissue)</h2>
+          <span className="staff-kicker">Akses Mandiri</span>
+          <h2>Kelola Kode Akses Pasien</h2>
+          <p className="field-hint">Penerbitan dan pencabutan kode akses portal mandiri ibu hamil.</p>
         </div>
       </header>
 
@@ -319,10 +320,7 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
 
       {revokedSuccess && (
         <div className="staff-alert alert-success" style={{ marginBottom: "1rem" }}>
-          <p>
-            Akses ibu hamil berhasil dicabut. Seluruh sesi aktif pasien telah dinonaktifkan di
-            database Supabase.
-          </p>
+          <p>Akses ibu hamil berhasil dicabut. Seluruh sesi aktif pasien telah dinonaktifkan.</p>
         </div>
       )}
 
@@ -333,8 +331,7 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
             className="form-lead"
             style={{ color: "var(--color-ink-muted)", marginBottom: "1rem" }}
           >
-            Terbitkan kode akses 16-karakter format Crockford Base32 untuk ibu hamil yang terdaftar
-            di Supabase.
+            Terbitkan kode akses mandiri untuk ibu hamil yang terdaftar.
           </p>
 
           <div className="form-group">
@@ -370,8 +367,8 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
             className="form-lead"
             style={{ color: "var(--color-ink-muted)", marginBottom: "1rem" }}
           >
-            Gunakan menu ini jika kode pasien hilang atau lupa. Kode lama akan otomatis dicabut di
-            Supabase.
+            Gunakan menu ini jika kode pasien hilang atau lupa. Kode lama akan otomatis tidak
+            berlaku.
           </p>
 
           <div className="form-group">

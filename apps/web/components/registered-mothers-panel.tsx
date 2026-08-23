@@ -616,7 +616,7 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
         <div style={{ padding: "3rem 1rem", textAlign: "center" }}>
           <div className="loading-spinner" style={{ margin: "0 auto 1rem" }} />
           <p style={{ color: "var(--ink-muted)", fontSize: "0.95rem" }}>
-            Memuat data ibu hamil dari database Supabase…
+            Memuat data ibu hamil…
           </p>
         </div>
       )}

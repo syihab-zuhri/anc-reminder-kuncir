@@ -99,8 +99,9 @@ export function BumilPatientPortal() {
     <div className="staff-panel-card bumil-portal-wrap">
       <header className="staff-panel-header">
         <div>
-          <span className="staff-kicker">Pratinjau Portal Mandiri Ibu Hamil</span>
-          <h2>Linimasa Pemeriksaan Kehamilan Pasien (K1–K8)</h2>
+          <span className="staff-kicker">Pratinjau Pasien</span>
+          <h2>Portal Mandiri Bumil (K1–K8)</h2>
+          <p className="field-hint">Simulasi tampilan linimasa mandiri dari sisi ibu hamil.</p>
         </div>
       </header>
 
@@ -197,7 +198,7 @@ export function BumilPatientPortal() {
 
       {loadingMilestones ? (
         <div style={{ padding: "2rem", textAlign: "center" }}>
-          <p className="staff-kicker">Memuat data linimasa kehamilan dari Supabase...</p>
+          <p className="staff-kicker">Memuat data linimasa kehamilan...</p>
         </div>
       ) : activeMother && activePregnancy ? (
         <div>
@@ -220,7 +221,7 @@ export function BumilPatientPortal() {
                 <strong>
                   {activePregnancy.completed_weeks} Minggu {activePregnancy.completed_days} Hari
                 </strong>
-                <small>Usia Kehamilan (Server-Calculated)</small>
+                <small>Usia Kehamilan Saat Ini</small>
               </div>
             </div>
           </section>
@@ -258,8 +259,7 @@ export function BumilPatientPortal() {
           <section className="milestone-timeline-section">
             <h3>Linimasa Lengkap K1 – K8 Pasien</h3>
             <p className="section-help">
-              Status linimasa (CONFIRMED, DUE, OVERDUE, UPCOMING) dihitung dan dikirim langsung
-              secara real-time oleh server backend Supabase.
+              Status linimasa pemeriksaan diperbarui otomatis oleh bidan/Puskesmas saat kunjungan.
             </p>
 
             <div className="timeline-grid">
@@ -295,7 +295,7 @@ export function BumilPatientPortal() {
                       </small>
                       <small style={{ color: "var(--color-ink-muted)", fontSize: "0.8rem" }}>
                         {isConfirmed
-                          ? "Tercatat di Supabase"
+                          ? "Sudah Terverifikasi"
                           : m.target_date_start && m.target_date_end
                             ? `${m.target_date_start} s/d ${m.target_date_end}`
                             : "Sesuai Usia Kehamilan"}
@@ -326,9 +326,8 @@ export function BumilPatientPortal() {
 
       <footer className="thin-client-footer" style={{ marginTop: "2rem" }}>
         <p>
-          <strong>Prinsip Server-Driven Thin Client (ADR Server-Driven):</strong> Seluruh
-          perhitungan usia kehamilan, tanggal rujukan, dan status K1-K8 dilakukan oleh server API
-          Supabase. Aplikasi mandiri ibu hamil tidak menyimpan atau mengubah status lokal.
+          Seluruh perhitungan usia kehamilan, tanggal rekomendasi, dan status K1–K8 dihitung
+          otomatis oleh server.
         </p>
       </footer>
     </div>

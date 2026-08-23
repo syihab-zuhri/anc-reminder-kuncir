@@ -233,7 +233,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
 
       setFeedback({
         type: "success",
-        message: `Fasilitas "${facilityName}" (${facilityCode}) berhasil didaftarkan ke Supabase.`,
+        message: `Fasilitas "${facilityName}" (${facilityCode}) berhasil didaftarkan.`,
       });
       setFacilityName("");
       setFacilityCode("");
@@ -286,7 +286,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
 
       setFeedback({
         type: "success",
-        message: `Data fasilitas "${editFacilityName}" berhasil diperbarui di Supabase.`,
+        message: `Data fasilitas "${editFacilityName}" berhasil diperbarui.`,
       });
       setEditingFacility(null);
       await fetchFacilities();
@@ -298,7 +298,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
   }
 
   async function handleDeleteFacility(f: Facility): Promise<void> {
-    if (!window.confirm(`Yakin ingin menghapus fasilitas "${f.name}" (${f.code}) dari Supabase?`)) {
+    if (!window.confirm(`Yakin ingin menghapus fasilitas "${f.name}" (${f.code})?`)) {
       return;
     }
     setSubmitting(true);
@@ -325,7 +325,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
 
       setFeedback({
         type: "success",
-        message: `Fasilitas "${f.name}" berhasil dihapus dari Supabase.`,
+        message: `Fasilitas "${f.name}" berhasil dihapus.`,
       });
       await fetchFacilities();
     } catch {
@@ -363,7 +363,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
 
       setFeedback({
         type: "success",
-        message: `Desa "${villageName}" (${villageCode}) berhasil didaftarkan ke Supabase.`,
+        message: `Desa "${villageName}" (${villageCode}) berhasil didaftarkan.`,
       });
       setVillageName("");
       setVillageCode("");
@@ -411,7 +411,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
 
       setFeedback({
         type: "success",
-        message: `Data desa "${editVillageName}" berhasil diperbarui di Supabase.`,
+        message: `Data desa "${editVillageName}" berhasil diperbarui.`,
       });
       setEditingVillage(null);
       await fetchVillages();
@@ -423,7 +423,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
   }
 
   async function handleDeleteVillage(v: Village): Promise<void> {
-    if (!window.confirm(`Yakin ingin menghapus desa "${v.name}" (${v.code}) dari Supabase?`)) {
+    if (!window.confirm(`Yakin ingin menghapus desa "${v.name}" (${v.code})?`)) {
       return;
     }
     setSubmitting(true);
@@ -450,7 +450,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
 
       setFeedback({
         type: "success",
-        message: `Desa "${v.name}" berhasil dihapus dari Supabase.`,
+        message: `Desa "${v.name}" berhasil dihapus.`,
       });
       await fetchVillages();
     } catch {
@@ -544,7 +544,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
 
       setFeedback({
         type: "success",
-        message: `Akun petugas "${editStaffDisplayName}" berhasil diperbarui di Supabase.`,
+        message: `Akun petugas "${editStaffDisplayName}" berhasil diperbarui.`,
       });
       setEditingStaff(null);
       await fetchStaff();
@@ -606,7 +606,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
   async function handleDeleteStaff(s: StaffSummary): Promise<void> {
     if (
       !window.confirm(
-        `Yakin ingin menghapus permanen akun Bidan "${s.display_name}" (@${s.login_identifier}) dari Supabase?`,
+        `Yakin ingin menghapus permanen akun Bidan "${s.display_name}" (@${s.login_identifier})?`,
       )
     ) {
       return;
@@ -632,7 +632,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
 
       setFeedback({
         type: "success",
-        message: `Akun Bidan "${s.display_name}" berhasil dihapus dari Supabase.`,
+        message: `Akun Bidan "${s.display_name}" berhasil dihapus.`,
       });
       await fetchStaff();
     } catch {
@@ -671,7 +671,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
 
       setFeedback({
         type: "success",
-        message: "Penugasan desa untuk Bidan berhasil disimpan ke Supabase.",
+        message: "Penugasan desa untuk Bidan berhasil disimpan.",
       });
       setAssignStaffId("");
       setAssignVillageId("");
@@ -715,7 +715,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
 
       setFeedback({
         type: "success",
-        message: "Penugasan wilayah desa berhasil dicabut dari Supabase.",
+        message: "Penugasan wilayah desa berhasil dicabut.",
       });
       await fetchAssignments();
     } catch {
@@ -731,8 +731,9 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
     <div className="staff-panel-card">
       <header className="staff-panel-header">
         <div>
-          <span className="staff-kicker">Administrasi & Konfigurasi Organisasi</span>
-          <h2>Pengelolaan Wilayah, Petugas & Aturan Klinis</h2>
+          <span className="staff-kicker">Administrasi Wilayah</span>
+          <h2>Pengaturan Fasilitas &amp; Petugas</h2>
+          <p className="field-hint">Kelola fasilitas kesehatan, desa binaan, dan akun staf bidan.</p>
         </div>
       </header>
 
@@ -966,7 +967,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
               </div>
 
               <button className="btn-primary" type="submit" disabled={submitting}>
-                {submitting ? "Menyimpan ke Supabase..." : "Simpan Fasilitas"}
+                {submitting ? "Menyimpan data..." : "Simpan Fasilitas"}
               </button>
             </form>
           )}
@@ -1134,7 +1135,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
               </div>
 
               <button className="btn-primary" type="submit" disabled={submitting}>
-                {submitting ? "Menyimpan ke Supabase..." : "Simpan Desa"}
+                {submitting ? "Menyimpan data..." : "Simpan Desa"}
               </button>
             </form>
           )}

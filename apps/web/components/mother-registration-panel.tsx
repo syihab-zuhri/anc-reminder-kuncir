@@ -207,8 +207,9 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
     <div className="staff-panel-card">
       <header className="staff-panel-header">
         <div>
-          <span className="staff-kicker">Registry Pendaftaran Ibu Hamil</span>
-          <h2>Pendaftaran Ibu Hamil &amp; Formulir Persetujuan (Consent)</h2>
+          <span className="staff-kicker">Pendaftaran Baru</span>
+          <h2>Pendaftaran Ibu Hamil</h2>
+          <p className="field-hint">Registrasi profil ibu hamil &amp; persetujuan pemantauan ANC.</p>
         </div>
       </header>
 
@@ -360,7 +361,7 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
         <div className="staff-review-box">
           <h3>Konfirmasi Tinjauan Data Pendaftaran</h3>
           <p className="review-lead" style={{ marginBottom: "1.5rem" }}>
-            Periksa kembali ringkasan data sebelum disimpan secara permanen ke database Supabase.
+            Periksa kembali ringkasan data sebelum disimpan.
           </p>
 
           <dl
@@ -399,7 +400,7 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
               <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>
                 Persetujuan Pengingat
               </dt>
-              <dd>{consentReminder ? "Disetujui (GRANTED)" : "Ditolak (WITHDRAWN)"}</dd>
+              <dd>{consentReminder ? "Disetujui" : "Ditolak"}</dd>
             </div>
           </dl>
 
@@ -418,7 +419,7 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
               onClick={() => void handleConfirmRegistration()}
               disabled={submitting}
             >
-              {submitting ? "Mendaftarkan ke Database..." : "Konfirmasi & Simpan Pendaftaran"}
+              {submitting ? "Menyimpan data..." : "Konfirmasi & Simpan Pendaftaran"}
             </button>
           </div>
         </div>
@@ -437,10 +438,10 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
           <div
             style={{ fontSize: "2.5rem", color: "var(--color-primary)", marginBottom: "0.5rem" }}
           ></div>
-          <h3>Pendaftaran Ibu Hamil Berhasil Disimpan ke Supabase!</h3>
+          <h3>Pendaftaran Ibu Hamil Berhasil Disimpan!</h3>
           <p style={{ color: "var(--color-ink-muted)", marginBottom: "1.5rem" }}>
-            Data ibu hamil, kehamilan aktif, persetujuan, dan jadwal ANC (K1-K8) telah otomatis
-            dibuat di database.
+            Data ibu hamil, kehamilan aktif, dan jadwal pemeriksaan ANC (K1-K8) telah berhasil
+            didaftarkan.
           </p>
 
           <dl
