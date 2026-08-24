@@ -17,14 +17,15 @@ dibuka ke internet.
 
 ## Nilai produksi untuk server Anda
 
-| Item          | Nilai                                                     |
-| ------------- | --------------------------------------------------------- |
-| Repository    | `https://github.com/syihab-zuhri/anc-reminder-kuncir.git` |
-| Branch rilis  | `main`                                                    |
-| Domain web    | `https://posyandu.zuhri.my.id`                            |
-| Domain API    | `https://posyandu.zuhri.my.id/api/v1`                     |
-| Folder proyek | `/www/wwwroot/posyandu.zuhri.my.id`                       |
-| Tunnel origin | `http://127.0.0.1:80`                                     |
+| Item                   | Nilai                                                     |
+| ---------------------- | --------------------------------------------------------- |
+| Repository             | `https://github.com/syihab-zuhri/anc-reminder-kuncir.git` |
+| Branch rilis           | `main`                                                    |
+| Domain web             | `https://posyandu.zuhri.my.id`                            |
+| Domain API             | `https://posyandu.zuhri.my.id/api/v1`                     |
+| Root site aaPanel      | `/www/wwwroot/posyandu.zuhri.my.id`                       |
+| Folder source aplikasi | `/www/wwwroot/posyandu.zuhri.my.id/app`                   |
+| Tunnel origin          | `http://127.0.0.1:80`                                     |
 
 Karena repository bersifat public, `git clone` tidak memerlukan password GitHub atau personal access
 token. Secret produksi tetap diisi melalui environment aaPanel dan tidak ada di repository.
@@ -109,17 +110,19 @@ aaPanel mendukung Node Project/PM2, domain binding, reverse proxy, dan SSL dari 
 Masuk ke **Terminal** aaPanel atau SSH. Jalankan perintah ini di server:
 
 ```bash
-cd /www/wwwroot/posyandu.zuhri.my.id
-ls -la                         # folder harus kosong sebelum clone
+SITE_ROOT=/www/wwwroot/posyandu.zuhri.my.id
+APP_DIR="$SITE_ROOT/app"
+sudo install -d -o www -g www "$APP_DIR"
 sudo git clone --branch main --single-branch \
-  https://github.com/syihab-zuhri/anc-reminder-kuncir.git .
+  https://github.com/syihab-zuhri/anc-reminder-kuncir.git "$APP_DIR"
+cd "$APP_DIR"
 git branch --show-current       # harus menampilkan: main
 git log -1 --oneline            # catat commit rilis yang dipakai
 ```
 
-Perintah `git clone ... .` hanya berhasil pada folder kosong. Jika aaPanel membuat file halaman
-default seperti `index.html`, pindahkan terlebih dahulu melalui File Manager aaPanel ke folder backup
-di luar root site. Jangan hapus source aplikasi atau file environment yang sudah dipakai.
+Root site aaPanel boleh tetap berisi `404.html`, `502.html`, `.well-known`, `.htaccess`, dan file
+bawaan lain. Jangan hapus atau pindahkan file-file tersebut. Repository di-clone ke subfolder `app`
+yang baru dan kosong.
 
 Jangan membuat atau mengubah source code langsung di folder server. Semua perubahan dibuat di
 komputer pengembang, diuji, dipush, lalu di-merge ke `main`. File `.env`, `google-services.json`,
@@ -128,7 +131,7 @@ service account Firebase, dan credential Cloudflare tidak ada di repository.
 Jika proses Node aaPanel menggunakan user `www`, berikan hak baca folder proyek kepadanya:
 
 ```bash
-sudo chown -R www:www /www/wwwroot/posyandu.zuhri.my.id
+sudo chown -R www:www /www/wwwroot/posyandu.zuhri.my.id/app
 ```
 
 ## 4. Install dependency dan build di server
@@ -136,7 +139,7 @@ sudo chown -R www:www /www/wwwroot/posyandu.zuhri.my.id
 Masuk ke **Terminal** aaPanel atau SSH, lalu:
 
 ```bash
-cd /www/wwwroot/posyandu.zuhri.my.id
+cd /www/wwwroot/posyandu.zuhri.my.id/app
 node --version    # harus 24.x
 npm --version     # harus 11.x
 npm ci
@@ -147,7 +150,7 @@ npm run build --workspace=@anc/worker
 ```
 
 Jangan memakai `npm install` acak di produksi; gunakan `npm ci` agar versi tepat mengikuti
-`package-lock.json` yang diupload.
+`package-lock.json` dari branch `main`.
 
 ## 5. Membuat rahasia produksi
 
@@ -226,7 +229,7 @@ bersamaan.
 ## 7. Menjalankan tiga Node Project
 
 Di **Website → Node Project**, buat tiga proses menggunakan Node `24.x`, user `www`, direktori kerja
-`/www/wwwroot/posyandu.zuhri.my.id`, dan satu instance/cluster untuk masing-masing proses.
+`/www/wwwroot/posyandu.zuhri.my.id/app`, dan satu instance/cluster untuk masing-masing proses.
 
 | Nama         | Perintah start kustom                | Port      |
 | ------------ | ------------------------------------ | --------- |
@@ -286,7 +289,7 @@ Lalu jalankan:
 
 ```bash
 chmod 600 /root/anc-migrate.env
-cd /www/wwwroot/posyandu.zuhri.my.id
+cd /www/wwwroot/posyandu.zuhri.my.id/app
 set -a
 . /root/anc-migrate.env
 set +a
@@ -294,7 +297,7 @@ npm run db:migrate:prod
 unset DATABASE_DIRECT_URL
 ```
 
-Jika file migrasi `000016_phase-4-mother-record-archive.cjs` ikut diupload, perintah ini juga
+Jika file migrasi `000016_phase-4-mother-record-archive.cjs` sudah ada di branch `main`, perintah ini juga
 menerapkan kemampuan arsip data Ibu Hamil yang baru. Jangan menggunakan rollback otomatis untuk
 data produksi; lakukan restore backup bila migrasi bermasalah.
 
@@ -304,7 +307,7 @@ Setelah API, database, dan migrasi sehat, buat akun pertama dengan identitas yan
 terminal dengan environment API yang sama. Jangan gunakan data dummy untuk produksi.
 
 ```bash
-cd /www/wwwroot/posyandu.zuhri.my.id
+cd /www/wwwroot/posyandu.zuhri.my.id/app
 export PROVISION_CONFIRM='CREATE_INITIAL_PUSKESMAS'
 export PROVISION_HEALTH_CENTER_CODE='KODE-PUSKESMAS-ASLI'
 export PROVISION_HEALTH_CENTER_NAME='Nama Puskesmas Asli'
@@ -353,7 +356,7 @@ Lalu build ulang Android di Android Studio. Gunakan domain HTTPS yang sama denga
 Di Terminal aaPanel atau SSH, jalankan:
 
 ```bash
-cd /www/wwwroot/posyandu.zuhri.my.id
+cd /www/wwwroot/posyandu.zuhri.my.id/app
 git status --short               # harus kosong; source server tidak boleh diedit manual
 git fetch origin
 git pull --ff-only origin main   # berhenti aman jika riwayat tidak sesuai
@@ -375,7 +378,7 @@ checkout commit itu saat maintenance window, install dependency dan build ulang,
 tiga proses:
 
 ```bash
-cd /www/wwwroot/posyandu.zuhri.my.id
+cd /www/wwwroot/posyandu.zuhri.my.id/app
 git checkout <commit-rilis-sehat>
 npm ci
 # jalankan kembali tiga perintah build dari blok update di atas
