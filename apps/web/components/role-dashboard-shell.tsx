@@ -294,14 +294,13 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
               </strong>
             </div>
           </div>
-
           <div className="queue-section">
             <h3>Antrean Tindakan Prioritas (Priority Action Queue)</h3>
             {puskesmasData.priority_action_queue.length === 0 ? (
               <p className="empty-notice">Tidak ada antrean tindakan prioritas saat ini.</p>
             ) : (
-              <div className="table-responsive">
-                <table className="staff-table">
+              <div className="table-responsive" style={{ marginTop: "1rem" }}>
+                <table className="staff-table priority-action-table">
                   <thead>
                     <tr>
                       <th>Nama Pasien</th>

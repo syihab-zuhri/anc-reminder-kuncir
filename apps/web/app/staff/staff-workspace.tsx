@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { AboutAppPanel } from "@/components/about-app-panel";
 import { BidanVisitConfirmationPanel } from "@/components/bidan-visit-confirmation-panel";
 import { BrandMark } from "@/components/brand-mark";
 import { BumilPatientPortal } from "@/components/bumil-patient-portal";
@@ -32,7 +33,8 @@ export type ModuleTab =
   | "confirm"
   | "bumil"
   | "admin"
-  | "content";
+  | "content"
+  | "about";
 
 interface TabDefinition {
   readonly id: ModuleTab;
@@ -51,18 +53,18 @@ const TAB_DEFINITIONS: readonly TabDefinition[] = [
     description: "Ringkasan metrik dan antrean prioritas operasional.",
   },
   {
+    id: "confirm",
+    label: "Konfirmasi Periksa",
+    shortLabel: "Konfirmasi",
+    allowedRoles: ["PUSKESMAS", "BIDAN"],
+    description: "Konfirmasi kehadiran dan kunjungan ANC oleh Bidan.",
+  },
+  {
     id: "mothers",
     label: "Data Bumil",
     shortLabel: "Data Bumil",
     allowedRoles: ["PUSKESMAS", "BIDAN"],
     description: "Daftar seluruh ibu hamil terdaftar dan status kehamilan.",
-  },
-  {
-    id: "register",
-    label: "Register Bumil",
-    shortLabel: "Register",
-    allowedRoles: ["PUSKESMAS", "BIDAN"],
-    description: "Form pendaftaran pasien ibu hamil baru ke sistem.",
   },
   {
     id: "clinical",
@@ -72,11 +74,11 @@ const TAB_DEFINITIONS: readonly TabDefinition[] = [
     description: "Pencatatan dan validasi rekam medis pemeriksaan K1–K6.",
   },
   {
-    id: "confirm",
-    label: "Konfirmasi Periksa",
-    shortLabel: "Konfirmasi",
+    id: "register",
+    label: "Register Bumil",
+    shortLabel: "Register",
     allowedRoles: ["PUSKESMAS", "BIDAN"],
-    description: "Konfirmasi kehadiran dan kunjungan ANC oleh Bidan.",
+    description: "Form pendaftaran pasien ibu hamil baru ke sistem.",
   },
   {
     id: "access",
@@ -105,6 +107,13 @@ const TAB_DEFINITIONS: readonly TabDefinition[] = [
     shortLabel: "Konten",
     allowedRoles: ["PUSKESMAS"],
     description: "Pengaturan template pesan pengingat WhatsApp & notifikasi.",
+  },
+  {
+    id: "about",
+    label: "Tentang Aplikasi",
+    shortLabel: "Tentang",
+    allowedRoles: ["PUSKESMAS", "BIDAN", "SUPER_ADMIN"],
+    description: "Informasi pengembang KKN Kuncir 2026 Institut Teknologi Mojosari.",
   },
 ];
 
@@ -272,6 +281,24 @@ function TabIcon({
       </svg>
     );
   }
+  if (id === "about") {
+    return (
+      <svg
+        className={className}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="16" x2="12" y2="12" />
+        <line x1="12" y1="8" x2="12.01" y2="8" />
+      </svg>
+    );
+  }
   return (
     <svg
       className={className}
@@ -316,6 +343,16 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
   const [loggingOut, setLoggingOut] = useState(false);
   const [activeTab, setActiveTab] = useState<ModuleTab>(initialTab);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && isMoreMenuOpen) {
+        setIsMoreMenuOpen(false);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMoreMenuOpen]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -411,7 +448,23 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
             onClick={logout}
             disabled={loggingOut}
           >
-            {loggingOut ? "Keluar…" : "Keluar"}
+            <span className="icon-label">
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                width="14"
+                height="14"
+              >
+                <path
+                  d="M13 3h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-3M9 14l5-4-5-4M14 10H3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span>{loggingOut ? "Keluar…" : "Keluar"}</span>
+            </span>
           </button>
         </div>
         <nav aria-label="Navigasi ruang petugas desktop">
@@ -436,7 +489,23 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
           onClick={logout}
           disabled={loggingOut}
         >
-          {loggingOut ? "Keluar…" : "Keluar"}
+          <span className="icon-label">
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              width="15"
+              height="15"
+            >
+              <path
+                d="M13 3h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-3M9 14l5-4-5-4M14 10H3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span>{loggingOut ? "Keluar…" : "Keluar"}</span>
+          </span>
         </button>
       </aside>
 
@@ -477,7 +546,8 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
                   className="badge-status status-confirmed"
                   style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem" }}
                 >
-                  ● Sesi Aktif
+                  <span className="status-dot" aria-hidden="true" />
+                  Sesi Aktif
                 </span>
               </div>
               <dl>
@@ -543,6 +613,8 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
         {effectiveTab === "content" && staff.role === "PUSKESMAS" && (
           <ContentManagementPanel userRole={staff.role} />
         )}
+
+        {effectiveTab === "about" && <AboutAppPanel />}
       </main>
 
       {/* Mobile Bottom Navigation Bar (Fixed 4-5 items) */}
@@ -607,7 +679,20 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
                 onClick={() => setIsMoreMenuOpen(false)}
                 aria-label="Tutup menu"
               >
-                ✕
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  width="14"
+                  height="14"
+                  aria-hidden="true"
+                >
+                  <line x1="15" y1="5" x2="5" y2="15" />
+                  <line x1="5" y1="5" x2="15" y2="15" />
+                </svg>
               </button>
             </div>
 

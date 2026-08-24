@@ -41,6 +41,14 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
 
   // Status & Feedback
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    fullName?: string;
+    nik?: string;
+    address?: string;
+    phoneNumber?: string;
+    pregnancyStartDate?: string;
+    consent?: string;
+  }>({});
   const [submitting, setSubmitting] = useState(false);
   const [successResult, setSuccessResult] = useState<{
     mother_id: string;
@@ -67,31 +75,41 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
   }
 
   function validateForm(): boolean {
-    setValidationError(null);
+    const errs: {
+      fullName?: string;
+      nik?: string;
+      address?: string;
+      phoneNumber?: string;
+      pregnancyStartDate?: string;
+      consent?: string;
+    } = {};
+
     if (!fullName.trim()) {
-      setValidationError("Nama lengkap ibu hamil wajib diisi.");
-      return false;
+      errs.fullName = "Nama lengkap ibu hamil wajib diisi.";
     }
     if (!/^\d{16}$/u.test(nik.trim())) {
-      setValidationError("NIK harus terdiri tepat dari 16 digit angka.");
-      return false;
+      errs.nik = "NIK harus terdiri tepat dari 16 digit angka.";
     }
     if (!address.trim()) {
-      setValidationError("Alamat domisili wajib diisi.");
-      return false;
+      errs.address = "Alamat domisili lengkap wajib diisi.";
     }
     if (!/^08\d{8,12}$/u.test(phoneNumber.trim())) {
-      setValidationError("Nomor telepon harus diawali '08' dengan 10-14 digit angka.");
-      return false;
+      errs.phoneNumber = "Nomor telepon harus diawali '08' dengan 10-14 digit angka.";
     }
     if (!/^\d{4}-\d{2}-\d{2}$/u.test(pregnancyStartDate.trim())) {
-      setValidationError("Tanggal awal kehamilan harus dalam format YYYY-MM-DD.");
-      return false;
+      errs.pregnancyStartDate = "Tanggal awal kehamilan harus dalam format YYYY-MM-DD.";
     }
     if (!consentReminder && !consentDataProcessing) {
-      setValidationError("Minimal satu persetujuan (pemberitahuan atau pemrosesan) harus dipilih.");
+      errs.consent = "Minimal satu persetujuan (pemberitahuan atau pemrosesan) harus dipilih.";
+    }
+
+    setFieldErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      setValidationError("Terdapat isian data yang belum valid. Mohon periksa field bertanda merah di bawah.");
       return false;
     }
+
+    setValidationError(null);
     return true;
   }
 
@@ -195,6 +213,7 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
     setConsentReminder(true);
     setConsentDataProcessing(true);
     setValidationError(null);
+    setFieldErrors({});
     setSuccessResult(null);
     setGeneratedCode(null);
     setCodeError(null);
@@ -232,78 +251,121 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
             <label htmlFor="reg-fullname">1. Nama Lengkap Ibu Hamil *</label>
             <input
               id="reg-fullname"
-              className="staff-input"
+              className={`staff-input ${fieldErrors.fullName ? "input-has-error" : ""}`}
               type="text"
               required
               placeholder="e.g. Siti Aminah"
               value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              onChange={(e) => {
+                setFullName(e.target.value);
+                if (fieldErrors.fullName) setFieldErrors((prev) => ({ ...prev, fullName: undefined }));
+              }}
             />
+            {fieldErrors.fullName && (
+              <span className="inline-field-error" role="alert">
+                {fieldErrors.fullName}
+              </span>
+            )}
           </div>
 
           <div className="form-group">
             <label htmlFor="reg-nik">2. Nomor Induk Kependudukan (NIK) *</label>
             <input
               id="reg-nik"
-              className="staff-input"
+              className={`staff-input ${fieldErrors.nik ? "input-has-error" : ""}`}
               type="text"
               required
               maxLength={16}
               placeholder="16 digit NIK sesuai KTP/KK"
               value={nik}
-              onChange={(e) => setNik(e.target.value.replace(/\D/gu, ""))}
+              onChange={(e) => {
+                setNik(e.target.value.replace(/\D/gu, ""));
+                if (fieldErrors.nik) setFieldErrors((prev) => ({ ...prev, nik: undefined }));
+              }}
             />
-            <small
-              className="field-help"
-              style={{ display: "block", marginTop: "0.25rem", color: "var(--color-ink-muted)" }}
-            >
-              NIK dienkripsi kuat di server dengan kunci base64 dan tidak pernah disimpan dalam
-              bentuk teks jernih.
-            </small>
+            {fieldErrors.nik ? (
+              <span className="inline-field-error" role="alert">
+                {fieldErrors.nik}
+              </span>
+            ) : (
+              <small
+                className="field-help"
+                style={{ display: "block", marginTop: "0.25rem", color: "var(--color-ink-muted)" }}
+              >
+                Pastikan 16 digit NIK sesuai dengan data KTP atau Kartu Keluarga resmi.
+              </small>
+            )}
           </div>
 
           <div className="form-group">
             <label htmlFor="reg-address">3. Alamat Domisili Lengkap *</label>
             <input
               id="reg-address"
-              className="staff-input"
+              className={`staff-input ${fieldErrors.address ? "input-has-error" : ""}`}
               type="text"
               required
               placeholder="Jalan, RT/RW, Dusun, Desa"
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              onChange={(e) => {
+                setAddress(e.target.value);
+                if (fieldErrors.address) setFieldErrors((prev) => ({ ...prev, address: undefined }));
+              }}
             />
+            {fieldErrors.address && (
+              <span className="inline-field-error" role="alert">
+                {fieldErrors.address}
+              </span>
+            )}
           </div>
 
           <div className="form-group">
             <label htmlFor="reg-phone">4. Nomor WhatsApp / Telepon *</label>
             <input
               id="reg-phone"
-              className="staff-input"
+              className={`staff-input ${fieldErrors.phoneNumber ? "input-has-error" : ""}`}
               type="tel"
               required
               placeholder="e.g. 081234567890"
               value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
+              onChange={(e) => {
+                setPhoneNumber(e.target.value);
+                if (fieldErrors.phoneNumber)
+                  setFieldErrors((prev) => ({ ...prev, phoneNumber: undefined }));
+              }}
             />
+            {fieldErrors.phoneNumber && (
+              <span className="inline-field-error" role="alert">
+                {fieldErrors.phoneNumber}
+              </span>
+            )}
           </div>
 
           <div className="form-group">
             <label htmlFor="reg-dating">5. Tanggal Awal Kehamilan (HPHT / Dating Date) *</label>
             <input
               id="reg-dating"
-              className="staff-input"
+              className={`staff-input ${fieldErrors.pregnancyStartDate ? "input-has-error" : ""}`}
               type="date"
               required
               value={pregnancyStartDate}
-              onChange={(e) => setPregnancyStartDate(e.target.value)}
+              onChange={(e) => {
+                setPregnancyStartDate(e.target.value);
+                if (fieldErrors.pregnancyStartDate)
+                  setFieldErrors((prev) => ({ ...prev, pregnancyStartDate: undefined }));
+              }}
             />
-            <small
-              className="field-help"
-              style={{ display: "block", marginTop: "0.25rem", color: "var(--color-ink-muted)" }}
-            >
-              Digunakan oleh server untuk menghitung usia kehamilan dan jadwal K1-K8 otomatis.
-            </small>
+            {fieldErrors.pregnancyStartDate ? (
+              <span className="inline-field-error" role="alert">
+                {fieldErrors.pregnancyStartDate}
+              </span>
+            ) : (
+              <small
+                className="field-help"
+                style={{ display: "block", marginTop: "0.25rem", color: "var(--color-ink-muted)" }}
+              >
+                Digunakan oleh server untuk menghitung usia kehamilan dan jadwal K1-K8 otomatis.
+              </small>
+            )}
           </div>
 
           <fieldset
@@ -330,7 +392,10 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
               <input
                 type="checkbox"
                 checked={consentReminder}
-                onChange={(e) => setConsentReminder(e.target.checked)}
+                onChange={(e) => {
+                  setConsentReminder(e.target.checked);
+                  if (fieldErrors.consent) setFieldErrors((prev) => ({ ...prev, consent: undefined }));
+                }}
               />
               <span>
                 Ibu hamil menyetujui pengiriman pesan pengingat jadwal ANC via WhatsApp/Push
@@ -344,13 +409,21 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
               <input
                 type="checkbox"
                 checked={consentDataProcessing}
-                onChange={(e) => setConsentDataProcessing(e.target.checked)}
+                onChange={(e) => {
+                  setConsentDataProcessing(e.target.checked);
+                  if (fieldErrors.consent) setFieldErrors((prev) => ({ ...prev, consent: undefined }));
+                }}
               />
               <span>
                 Ibu hamil menyetujui pemrosesan data kesehatan kehamilan oleh Puskesmas &amp; Bidan
                 setempat (DATA_PROCESSING)
               </span>
             </label>
+            {fieldErrors.consent && (
+              <span className="inline-field-error" role="alert" style={{ marginTop: "0.5rem" }}>
+                {fieldErrors.consent}
+              </span>
+            )}
           </fieldset>
 
           <button className="btn-primary" type="submit">

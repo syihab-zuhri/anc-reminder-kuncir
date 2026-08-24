@@ -437,7 +437,8 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
                         : "#92400e",
                   }}
                 >
-                  ● {existingRecord?.record_validation_status ?? "BELUM TERCATAT"}
+                  <span className="status-dot" aria-hidden="true" />
+                  {existingRecord?.record_validation_status ?? "BELUM TERCATAT"}
                 </span>
               </div>
               {existingRecord?.record_validation_status !== "VALIDATED" && existingRecord && (
@@ -558,7 +559,7 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
       ) : (
         <div
           style={{
-            padding: "2rem 1.25rem",
+            padding: "2.5rem 1.25rem",
             background: "var(--paper)",
             border: "1px dashed var(--line-strong)",
             borderRadius: "12px",
@@ -596,32 +597,11 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
           </h3>
           <p
             className="field-hint"
-            style={{ maxWidth: "26rem", margin: "0 auto 1.25rem", lineHeight: 1.5 }}
+            style={{ maxWidth: "26rem", margin: "0 auto", lineHeight: 1.5 }}
           >
-            Silakan pilih nama ibu hamil di menu atas untuk mulai menginput atau memvalidasi rekam
+            Silakan pilih nama ibu hamil pada menu pilihan di atas untuk mulai menginput atau memvalidasi rekam
             medis fisik &amp; laboratorium kunjungan K1–K6.
           </p>
-
-          {mothers.filter((m) => m.active_pregnancy !== null).length > 0 && (
-            <div
-              style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "center" }}
-            >
-              {mothers
-                .filter((m) => m.active_pregnancy !== null)
-                .slice(0, 3)
-                .map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => void handleSelectMother(m.id)}
-                    style={{ minHeight: "36px", padding: "0 0.85rem", fontSize: "0.78rem" }}
-                  >
-                    👤 {m.full_name}
-                  </button>
-                ))}
-            </div>
-          )}
         </div>
       )}
     </div>

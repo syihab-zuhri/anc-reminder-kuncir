@@ -1,6 +1,10 @@
 "use client";
 
-import type { MotherAccessCredentialIssueResponse, MotherSummary } from "@anc/contracts";
+import type {
+  MotherAccessCredentialIssueResponse,
+  MotherSummary,
+  Village,
+} from "@anc/contracts";
 import { useEffect, useState } from "react";
 
 interface MotherAccessPanelProps {
@@ -10,11 +14,13 @@ interface MotherAccessPanelProps {
 export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
   const [activeTab, setActiveTab] = useState<"issue" | "reissue" | "revoke">("issue");
 
-  // Loaded mothers from Supabase
+  // Loaded mothers and villages from Supabase
   const [mothers, setMothers] = useState<readonly MotherSummary[]>([]);
+  const [villages, setVillages] = useState<readonly Village[]>([]);
   const [loadingMothers, setLoadingMothers] = useState(false);
 
-  // Selected mother for forms
+  // Selected filters and form states
+  const [selectedVillageId, setSelectedVillageId] = useState("");
   const [selectedMotherId, setSelectedMotherId] = useState("");
   const [reissueReason, setReissueReason] = useState("Kode pasien hilang / lupa");
   const [revokeReason, setRevokeReason] = useState("Pasien pindah domisili atau atas permintaan");
@@ -40,10 +46,18 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
     async function loadMothers(signal: AbortSignal): Promise<void> {
       setLoadingMothers(true);
       try {
-        const res = await fetch("/api/staff-proxy/mothers", { signal });
-        if (res.ok) {
-          const data = (await res.json()) as { items: readonly MotherSummary[] };
+        const [mRes, vRes] = await Promise.all([
+          fetch("/api/staff-proxy/mothers", { signal }),
+          fetch("/api/staff-proxy/staff/organization/villages", { signal }).catch(() => null),
+        ]);
+
+        if (mRes.ok) {
+          const data = (await mRes.json()) as { items: readonly MotherSummary[] };
           setMothers(data.items ?? []);
+        }
+        if (vRes && vRes.ok) {
+          const vData = (await vRes.json()) as readonly Village[];
+          setVillages(vData ?? []);
         }
       } catch (err) {
         if (!(err instanceof DOMException && err.name === "AbortError")) {
@@ -193,6 +207,10 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
     }
   }
 
+  const filteredMothers = selectedVillageId
+    ? mothers.filter((m) => m.village_id === selectedVillageId)
+    : mothers;
+
   return (
     <div className="staff-panel-card">
       <header className="staff-panel-header">
@@ -205,39 +223,88 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
         </div>
       </header>
 
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
+      {/* Subtab Pill Navigation */}
+      <div className="staff-tab-pill-bar">
         <button
           type="button"
-          className={activeTab === "issue" ? "btn-primary" : "btn-secondary"}
+          className={`staff-tab-pill-btn ${activeTab === "issue" ? "is-active" : ""}`}
           onClick={() => {
             setActiveTab("issue");
             setErrorFeedback(null);
             setRevokedSuccess(false);
           }}
         >
-          Terbitkan Kode Baru
+          <span className="icon-label">
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              width="15"
+              height="15"
+            >
+              <path
+                d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span>Terbitkan Kode Baru</span>
+          </span>
         </button>
         <button
           type="button"
-          className={activeTab === "reissue" ? "btn-primary" : "btn-secondary"}
+          className={`staff-tab-pill-btn ${activeTab === "reissue" ? "is-active" : ""}`}
           onClick={() => {
             setActiveTab("reissue");
             setErrorFeedback(null);
             setRevokedSuccess(false);
           }}
         >
-          Terbitkan Ulang (Reissue)
+          <span className="icon-label">
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              width="15"
+              height="15"
+            >
+              <path
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span>Terbitkan Ulang (Reissue)</span>
+          </span>
         </button>
         <button
           type="button"
-          className={activeTab === "revoke" ? "btn-primary" : "btn-secondary"}
+          className={`staff-tab-pill-btn ${activeTab === "revoke" ? "is-active" : ""}`}
           onClick={() => {
             setActiveTab("revoke");
             setErrorFeedback(null);
             setRevokedSuccess(false);
           }}
         >
-          Cabut Akses (Revoke)
+          <span className="icon-label">
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              width="15"
+              height="15"
+            >
+              <path
+                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span>Cabut Akses (Revoke)</span>
+          </span>
         </button>
       </div>
 
@@ -250,49 +317,48 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
       {/* Security Handoff Card displaying Plaintext Access Code ONCE */}
       {issuedCodeResult && (
         <div
-          className="staff-handoff-modal"
+          className="admin-form-card"
           style={{
-            padding: "1.5rem",
-            background: "var(--color-surface)",
-            borderRadius: "8px",
-            border: "2px solid var(--color-primary)",
-            marginBottom: "1.5rem",
+            borderColor: "var(--ink, #123832)",
+            boxShadow: "0 8px 24px rgba(18, 56, 50, 0.12)",
           }}
         >
           <div
             style={{
               display: "inline-block",
               padding: "0.25rem 0.75rem",
-              background: "var(--color-primary-light, #e0f2fe)",
-              color: "var(--color-primary, #0369a1)",
+              background: "#e0f2fe",
+              color: "#0369a1",
               borderRadius: "9999px",
-              fontSize: "0.85rem",
-              fontWeight: 600,
-              marginBottom: "0.75rem",
+              fontSize: "0.82rem",
+              fontWeight: 800,
+              marginBottom: "0.5rem",
             }}
           >
             {issuedCodeResult.action_kind === "INITIAL"
               ? "Penerbitan Pertama"
               : "Penerbitan Ulang (Reissued)"}
           </div>
-          <h3>Serahkan Kode Akses kepada Ibu Hamil</h3>
-          <p style={{ color: "var(--color-ink-muted)", marginBottom: "1rem" }}>
-            Tunjukkan atau cetak kode di bawah ini untuk diserahkan secara pribadi kepada pasien
-            saat pemeriksaan:
+          <h3 className="admin-form-card-title" style={{ borderBottom: "none", margin: 0 }}>
+            Serahkan Kode Akses kepada Ibu Hamil
+          </h3>
+          <p className="admin-form-card-desc" style={{ marginTop: "0.25rem" }}>
+            Tunjukkan atau catat kode di bawah ini untuk diserahkan secara pribadi kepada pasien:
           </p>
 
           <div
             style={{
               padding: "1.25rem",
-              background: "var(--color-bg, #0f172a)",
+              background: "#0f172a",
               color: "#38bdf8",
               fontSize: "1.6rem",
-              fontWeight: "bold",
+              fontWeight: 900,
               fontFamily: "monospace",
               letterSpacing: "3px",
-              borderRadius: "8px",
+              borderRadius: "10px",
               textAlign: "center",
-              marginBottom: "1rem",
+              margin: "1rem 0",
+              boxShadow: "inset 0 2px 4px rgba(0,0,0,0.5)",
             }}
           >
             <code>{issuedCodeResult.access_code}</code>
@@ -300,12 +366,13 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
 
           <div
             style={{
-              padding: "0.75rem 1rem",
+              padding: "0.85rem 1rem",
               background: "#fff1f2",
               border: "1px solid #fecdd3",
-              borderRadius: "6px",
+              borderRadius: "8px",
               color: "#be123c",
-              fontSize: "0.9rem",
+              fontSize: "0.85rem",
+              lineHeight: 1.45,
               marginBottom: "1.25rem",
             }}
           >
@@ -326,135 +393,273 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
         </div>
       )}
 
+      {/* Tab 1: Penerbitan Baru */}
       {!issuedCodeResult && activeTab === "issue" && (
-        <form className="staff-form-grid" onSubmit={(e) => void handleIssueCredential(e)}>
-          <h3>Penerbitan Kode Akses Pasien</h3>
-          <p
-            className="form-lead"
-            style={{ color: "var(--color-ink-muted)", marginBottom: "1rem" }}
-          >
-            Terbitkan kode akses mandiri untuk ibu hamil yang terdaftar.
+        <div className="admin-form-card">
+          <h3 className="admin-form-card-title">Penerbitan Kode Akses Pasien</h3>
+          <p className="admin-form-card-desc">
+            Terbitkan kode akses mandiri baru berformat Crockford Base32 untuk ibu hamil yang terdaftar.
           </p>
 
-          <div className="form-group">
-            <label htmlFor="issue-mother">Pilih Ibu Hamil *</label>
-            <select
-              id="issue-mother"
-              className="staff-input"
-              value={selectedMotherId}
-              onChange={(e) => setSelectedMotherId(e.target.value)}
-              required
-            >
-              <option value="">
-                -- {loadingMothers ? "Memuat data ibu hamil..." : "Pilih Pasien Terdaftar"} --
-              </option>
-              {mothers.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.full_name} ({m.phone_masked}) - {m.village_name ?? "Tanpa Desa"}
-                </option>
-              ))}
-            </select>
-          </div>
+          <form onSubmit={(e) => void handleIssueCredential(e)}>
+            <div className="admin-form-grid-2col">
+              <div className="form-group">
+                <label htmlFor="issue-village">1. Filter Desa / Wilayah Binaan</label>
+                <select
+                  id="issue-village"
+                  className="staff-input"
+                  value={selectedVillageId}
+                  onChange={(e) => {
+                    setSelectedVillageId(e.target.value);
+                    setSelectedMotherId("");
+                  }}
+                  disabled={loadingMothers}
+                >
+                  <option value="">
+                    -- Semua Wilayah ({mothers.length} Pasien Terdaftar) --
+                  </option>
+                  {villages.map((v) => {
+                    const countInVillage = mothers.filter((m) => m.village_id === v.id).length;
+                    return (
+                      <option key={v.id} value={v.id}>
+                        {v.name} ({countInVillage} Pasien)
+                      </option>
+                    );
+                  })}
+                </select>
+                <small className="field-hint">
+                  Saring daftar ibu hamil berdasarkan domisili desa.
+                </small>
+              </div>
 
-          <button className="btn-primary" type="submit" disabled={submitting || !selectedMotherId}>
-            {submitting ? "Menerbitkan Kode..." : "Terbitkan Kode Akses Pasien"}
-          </button>
-        </form>
+              <div className="form-group">
+                <label htmlFor="issue-mother">2. Pilih Pasien Ibu Hamil *</label>
+                <select
+                  id="issue-mother"
+                  className="staff-input"
+                  value={selectedMotherId}
+                  onChange={(e) => setSelectedMotherId(e.target.value)}
+                  disabled={loadingMothers}
+                  required
+                >
+                  <option value="">
+                    -- {loadingMothers
+                      ? "Memuat data ibu hamil..."
+                      : filteredMothers.length === 0
+                        ? "Tidak ada pasien di wilayah ini"
+                        : `Pilih Pasien (${filteredMothers.length} Tersedia)`} --
+                  </option>
+                  {filteredMothers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.full_name} ({m.phone_masked}) - {m.village_name ?? "Tanpa Desa"}
+                    </option>
+                  ))}
+                </select>
+                <small className="field-hint">
+                  Pilih pasien yang akan diterbitkan kode aksesnya.
+                </small>
+              </div>
+            </div>
+
+            <div className="admin-form-actions">
+              <button
+                className="btn-primary"
+                type="submit"
+                disabled={submitting || !selectedMotherId}
+              >
+                {submitting ? "Menerbitkan Kode..." : "Terbitkan Kode Akses Pasien"}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
+      {/* Tab 2: Penerbitan Ulang (Reissue) */}
       {!issuedCodeResult && activeTab === "reissue" && (
-        <form className="staff-form-grid" onSubmit={(e) => void handleReissueCredential(e)}>
-          <h3>Penerbitan Ulang Kode Akses (Reissue)</h3>
-          <p
-            className="form-lead"
-            style={{ color: "var(--color-ink-muted)", marginBottom: "1rem" }}
-          >
-            Gunakan menu ini jika kode pasien hilang atau lupa. Kode lama akan otomatis tidak
-            berlaku.
+        <div className="admin-form-card">
+          <h3 className="admin-form-card-title">Penerbitan Ulang Kode Akses (Reissue)</h3>
+          <p className="admin-form-card-desc">
+            Gunakan menu ini jika kode pasien hilang atau lupa. Kredensial lama otomatis dibatalkan.
           </p>
 
-          <div className="form-group">
-            <label htmlFor="reissue-mother">Pilih Ibu Hamil *</label>
-            <select
-              id="reissue-mother"
-              className="staff-input"
-              value={selectedMotherId}
-              onChange={(e) => setSelectedMotherId(e.target.value)}
-              required
-            >
-              <option value="">-- {loadingMothers ? "Memuat data..." : "Pilih Pasien"} --</option>
-              {mothers.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.full_name} ({m.phone_masked})
-                </option>
-              ))}
-            </select>
-          </div>
+          <form onSubmit={(e) => void handleReissueCredential(e)}>
+            <div className="admin-form-grid-2col">
+              <div className="form-group">
+                <label htmlFor="reissue-village">1. Filter Desa / Wilayah Binaan</label>
+                <select
+                  id="reissue-village"
+                  className="staff-input"
+                  value={selectedVillageId}
+                  onChange={(e) => {
+                    setSelectedVillageId(e.target.value);
+                    setSelectedMotherId("");
+                  }}
+                  disabled={loadingMothers}
+                >
+                  <option value="">
+                    -- Semua Wilayah ({mothers.length} Pasien Terdaftar) --
+                  </option>
+                  {villages.map((v) => {
+                    const countInVillage = mothers.filter((m) => m.village_id === v.id).length;
+                    return (
+                      <option key={v.id} value={v.id}>
+                        {v.name} ({countInVillage} Pasien)
+                      </option>
+                    );
+                  })}
+                </select>
+                <small className="field-hint">
+                  Saring daftar ibu hamil berdasarkan domisili desa.
+                </small>
+              </div>
 
-          <div className="form-group">
-            <label htmlFor="reissue-reason">Alasan Penerbitan Ulang *</label>
-            <input
-              id="reissue-reason"
-              className="staff-input"
-              type="text"
-              required
-              placeholder="e.g. Kode pasien hilang / lupa"
-              value={reissueReason}
-              onChange={(e) => setReissueReason(e.target.value)}
-            />
-          </div>
+              <div className="form-group">
+                <label htmlFor="reissue-mother">2. Pilih Pasien Ibu Hamil *</label>
+                <select
+                  id="reissue-mother"
+                  className="staff-input"
+                  value={selectedMotherId}
+                  onChange={(e) => setSelectedMotherId(e.target.value)}
+                  disabled={loadingMothers}
+                  required
+                >
+                  <option value="">
+                    -- {loadingMothers
+                      ? "Memuat data..."
+                      : filteredMothers.length === 0
+                        ? "Tidak ada pasien di wilayah ini"
+                        : `Pilih Pasien (${filteredMothers.length} Tersedia)`} --
+                  </option>
+                  {filteredMothers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.full_name} ({m.phone_masked}) - {m.village_name ?? "Tanpa Desa"}
+                    </option>
+                  ))}
+                </select>
+                <small className="field-hint">
+                  Pilih pasien yang meminta penerbitan ulang kode akses.
+                </small>
+              </div>
 
-          <button className="btn-primary" type="submit" disabled={submitting || !selectedMotherId}>
-            {submitting ? "Memproses Reissue..." : "Terbitkan Kode Pengganti"}
-          </button>
-        </form>
+              <div className="form-group form-group-full">
+                <label htmlFor="reissue-reason">3. Alasan Penerbitan Ulang *</label>
+                <input
+                  id="reissue-reason"
+                  className="staff-input"
+                  type="text"
+                  required
+                  placeholder="Contoh: Kode pasien hilang / lupa"
+                  value={reissueReason}
+                  onChange={(e) => setReissueReason(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="admin-form-actions">
+              <button
+                className="btn-primary"
+                type="submit"
+                disabled={submitting || !selectedMotherId}
+              >
+                {submitting ? "Memproses Reissue..." : "Terbitkan Kode Pengganti"}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
+      {/* Tab 3: Pencabutan Akses (Revoke) */}
       {!issuedCodeResult && activeTab === "revoke" && (
-        <form className="staff-form-grid" onSubmit={(e) => void handleRevokeCredential(e)}>
-          <h3>Pencabutan Akses Pasien (Revoke)</h3>
-          <p
-            className="form-lead"
-            style={{ color: "var(--color-ink-muted)", marginBottom: "1rem" }}
-          >
+        <div className="admin-form-card">
+          <h3 className="admin-form-card-title">Pencabutan Akses Pasien (Revoke)</h3>
+          <p className="admin-form-card-desc">
             Mencabut kredensial dan menghentikan seluruh sesi mandiri ibu hamil secara permanen.
           </p>
 
-          <div className="form-group">
-            <label htmlFor="revoke-mother">Pilih Ibu Hamil *</label>
-            <select
-              id="revoke-mother"
-              className="staff-input"
-              value={selectedMotherId}
-              onChange={(e) => setSelectedMotherId(e.target.value)}
-              required
-            >
-              <option value="">-- {loadingMothers ? "Memuat data..." : "Pilih Pasien"} --</option>
-              {mothers.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.full_name} ({m.phone_masked})
-                </option>
-              ))}
-            </select>
-          </div>
+          <form onSubmit={(e) => void handleRevokeCredential(e)}>
+            <div className="admin-form-grid-2col">
+              <div className="form-group">
+                <label htmlFor="revoke-village">1. Filter Desa / Wilayah Binaan</label>
+                <select
+                  id="revoke-village"
+                  className="staff-input"
+                  value={selectedVillageId}
+                  onChange={(e) => {
+                    setSelectedVillageId(e.target.value);
+                    setSelectedMotherId("");
+                  }}
+                  disabled={loadingMothers}
+                >
+                  <option value="">
+                    -- Semua Wilayah ({mothers.length} Pasien Terdaftar) --
+                  </option>
+                  {villages.map((v) => {
+                    const countInVillage = mothers.filter((m) => m.village_id === v.id).length;
+                    return (
+                      <option key={v.id} value={v.id}>
+                        {v.name} ({countInVillage} Pasien)
+                      </option>
+                    );
+                  })}
+                </select>
+                <small className="field-hint">
+                  Saring daftar ibu hamil berdasarkan domisili desa.
+                </small>
+              </div>
 
-          <div className="form-group">
-            <label htmlFor="revoke-reason">Alasan Pencabutan *</label>
-            <input
-              id="revoke-reason"
-              className="staff-input"
-              type="text"
-              required
-              placeholder="e.g. Pasien pindah domisili"
-              value={revokeReason}
-              onChange={(e) => setRevokeReason(e.target.value)}
-            />
-          </div>
+              <div className="form-group">
+                <label htmlFor="revoke-mother">2. Pilih Pasien Ibu Hamil *</label>
+                <select
+                  id="revoke-mother"
+                  className="staff-input"
+                  value={selectedMotherId}
+                  onChange={(e) => setSelectedMotherId(e.target.value)}
+                  disabled={loadingMothers}
+                  required
+                >
+                  <option value="">
+                    -- {loadingMothers
+                      ? "Memuat data..."
+                      : filteredMothers.length === 0
+                        ? "Tidak ada pasien di wilayah ini"
+                        : `Pilih Pasien (${filteredMothers.length} Tersedia)`} --
+                  </option>
+                  {filteredMothers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.full_name} ({m.phone_masked}) - {m.village_name ?? "Tanpa Desa"}
+                    </option>
+                  ))}
+                </select>
+                <small className="field-hint">
+                  Pilih pasien yang hak akses mandirinya akan dicabut.
+                </small>
+              </div>
 
-          <button className="btn-danger" type="submit" disabled={submitting || !selectedMotherId}>
-            {submitting ? "Mencabut Akses..." : "Cabut Akses Pasien"}
-          </button>
-        </form>
+              <div className="form-group form-group-full">
+                <label htmlFor="revoke-reason">3. Alasan Pencabutan *</label>
+                <input
+                  id="revoke-reason"
+                  className="staff-input"
+                  type="text"
+                  required
+                  placeholder="Contoh: Pasien pindah domisili luar wilayah"
+                  value={revokeReason}
+                  onChange={(e) => setRevokeReason(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="admin-form-actions">
+              <button
+                className="btn-danger"
+                type="submit"
+                disabled={submitting || !selectedMotherId}
+              >
+                {submitting ? "Mencabut Akses..." : "Cabut Akses Pasien"}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
     </div>
   );

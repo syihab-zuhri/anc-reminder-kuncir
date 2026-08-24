@@ -350,10 +350,28 @@ export function MotherDashboard() {
                             : "Sesuai Usia Kehamilan"}
                       </p>
                       <p className="timeline-facility-tag">
-                        📍{" "}
-                        {m.milestone_code === "K1" || m.milestone_code === "K5"
-                          ? "Puskesmas (Dokter)"
-                          : "Posyandu / Bidan Desa"}
+                        <svg
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          width="12"
+                          height="12"
+                          aria-hidden="true"
+                          style={{ display: "inline-block", verticalAlign: "-0.1em", marginRight: "0.25rem" }}
+                        >
+                          <path
+                            d="M10 2a5 5 0 0 0-5 5c0 3.75 5 9 5 9s5-5.25 5-9a5 5 0 0 0-5-5Z"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <circle cx="10" cy="7" r="1.75" />
+                        </svg>
+                        <span>
+                          {m.milestone_code === "K1" || m.milestone_code === "K5"
+                            ? "Puskesmas (Dokter)"
+                            : "Posyandu / Bidan Desa"}
+                        </span>
                       </p>
                     </div>
                   </div>
