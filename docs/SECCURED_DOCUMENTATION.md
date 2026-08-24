@@ -1,7 +1,9 @@
 # SECCURED COMPREHENSIVE DOCUMENTATION - ANC Reminder
 
 ## Version: 2.0.0
+
 ## Timestamp: 2026-08-19
+
 ## Status: Production Ready
 
 ---
@@ -24,6 +26,7 @@
 ## What is ANC Reminder System?
 
 ANC Reminder is a **server-driven healthcare management platform** designed for:
+
 - **Puskesmas** (Community Health Centers) to manage ANC (ante-natal care) programs
 - **Bidan** (Midwives) to track and monitor pregnant mothers
 - **Bumil** (Pregnant Women) to access their pregnancy care information
@@ -31,6 +34,7 @@ ANC Reminder is a **server-driven healthcare management platform** designed for:
 ## Key Features
 
 ### 🏥 For Puskesmas (Health Centers)
+
 - Dashboard with overview of program effectiveness
 - Mother registry with pregnancy tracking
 - Check-up tracking across K1, K2, K3, K4, K5, K6 milestones
@@ -38,12 +42,14 @@ ANC Reminder is a **server-driven healthcare management platform** designed for:
 - Notification scheduling and history
 
 ### 👩‍⚕️ For Midwives (Bidan)
+
 - Access to assigned mothers' profiles
 - Bookmark mothers for easy access
 - Track over time through pregnancy milestones
 - SPA-level configuration
 
 ### 👶 For Pregnant Women (Bumil)
+
 - Access mother private portal
 - View their pregnancy timeline
 - Important note: Bumil cannot perform self-check-in
@@ -73,6 +79,7 @@ Backend:
 ### Staff Authentication (OAuth 2.0)
 
 **Flow:**
+
 1. **Login**: Staff submits identifier + password via HTTPS POST
 2. **Verification**: Server verifies credentials via salted scrypt hashing
 3. **Session Creation**: Server creates access token, refresh token, user context
@@ -80,6 +87,7 @@ Backend:
 5. **MFA Support**: Optional 2FA for additional security
 
 **Security Features:**
+
 - ✅ **HTTP-only, Secure, SameSite cookies** to prevent XSS attacks
 - ✅ **Salted scrypt password hashing** (N=2^17, r=8, p=1)
 - ✅ **Reflexive challenge-response** authentication
@@ -89,12 +97,14 @@ Backend:
 ### Mother Authentication
 
 **Flow:**
+
 1. **Access Code Generation**: Mother receives 16-char access code via WA/Email
 2. **Login via Portal**: Bumil enters code in web portal
 3. **Session Creation**: Server creates secure session with limited scope
 4. **No Local History**: State never stored in browser
 
 **Security Features:**
+
 - ✅ **OForrer unique 16-char wali鉴** codes with scrypt verification
 - ✅ **Automatic token verification** via refresh rotation
 - ✅ **No local storage** for access tokens
@@ -103,16 +113,17 @@ Backend:
 
 ### Role Capabilities
 
-| Role | Capabilities |
-|------|--------------|
-| **Super Admin** | Full system access, all configurations |
-| **Puskesmas** | Access to assigned health center data, staff management |
-| **Bidan** | Access to assigned mothers' profiles within Puskesmas |
-| **Bumil** | Access to own pregnancy data, check-up results |
+| Role            | Capabilities                                            |
+| --------------- | ------------------------------------------------------- |
+| **Super Admin** | Full system access, all configurations                  |
+| **Puskesmas**   | Access to assigned health center data, staff management |
+| **Bidan**       | Access to assigned mothers' profiles within Puskesmas   |
+| **Bumil**       | Access to own pregnancy data, check-up results          |
 
 **Capability Deny-By-Default Policy:**
+
 ```
-Unknown, wrong-password, locked, disabled, inactive-center login attempts 
+Unknown, wrong-password, locked, disabled, inactive-center login attempts
 share a generic credential error.
 ```
 
@@ -122,10 +133,10 @@ share a generic credential error.
 
 ## Base URL
 
-| Environment | Development | Staging | Production |
-|-------------|-------------|---------|------------|
+| Environment | Development                  | Staging                          | Production                      |
+| ----------- | ---------------------------- | -------------------------------- | ------------------------------- |
 | API         | http://localhost:3001/api/v1 | https://api.anc-reminder.staging | https://api.anc-reminder.kuncir |
-| Web         | http://localhost:3000 | https://anc-reminder.kuncir | https://anc.beranda-demo |
+| Web         | http://localhost:3000        | https://anc-reminder.kuncir      | https://anc.beranda-demo        |
 
 ## Authentication
 
@@ -151,10 +162,12 @@ X-Request-ID: <unique-request-id>
 ### Staff Authentication
 
 #### POST /api/staff-session/login
+
 **Auth Required**: No
 **Description**: Login as staff
 
 **Request:**
+
 ```json
 {
   "identifier": "puskesmas.kuncir",
@@ -163,6 +176,7 @@ X-Request-ID: <unique-request-id>
 ```
 
 **Response (Success):**
+
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -179,6 +193,7 @@ X-Request-ID: <unique-request-id>
 ```
 
 **Response (Error - Unauthorized):**
+
 ```json
 {
   "error": "Unauthorized",
@@ -189,16 +204,19 @@ X-Request-ID: <unique-request-id>
 ```
 
 #### POST /api/staff-session/logout
+
 **Auth Required**: Yes
 **Description**: Logout current session
 
 **Response:** 204 No Content
 
 #### POST /api/staff-session/refresh
+
 **Auth Required**: Yes (Refresh Token)
 **Description**: Get new access token
 
 **Response:**
+
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -209,10 +227,12 @@ X-Request-ID: <unique-request-id>
 ### Mother Authentication
 
 #### POST /api/mother-session/login
+
 **Auth Required**: No
 **Description**: Access via access code
 
 **Request:**
+
 ```json
 {
   "access_code": "ANC-XXXX-XXXX-XXXX-XXXX"
@@ -220,6 +240,7 @@ X-Request-ID: <unique-request-id>
 ```
 
 **Response (Success):**
+
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -229,6 +250,7 @@ X-Request-ID: <unique-request-id>
 ```
 
 #### DELETE /api/mother-session/logout
+
 **Auth Required**: Yes
 **Description**: Logout mother session
 
@@ -237,9 +259,11 @@ X-Request-ID: <unique-request-id>
 ### Staff CRUD Endpoints
 
 #### GET /api/staff/me
+
 **Auth Required**: Yes (Staff Access Token)
 
 **Response:**
+
 ```json
 {
   "id": "507f1f77bcf86cd799439011",
@@ -253,54 +277,66 @@ X-Request-ID: <unique-request-id>
 ```
 
 #### POST /api/staff
+
 **Auth Required**: Yes (Super Admin Only)
 **Description**: Create new staff
 
 #### PUT /api/staff/:id
+
 **Auth Required**: Yes (Based on role and scope)
 **Description**: Update staff information
 
 #### DELETE /api/staff/:id
+
 **Auth Required**: Yes (Based on role and scope)
 **Description**: Delete staff
 
 ### Mother Management
 
 #### GET /api/mothers
+
 **Auth Required**: Yes (Based on scope)
 **Description**: List mothers with pagination
 
 #### GET /api/mothers/:id
+
 **Auth Required**: Yes (Based on scope)
 **Description**: Get specific mother details
 
 #### POST /api/mothers
+
 **Auth Required**: Yes (Based on scope)
 **Description**: Create mother record
 
 #### PUT /api/mothers/:id
+
 **Auth Required**: Yes (Based on scope)
 **Description**: Update mother record
 
 #### DELETE /api/mothers/:id
+
 **Auth Required**: Yes (Based on scope)
 **Description**: Delete mother record
 
 #### POST /api/mothers/:id/checkup
+
 **Auth Required**: Yes (Based on scope)
 **Description**: Create/check-up record
 
 ### Pregnancy & Milestones
 
 #### GET /api/mothers/:id/pregnancy
+
 **Auth Required**: Yes (Based on scope)
 **Description**: Get pregnancy details
 
 #### POST /api/mothers/:id/pregnancy/checkup
+
 **Auth Required**: Yes (Based on scope)
 **Description**: Create/check-up at milestone
 
 #### GET /api/mothers/:id/checkups
+
 **Auth Required**: Yes (Based on scope)
 **Description**: List all check-ups for mother
 
@@ -315,14 +351,14 @@ X-Request-ID: <unique-request-id>
 }
 ```
 
-| Code | Status | Description |
-|------|--------|-------------|
-| `UNAUTHORIZED` | 401 | Invalid credentials or no valid session |
-| `FORBIDDEN` | 403 | Insufficient permissions |
-| `NOT_FOUND` | 404 | Resource not found |
-| `VALIDATION_ERROR` | 400 | Invalid request data |
-| `RATE_LIMITED` | 429 | Too many requests |
-| `INTERNAL_SERVER_ERROR` | 500 | Server error |
+| Code                    | Status | Description                             |
+| ----------------------- | ------ | --------------------------------------- |
+| `UNAUTHORIZED`          | 401    | Invalid credentials or no valid session |
+| `FORBIDDEN`             | 403    | Insufficient permissions                |
+| `NOT_FOUND`             | 404    | Resource not found                      |
+| `VALIDATION_ERROR`      | 400    | Invalid request data                    |
+| `RATE_LIMITED`          | 429    | Too many requests                       |
+| `INTERNAL_SERVER_ERROR` | 500    | Server error                            |
 
 ---
 
@@ -331,24 +367,28 @@ X-Request-ID: <unique-request-id>
 ## Pre-Deployment Checklist
 
 ### Database Setup ✅
+
 - [x] PostgreSQL 17 installed and running
 - [x] Migration files created
 - [x] Database credentials configured
 - [x] Index created for search optimization
 
 ### Backend Setup
+
 - [x] NestJS application building
 - [x] Environment variables set
 - [x] Secrets generated and stored in secret manager
 - [x] SSL certificates obtained (for production)
 
 ### Frontend Setup
+
 - [x] Next.js application building
 - [x] Environment variables set
 - [x] Static assets optimized
 - [x] WebP assets used where possible
 
 ### Certificates & Security
+
 - [x] SSL certificates for domain
 - [x] HTTPS enforced
 - [x] HSTS header configured
@@ -360,6 +400,7 @@ X-Request-ID: <unique-request-id>
 ### 1. Environment Variables
 
 #### Backend (.env.production)
+
 ```bash
 NODE_ENV=production
 PORT=3001
@@ -393,6 +434,7 @@ PHONE_APPEAL_OVERRIDE_8月列表=1 # minutes before appointment
 ```
 
 #### Frontend (.env.production)
+
 ```bash
 NEXT_PUBLIC_API_URL=https://api.anc-reminder.kuncir
 NEXT_PUBLIC_APP_URL=https://anc.beranda-demo
@@ -403,6 +445,7 @@ NEXT_PUBLIC_NODE_ENV=production
 ### 2. Build & Compile
 
 **Backend:**
+
 ```bash
 cd apps/api
 npm ci
@@ -412,6 +455,7 @@ npm run test:ci
 ```
 
 **Frontend:**
+
 ```bash
 cd apps/web
 npm ci
@@ -447,6 +491,7 @@ npm run test:smoke:api
 #### Systemd Services (Production)
 
 **API Service:**
+
 ```ini
 [Unit]
 Description=ANC Reminder API
@@ -466,6 +511,7 @@ WantedBy=multi-user.target
 ```
 
 **Web Service:**
+
 ```ini
 [Unit]
 Description=ANC Reminder Web
@@ -485,6 +531,7 @@ WantedBy=multi-user.target
 ```
 
 **Worker Service:**
+
 ```ini
 [Unit]
 Description=ANC Reminder Worker
@@ -558,12 +605,14 @@ server {
 ### Issue 1: App won't start due to environment variables
 
 **Symptoms:**
+
 ```
 Error: Configuration validation failed
 Missing required environment variables
 ```
 
 **Solution:**
+
 ```bash
 # Check environment variables
 cat .env.production | grep -v "SECRET"
@@ -579,12 +628,14 @@ pm2 restart anc-api
 ### Issue 2: Database connection issues
 
 **Symptoms:**
+
 ```
 Connection refused by PostgreSQL
 Connection timeout
 ```
 
 **Solution:**
+
 ```sql
 -- Check PostgreSQL is running
 sudo systemctl status postgresql
@@ -602,10 +653,12 @@ sudo systemctl restart postgresql
 ### Issue 3: Push notifications not sending
 
 **Symptoms:**
+
 - FCM device token not registering
 - No notifications received by app
 
 **Solution:**
+
 ```bash
 # Check FCM token
 curl -X POST "https://fcm.googleapis.com/v1/projects/your-project-id/messages:send" \
@@ -628,12 +681,14 @@ firebase logs:tail --project=your-project-id
 ### Issue 4: SMS messages failing to send
 
 **Symptoms:**
+
 ```
 Failed to send SMS
 Phone number not reachable
 ```
 
 **Solution:**
+
 ```bash
 # Verifikasi gateway credentials
 curl -X POST "https://api.smsprovider.com/v2/send" \
@@ -673,13 +728,13 @@ curl http://localhost:3001/health/cache
 
 ### Metrics to Monitor
 
-| Metric | Threshold | Action |
-|--------|-----------|--------|
-| API Response Time | > 2 seconds | Check database queries |
-| Error Rate | > 5% | Review logs |
-| Queue Depth | > 1000 | Check worker latency |
-| Database Connections | > 90% | Increase pool size |
-| Memory Usage | > 90% | Scale horizontally |
+| Metric               | Threshold   | Action                 |
+| -------------------- | ----------- | ---------------------- |
+| API Response Time    | > 2 seconds | Check database queries |
+| Error Rate           | > 5%        | Review logs            |
+| Queue Depth          | > 1000      | Check worker latency   |
+| Database Connections | > 90%       | Increase pool size     |
+| Memory Usage         | > 90%       | Scale horizontally     |
 
 ### Monitoring Tools
 
@@ -709,11 +764,13 @@ df -h
 ### Scenario 1: Staff Login failures cascade
 
 **Symptoms:**
+
 - Large number of staff login failures
 - Database slow during login operations
 - Session management overload
 
 **Procedure:**
+
 ```bash
 # 1. Pause new staff sessions
 sudo iptables -A INPUT -p tcp --dport 3001 -j DROP
@@ -731,10 +788,12 @@ sudo iptables -D INPUT -p tcp --dport 3001 -j DROP
 ### Scenario 2: Mother session rotation issues
 
 **Symptoms:**
+
 - Error "Invalid token" for mothers
 - Session not refreshing properly
 
 **Procedure:**
+
 ```bash
 # 1. Check token rotation status
 curl -X POST http://localhost:3001/api/mother-session/refresh \
@@ -750,10 +809,12 @@ tail -f /var/log/anc-api.log | grep "refresh\|tokens\|rotation"
 ### Scenario 3: Database migration failures
 
 **Symptoms:**
+
 - Migration fails with constraint violations
 - Data corruption detected
 
 **Procedure:**
+
 ```bash
 # 1. Stop application
 pm2 stop anc-api anc-worker
@@ -774,6 +835,7 @@ npm run db:migrate:prod
 # ✅ Pre-Deployment Checklist
 
 ## Infrastructure
+
 - [ ] PostgreSQL 17 installed and running
 - [ ] Redis configured for queue management
 - [ ] SSL certificates obtained (from CA)
@@ -786,6 +848,7 @@ npm run db:migrate:prod
 - [ ] Disaster recovery plan documented and tested
 
 ## Application Configuration
+
 - [ ] Production environment variables set
 - [ ] All secrets generated and stored
 - [ ] Database schemas migrated
@@ -799,6 +862,7 @@ npm run db:migrate:prod
 - [ ] Performance optimized
 
 ## Tests
+
 - [ ] Unit tests passing
 - [ ] Integration tests passing
 - [ ] E2E tests passing
@@ -809,6 +873,7 @@ npm run db:migrate:prod
 - [ ] User acceptance tests passed
 
 ## Documentation
+
 - [ ] API documentation updated
 - [ ] Deployment guide followed
 - [ ] Troubleshooting guide created
@@ -818,6 +883,7 @@ npm run db:migrate:prod
 - [ ] Crisis management plan documented
 
 ## Staff Readiness
+
 - [ ] Key personnel trained on system
 - [ ] Admin credentials properly distributed
 - [ ] Rollback procedure tested
@@ -829,18 +895,18 @@ npm run db:migrate:prod
 
 ## 📞 Support Contacts
 
-| Role | Contact | Response Time |
-|------|---------|---------------|
-| On-call Engineer | engineer-oncall@anc.beranda-demo | 15 minutes |
-| Tech Lead | techlead@anc.beranda-demo | 1 hour |
-| Product Owner | product@anc.beranda-demo | 4 hours |
-| Security Team | security@anc.beranda-demo | Immediate |
+| Role             | Contact                          | Response Time |
+| ---------------- | -------------------------------- | ------------- |
+| On-call Engineer | engineer-oncall@anc.beranda-demo | 15 minutes    |
+| Tech Lead        | techlead@anc.beranda-demo        | 1 hour        |
+| Product Owner    | product@anc.beranda-demo         | 4 hours       |
+| Security Team    | security@anc.beranda-demo        | Immediate     |
 
 ## 📝 Document Revision History
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 2.0.0 | 2026-08-19 | Development Team | Comprehensive security documentation |
+| Version | Date       | Author           | Changes                              |
+| ------- | ---------- | ---------------- | ------------------------------------ |
+| 2.0.0   | 2026-08-19 | Development Team | Comprehensive security documentation |
 
 ---
 

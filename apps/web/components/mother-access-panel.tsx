@@ -1,10 +1,6 @@
 "use client";
 
-import type {
-  MotherAccessCredentialIssueResponse,
-  MotherSummary,
-  Village,
-} from "@anc/contracts";
+import type { MotherAccessCredentialIssueResponse, MotherSummary, Village } from "@anc/contracts";
 import { useEffect, useState } from "react";
 
 interface MotherAccessPanelProps {
@@ -398,7 +394,8 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
         <div className="admin-form-card">
           <h3 className="admin-form-card-title">Penerbitan Kode Akses Pasien</h3>
           <p className="admin-form-card-desc">
-            Terbitkan kode akses mandiri baru berformat Crockford Base32 untuk ibu hamil yang terdaftar.
+            Terbitkan kode akses mandiri baru berformat Crockford Base32 untuk ibu hamil yang
+            terdaftar.
           </p>
 
           <form onSubmit={(e) => void handleIssueCredential(e)}>
@@ -415,9 +412,7 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
                   }}
                   disabled={loadingMothers}
                 >
-                  <option value="">
-                    -- Semua Wilayah ({mothers.length} Pasien Terdaftar) --
-                  </option>
+                  <option value="">-- Semua Wilayah ({mothers.length} Pasien Terdaftar) --</option>
                   {villages.map((v) => {
                     const countInVillage = mothers.filter((m) => m.village_id === v.id).length;
                     return (
@@ -443,11 +438,13 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
                   required
                 >
                   <option value="">
-                    -- {loadingMothers
+                    --{" "}
+                    {loadingMothers
                       ? "Memuat data ibu hamil..."
                       : filteredMothers.length === 0
                         ? "Tidak ada pasien di wilayah ini"
-                        : `Pilih Pasien (${filteredMothers.length} Tersedia)`} --
+                        : `Pilih Pasien (${filteredMothers.length} Tersedia)`}{" "}
+                    --
                   </option>
                   {filteredMothers.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -496,9 +493,7 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
                   }}
                   disabled={loadingMothers}
                 >
-                  <option value="">
-                    -- Semua Wilayah ({mothers.length} Pasien Terdaftar) --
-                  </option>
+                  <option value="">-- Semua Wilayah ({mothers.length} Pasien Terdaftar) --</option>
                   {villages.map((v) => {
                     const countInVillage = mothers.filter((m) => m.village_id === v.id).length;
                     return (
@@ -524,11 +519,13 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
                   required
                 >
                   <option value="">
-                    -- {loadingMothers
+                    --{" "}
+                    {loadingMothers
                       ? "Memuat data..."
                       : filteredMothers.length === 0
                         ? "Tidak ada pasien di wilayah ini"
-                        : `Pilih Pasien (${filteredMothers.length} Tersedia)`} --
+                        : `Pilih Pasien (${filteredMothers.length} Tersedia)`}{" "}
+                    --
                   </option>
                   {filteredMothers.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -590,9 +587,7 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
                   }}
                   disabled={loadingMothers}
                 >
-                  <option value="">
-                    -- Semua Wilayah ({mothers.length} Pasien Terdaftar) --
-                  </option>
+                  <option value="">-- Semua Wilayah ({mothers.length} Pasien Terdaftar) --</option>
                   {villages.map((v) => {
                     const countInVillage = mothers.filter((m) => m.village_id === v.id).length;
                     return (
@@ -618,11 +613,13 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
                   required
                 >
                   <option value="">
-                    -- {loadingMothers
+                    --{" "}
+                    {loadingMothers
                       ? "Memuat data..."
                       : filteredMothers.length === 0
                         ? "Tidak ada pasien di wilayah ini"
-                        : `Pilih Pasien (${filteredMothers.length} Tersedia)`} --
+                        : `Pilih Pasien (${filteredMothers.length} Tersedia)`}{" "}
+                    --
                   </option>
                   {filteredMothers.map((m) => (
                     <option key={m.id} value={m.id}>

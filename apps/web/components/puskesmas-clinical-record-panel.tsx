@@ -599,8 +599,8 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
             className="field-hint"
             style={{ maxWidth: "26rem", margin: "0 auto", lineHeight: 1.5 }}
           >
-            Silakan pilih nama ibu hamil pada menu pilihan di atas untuk mulai menginput atau memvalidasi rekam
-            medis fisik &amp; laboratorium kunjungan K1–K6.
+            Silakan pilih nama ibu hamil pada menu pilihan di atas untuk mulai menginput atau
+            memvalidasi rekam medis fisik &amp; laboratorium kunjungan K1–K6.
           </p>
         </div>
       )}

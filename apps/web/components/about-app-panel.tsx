@@ -13,7 +13,8 @@ export function AboutAppPanel() {
           <span className="staff-kicker">Informasi Pengembang &amp; Hak Cipta</span>
           <h2>Tentang Aplikasi Pengingat ANC</h2>
           <p className="field-hint">
-            Sistem informasi dan pengingat jadwal pemeriksaan kehamilan terintegrasi Posyandu dan Puskesmas Kuncir.
+            Sistem informasi dan pengingat jadwal pemeriksaan kehamilan terintegrasi Posyandu dan
+            Puskesmas Kuncir.
           </p>
         </div>
       </header>
@@ -88,7 +89,10 @@ export function AboutAppPanel() {
                   height="14"
                   aria-hidden="true"
                 >
-                  <path d="M10 2l6 3.5v5.5c0 4.5-3 7-6 8-3-1-6-3.5-6-8V5.5L10 2z" strokeLinejoin="round" />
+                  <path
+                    d="M10 2l6 3.5v5.5c0 4.5-3 7-6 8-3-1-6-3.5-6-8V5.5L10 2z"
+                    strokeLinejoin="round"
+                  />
                   <path d="M7.5 10l2 2 3.5-3.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 Plakat Pengembang Resmi
@@ -139,7 +143,13 @@ export function AboutAppPanel() {
               >
                 Versi 1.0.0 (Produksi)
               </span>
-              <span style={{ fontSize: "0.72rem", color: "rgba(251, 248, 241, 0.65)", marginTop: "0.35rem" }}>
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  color: "rgba(251, 248, 241, 0.65)",
+                  marginTop: "0.35rem",
+                }}
+              >
                 Rilis Tahun 2026
               </span>
             </div>
@@ -168,7 +178,14 @@ export function AboutAppPanel() {
                 gap: "0.4rem",
               }}
             >
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" width="14" height="14">
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                width="14"
+                height="14"
+              >
                 <path d="M10 2a6 6 0 00-6 6c0 4.5 6 10 6 10s6-5.5 6-10a6 6 0 00-6-6z" />
                 <circle cx="10" cy="8" r="2" />
               </svg>
@@ -183,7 +200,8 @@ export function AboutAppPanel() {
                 fontWeight: 600,
               }}
             >
-              INSTITUT TEKNOLOGI MOJOSARI, Mojosari, Ngepeh, Kec. Loceret, Kabupaten Nganjuk, Jawa Timur 64471
+              INSTITUT TEKNOLOGI MOJOSARI, Mojosari, Ngepeh, Kec. Loceret, Kabupaten Nganjuk, Jawa
+              Timur 64471
             </p>
           </div>
         </div>
@@ -201,13 +219,25 @@ export function AboutAppPanel() {
           gap: "1.25rem",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "0.5rem",
+          }}
+        >
           <div>
-            <h3 id="gallery-title" style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "var(--ink)" }}>
+            <h3
+              id="gallery-title"
+              style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "var(--ink)" }}
+            >
               Dokumentasi Tim KKN Kuncir 2026
             </h3>
             <p style={{ margin: "0.2rem 0 0", fontSize: "0.84rem", color: "var(--ink-muted)" }}>
-              Dokumentasi resmi tim mahasiswa Kuliah Kerja Nyata (KKN) Institut Teknologi Mojosari Desa Kuncir.
+              Dokumentasi resmi tim mahasiswa Kuliah Kerja Nyata (KKN) Institut Teknologi Mojosari
+              Desa Kuncir.
             </p>
           </div>
           <span
@@ -298,19 +328,45 @@ export function AboutAppPanel() {
                   gap: "0.3rem",
                 }}
               >
-                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" width="12" height="12">
-                  <path d="M3 8V3h5M17 8V3h-5M3 12v5h5M17 12v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  width="12"
+                  height="12"
+                >
+                  <path
+                    d="M3 8V3h5M17 8V3h-5M3 12v5h5M17 12v5h-5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
                 Perbesar
               </div>
             </div>
 
             <div style={{ padding: "0.9rem 1.1rem", background: "var(--paper-raised, #ffffff)" }}>
-              <strong style={{ fontSize: "0.88rem", color: "var(--ink)", display: "block", marginBottom: "0.2rem" }}>
+              <strong
+                style={{
+                  fontSize: "0.88rem",
+                  color: "var(--ink)",
+                  display: "block",
+                  marginBottom: "0.2rem",
+                }}
+              >
                 Pentas Seni &amp; Penyerahan Plakat KKN Kuncir
               </strong>
-              <small style={{ fontSize: "0.78rem", color: "var(--ink-muted)", lineHeight: 1.4, display: "block" }}>
-                Institut Teknologi Mojosari &middot; Kegiatan Pengabdian Masyarakat Desa Kuncir 2026.
+              <small
+                style={{
+                  fontSize: "0.78rem",
+                  color: "var(--ink-muted)",
+                  lineHeight: 1.4,
+                  display: "block",
+                }}
+              >
+                Institut Teknologi Mojosari &middot; Kegiatan Pengabdian Masyarakat Desa Kuncir
+                2026.
               </small>
             </div>
           </div>
@@ -387,18 +443,43 @@ export function AboutAppPanel() {
                   gap: "0.3rem",
                 }}
               >
-                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" width="12" height="12">
-                  <path d="M3 8V3h5M17 8V3h-5M3 12v5h5M17 12v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  width="12"
+                  height="12"
+                >
+                  <path
+                    d="M3 8V3h5M17 8V3h-5M3 12v5h5M17 12v5h-5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
                 Perbesar
               </div>
             </div>
 
             <div style={{ padding: "0.9rem 1.1rem", background: "var(--paper-raised, #ffffff)" }}>
-              <strong style={{ fontSize: "0.88rem", color: "var(--ink)", display: "block", marginBottom: "0.2rem" }}>
+              <strong
+                style={{
+                  fontSize: "0.88rem",
+                  color: "var(--ink)",
+                  display: "block",
+                  marginBottom: "0.2rem",
+                }}
+              >
                 Kebersamaan Mahasiswa KKN &amp; Warga Kuncir
               </strong>
-              <small style={{ fontSize: "0.78rem", color: "var(--ink-muted)", lineHeight: 1.4, display: "block" }}>
+              <small
+                style={{
+                  fontSize: "0.78rem",
+                  color: "var(--ink-muted)",
+                  lineHeight: 1.4,
+                  display: "block",
+                }}
+              >
                 Institut Teknologi Mojosari &middot; Dokumentasi Tim Pengembang Aplikasi ANC.
               </small>
             </div>
@@ -431,7 +512,14 @@ export function AboutAppPanel() {
                 borderRadius: "8px",
               }}
             >
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" width="16" height="16">
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                width="16"
+                height="16"
+              >
                 <path d="M3 10h4l2-6 4 12 2-6h4" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </span>
@@ -439,8 +527,13 @@ export function AboutAppPanel() {
               Tujuan &amp; Latar Belakang
             </h4>
           </div>
-          <p style={{ margin: 0, fontSize: "0.88rem", lineHeight: 1.55, color: "var(--ink-muted)" }}>
-            Aplikasi ini dikembangkan sebagai karya pengabdian masyarakat program Kuliah Kerja Nyata (KKN) Desa Kuncir tahun 2026 dari Institut Teknologi Mojosari untuk membantu Puskesmas dan Bidan Desa dalam memantau kepatuhan kunjungan pemeriksaan kehamilan (ANC) secara teratur.
+          <p
+            style={{ margin: 0, fontSize: "0.88rem", lineHeight: 1.55, color: "var(--ink-muted)" }}
+          >
+            Aplikasi ini dikembangkan sebagai karya pengabdian masyarakat program Kuliah Kerja Nyata
+            (KKN) Desa Kuncir tahun 2026 dari Institut Teknologi Mojosari untuk membantu Puskesmas
+            dan Bidan Desa dalam memantau kepatuhan kunjungan pemeriksaan kehamilan (ANC) secara
+            teratur.
           </p>
         </div>
 
@@ -467,7 +560,14 @@ export function AboutAppPanel() {
                 borderRadius: "8px",
               }}
             >
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" width="16" height="16">
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                width="16"
+                height="16"
+              >
                 <rect x="3" y="4" width="14" height="13" rx="2" />
                 <line x1="7" y1="2" x2="7" y2="4" />
                 <line x1="13" y1="2" x2="13" y2="4" />
@@ -478,8 +578,12 @@ export function AboutAppPanel() {
               Standar Klinis K1–K8
             </h4>
           </div>
-          <p style={{ margin: 0, fontSize: "0.88rem", lineHeight: 1.55, color: "var(--ink-muted)" }}>
-            Sistem mengadopsi 8 tahapan kunjungan antenatal terpadu Kemenkes RI dengan jadwal otomatis berbasis tanggal HPHT (*server-driven dating*), verifikasi dokter di fasilitas Puskesmas, serta konfirmasi kehadiran posyandu oleh Bidan Desa.
+          <p
+            style={{ margin: 0, fontSize: "0.88rem", lineHeight: 1.55, color: "var(--ink-muted)" }}
+          >
+            Sistem mengadopsi 8 tahapan kunjungan antenatal terpadu Kemenkes RI dengan jadwal
+            otomatis berbasis tanggal HPHT (*server-driven dating*), verifikasi dokter di fasilitas
+            Puskesmas, serta konfirmasi kehadiran posyandu oleh Bidan Desa.
           </p>
         </div>
       </div>
@@ -506,7 +610,14 @@ export function AboutAppPanel() {
             gap: "1rem",
           }}
         >
-          <div style={{ padding: "0.85rem 1rem", background: "var(--paper)", borderRadius: "8px", border: "1px solid var(--line)" }}>
+          <div
+            style={{
+              padding: "0.85rem 1rem",
+              background: "var(--paper)",
+              borderRadius: "8px",
+              border: "1px solid var(--line)",
+            }}
+          >
             <strong style={{ fontSize: "0.84rem", display: "block", color: "var(--ink)" }}>
               Enkripsi Kredensial Pasien
             </strong>
@@ -515,7 +626,14 @@ export function AboutAppPanel() {
             </small>
           </div>
 
-          <div style={{ padding: "0.85rem 1rem", background: "var(--paper)", borderRadius: "8px", border: "1px solid var(--line)" }}>
+          <div
+            style={{
+              padding: "0.85rem 1rem",
+              background: "var(--paper)",
+              borderRadius: "8px",
+              border: "1px solid var(--line)",
+            }}
+          >
             <strong style={{ fontSize: "0.84rem", display: "block", color: "var(--ink)" }}>
               Privasi &amp; Redaksi NIK
             </strong>
@@ -524,7 +642,14 @@ export function AboutAppPanel() {
             </small>
           </div>
 
-          <div style={{ padding: "0.85rem 1rem", background: "var(--paper)", borderRadius: "8px", border: "1px solid var(--line)" }}>
+          <div
+            style={{
+              padding: "0.85rem 1rem",
+              background: "var(--paper)",
+              borderRadius: "8px",
+              border: "1px solid var(--line)",
+            }}
+          >
             <strong style={{ fontSize: "0.84rem", display: "block", color: "var(--ink)" }}>
               Pangkalan Data Relasional
             </strong>
@@ -533,7 +658,14 @@ export function AboutAppPanel() {
             </small>
           </div>
 
-          <div style={{ padding: "0.85rem 1rem", background: "var(--paper)", borderRadius: "8px", border: "1px solid var(--line)" }}>
+          <div
+            style={{
+              padding: "0.85rem 1rem",
+              background: "var(--paper)",
+              borderRadius: "8px",
+              border: "1px solid var(--line)",
+            }}
+          >
             <strong style={{ fontSize: "0.84rem", display: "block", color: "var(--ink)" }}>
               Tata Kelola Multi-Wilayah
             </strong>
@@ -563,7 +695,8 @@ export function AboutAppPanel() {
             Hak Cipta &copy; 2026 KKN KUNCIR &middot; INSTITUT TEKNOLOGI MOJOSARI (ITM)
           </span>
           <span style={{ fontSize: "0.76rem", color: "var(--ink-muted)" }}>
-            Seluruh hak cipta dilindungi undang-undang. Dipersembahkan untuk masyarakat dan tenaga kesehatan Desa Kuncir.
+            Seluruh hak cipta dilindungi undang-undang. Dipersembahkan untuk masyarakat dan tenaga
+            kesehatan Desa Kuncir.
           </span>
         </div>
       </footer>
@@ -677,4 +810,3 @@ export function AboutAppPanel() {
     </div>
   );
 }
-

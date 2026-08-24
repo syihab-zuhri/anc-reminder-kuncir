@@ -1,6 +1,7 @@
 # 📋 Catatan Progres & Panduan Tindakan (My Action Plan)
+
 **Sistem Pengingat ANC Ibu Hamil (Posyandu Kuncir)**  
-*Terakhir Diperbarui: 18 Agustus 2026*
+_Terakhir Diperbarui: 18 Agustus 2026_
 
 ---
 
@@ -8,14 +9,14 @@
 
 Status sistem saat ini: **KODE & INFRASTRUKTUR INTI SUDAH 100% SIAP & AKTIF SECARA LOKAL.**
 
-| Komponen | Status | Keterangan |
-| :--- | :---: | :--- |
-| **Database Supabase** | ✅ **Selesai** | Terhubung ke project `anc-reminder-kuncir` (`eelgatcekddwxcofykzs`). Seluruh tabel dan skema database sudah termigrasi. |
-| **Backend API (NestJS)** | ✅ **Aktif** | Berjalan di port `3001` (`http://localhost:3001/api/v1/health/ready`). |
-| **Frontend Web (Next.js)** | ✅ **Aktif** | Berjalan di port `3000` (`http://localhost:3000`), responsif untuk layar laptop maupun layar HP. |
-| **Akses Jaringan HP (Hotspot)** | ✅ **Aktif** | Berhasil diakses dari HP via IP lokal: `http://10.155.10.200:3000`. |
-| **Notifikasi Firebase (FCM)** | ✅ **Selesai** | Kredensial Firebase (`posyandu-kuncir`) terpasang di `.env`, token Google OAuth2 terverifikasi, dan sinkronisasi Android (`npx cap sync android`) selesai. |
-| **WhatsApp Fallback (`wa.me`)** | ✅ **Selesai** | Siap mengirimkan pesan WhatsApp otomatis jika ibu hamil belum memasang aplikasi APK di HP. |
+| Komponen                        |     Status     | Keterangan                                                                                                                                                 |
+| :------------------------------ | :------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Database Supabase**           | ✅ **Selesai** | Terhubung ke project `anc-reminder-kuncir` (`eelgatcekddwxcofykzs`). Seluruh tabel dan skema database sudah termigrasi.                                    |
+| **Backend API (NestJS)**        |  ✅ **Aktif**  | Berjalan di port `3001` (`http://localhost:3001/api/v1/health/ready`).                                                                                     |
+| **Frontend Web (Next.js)**      |  ✅ **Aktif**  | Berjalan di port `3000` (`http://localhost:3000`), responsif untuk layar laptop maupun layar HP.                                                           |
+| **Akses Jaringan HP (Hotspot)** |  ✅ **Aktif**  | Berhasil diakses dari HP via IP lokal: `http://10.155.10.200:3000`.                                                                                        |
+| **Notifikasi Firebase (FCM)**   | ✅ **Selesai** | Kredensial Firebase (`posyandu-kuncir`) terpasang di `.env`, token Google OAuth2 terverifikasi, dan sinkronisasi Android (`npx cap sync android`) selesai. |
+| **WhatsApp Fallback (`wa.me`)** | ✅ **Selesai** | Siap mengirimkan pesan WhatsApp otomatis jika ibu hamil belum memasang aplikasi APK di HP.                                                                 |
 
 ---
 
@@ -33,7 +34,8 @@ graph TD
 ---
 
 ### 🔹 Langkah 1: Siapkan Data Master Asli Puskesmas
-Saat ini database masih berisi data simulasi (*dummy* seperti Desa Kuncir, Posyandu Mawar, Siti Aminah). Sebelum diserahkan, siapkan data riil:
+
+Saat ini database masih berisi data simulasi (_dummy_ seperti Desa Kuncir, Posyandu Mawar, Siti Aminah). Sebelum diserahkan, siapkan data riil:
 
 1. **Minta data wilayah kerja dari Puskesmas**:
    - Daftar nama Desa / Kelurahan binaan Puskesmas.
@@ -46,6 +48,7 @@ Saat ini database masih berisi data simulasi (*dummy* seperti Desa Kuncir, Posya
 ---
 
 ### 🔹 Langkah 2: Uji Coba Input Data Pasien Riil (Simulasi 1-3 Ibu Hamil)
+
 1. **Daftarkan Ibu Hamil Baru**:
    - Masuk ke menu **Pendaftaran Pasien**.
    - Masukkan nama ibu hamil, NIK, tanggal HPHT asli, dan pilih Posyandu serta Bidan pembina.
@@ -60,6 +63,7 @@ Saat ini database masih berisi data simulasi (*dummy* seperti Desa Kuncir, Posya
 ---
 
 ### 🔹 Langkah 3: Online-kan Aplikasi ke Hosting / Domain Publik
+
 Agar Bidan di Puskesmas dan Ibu Hamil di rumah bisa membuka aplikasi kapan saja tanpa perlu laptop Anda menyala:
 
 1. **Sewa Domain & Server Hosting / VPS**:
@@ -72,6 +76,7 @@ Agar Bidan di Puskesmas dan Ibu Hamil di rumah bisa membuka aplikasi kapan saja 
 ---
 
 ### 🔹 Langkah 4: Pelatihan Bidan & Serah Terima ke Puskesmas
+
 1. **Sosialisasi ke Bidan & Petugas**:
    - Tunjukkan cara login ke portal staff.
    - Tunjukkan cara input ibu hamil baru saat posyandu bulanan.

@@ -1040,8 +1040,12 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
                     >
                       <option value="POSYANDU">POSYANDU (Pos Pelayanan Terpadu)</option>
                       <option value="PUSKESMAS">PUSKESMAS (Pusat Kesehatan Masyarakat)</option>
-                      <option value="MIDWIFE_PRACTICE">MIDWIFE_PRACTICE (Praktik Mandiri Bidan)</option>
-                      <option value="PONED">PONED (Pelayanan Obstetri Neonatal Emergensi Dasar)</option>
+                      <option value="MIDWIFE_PRACTICE">
+                        MIDWIFE_PRACTICE (Praktik Mandiri Bidan)
+                      </option>
+                      <option value="PONED">
+                        PONED (Pelayanan Obstetri Neonatal Emergensi Dasar)
+                      </option>
                       <option value="HOSPITAL">HOSPITAL (Rumah Sakit Rujukan)</option>
                       <option value="OTHER">OTHER (Lainnya)</option>
                     </select>
@@ -1424,9 +1428,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="staffPassword">
-                      Kata Sandi Awal (Min 8 karakter)
-                    </label>
+                    <label htmlFor="staffPassword">Kata Sandi Awal (Min 8 karakter)</label>
                     <input
                       id="staffPassword"
                       className="staff-input"

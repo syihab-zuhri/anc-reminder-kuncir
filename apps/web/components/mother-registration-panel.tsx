@@ -105,7 +105,9 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
 
     setFieldErrors(errs);
     if (Object.keys(errs).length > 0) {
-      setValidationError("Terdapat isian data yang belum valid. Mohon periksa field bertanda merah di bawah.");
+      setValidationError(
+        "Terdapat isian data yang belum valid. Mohon periksa field bertanda merah di bawah.",
+      );
       return false;
     }
 
@@ -258,7 +260,8 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
               value={fullName}
               onChange={(e) => {
                 setFullName(e.target.value);
-                if (fieldErrors.fullName) setFieldErrors((prev) => ({ ...prev, fullName: undefined }));
+                if (fieldErrors.fullName)
+                  setFieldErrors((prev) => ({ ...prev, fullName: undefined }));
               }}
             />
             {fieldErrors.fullName && (
@@ -308,7 +311,8 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
               value={address}
               onChange={(e) => {
                 setAddress(e.target.value);
-                if (fieldErrors.address) setFieldErrors((prev) => ({ ...prev, address: undefined }));
+                if (fieldErrors.address)
+                  setFieldErrors((prev) => ({ ...prev, address: undefined }));
               }}
             />
             {fieldErrors.address && (
@@ -394,7 +398,8 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
                 checked={consentReminder}
                 onChange={(e) => {
                   setConsentReminder(e.target.checked);
-                  if (fieldErrors.consent) setFieldErrors((prev) => ({ ...prev, consent: undefined }));
+                  if (fieldErrors.consent)
+                    setFieldErrors((prev) => ({ ...prev, consent: undefined }));
                 }}
               />
               <span>
@@ -411,7 +416,8 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
                 checked={consentDataProcessing}
                 onChange={(e) => {
                   setConsentDataProcessing(e.target.checked);
-                  if (fieldErrors.consent) setFieldErrors((prev) => ({ ...prev, consent: undefined }));
+                  if (fieldErrors.consent)
+                    setFieldErrors((prev) => ({ ...prev, consent: undefined }));
                 }}
               />
               <span>

@@ -384,9 +384,7 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
                 onChange={(e) => handleSelectVillage(e.target.value)}
                 disabled={loadingInitial}
               >
-                <option value="">
-                  -- Semua Wilayah ({mothers.length} Pasien Terdaftar) --
-                </option>
+                <option value="">-- Semua Wilayah ({mothers.length} Pasien Terdaftar) --</option>
                 {villages.map((v) => {
                   const countInVillage = mothers.filter((m) => m.village_id === v.id).length;
                   return (
@@ -413,11 +411,13 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
                 required
               >
                 <option value="">
-                  -- {loadingInitial
+                  --{" "}
+                  {loadingInitial
                     ? "Memuat pasien..."
                     : filteredMothers.length === 0
                       ? "Tidak ada pasien di wilayah ini"
-                      : `Pilih Ibu Hamil (${filteredMothers.length} Tersedia)`} --
+                      : `Pilih Ibu Hamil (${filteredMothers.length} Tersedia)`}{" "}
+                  --
                 </option>
                 {filteredMothers.map((m) => (
                   <option key={m.id} value={m.id}>

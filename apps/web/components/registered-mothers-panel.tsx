@@ -874,16 +874,27 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
                 onClick={() => setEditingMother(null)}
                 aria-label="Tutup"
               >
-                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  width="16"
+                  height="16"
+                >
                   <path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
             </header>
 
-            <form onSubmit={handleSaveEdit} style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+            <form
+              onSubmit={handleSaveEdit}
+              style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}
+            >
               <div className="staff-modal-body">
                 <p className="field-hint" style={{ margin: 0 }}>
-                  NIK tidak ditampilkan atau diubah di formulir ini. Kosongkan nomor telepon bila tidak berubah.
+                  NIK tidak ditampilkan atau diubah di formulir ini. Kosongkan nomor telepon bila
+                  tidak berubah.
                 </p>
                 {editError && (
                   <div className="staff-alert alert-error" style={{ margin: 0 }}>
@@ -959,7 +970,9 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
           <div className="staff-modal-dialog modal-md" role="dialog" aria-modal="true">
             <header className="staff-modal-header" style={{ background: "#7f1d1d" }}>
               <div className="staff-modal-header-content">
-                <span className="staff-modal-kicker" style={{ color: "#fca5a5" }}>Arsip Rekam Pasien</span>
+                <span className="staff-modal-kicker" style={{ color: "#fca5a5" }}>
+                  Arsip Rekam Pasien
+                </span>
                 <h3 className="staff-modal-title">Hapus / Arsipkan Data</h3>
                 <p className="staff-modal-subtitle">
                   {archiveMother.full_name} ({archiveMother.phone_masked})
@@ -971,23 +984,35 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
                 onClick={() => setArchiveMother(null)}
                 aria-label="Tutup"
               >
-                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  width="16"
+                  height="16"
+                >
                   <path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
             </header>
 
-            <form onSubmit={handleArchive} style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+            <form
+              onSubmit={handleArchive}
+              style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}
+            >
               <div className="staff-modal-body">
                 <div className="staff-alert alert-error" style={{ margin: 0 }}>
                   <p>
-                    Data tidak dimusnahkan. Rekam dan jejak audit dipertahankan, sedangkan akses portal dan perangkat pasien dicabut.
+                    Data tidak dimusnahkan. Rekam dan jejak audit dipertahankan, sedangkan akses
+                    portal dan perangkat pasien dicabut.
                   </p>
                 </div>
                 {archiveMother.active_pregnancy && (
                   <div className="staff-alert alert-info" style={{ margin: 0 }}>
                     <p>
-                      Kehamilan aktif akan ditutup terlebih dahulu. Pengingat yang belum selesai akan dibatalkan secara tercatat.
+                      Kehamilan aktif akan ditutup terlebih dahulu. Pengingat yang belum selesai
+                      akan dibatalkan secara tercatat.
                     </p>
                   </div>
                 )}
@@ -1443,8 +1468,8 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
                       lineHeight: 1.45,
                     }}
                   >
-                    <strong>PERHATIAN KEAMANAN:</strong> Kode ini <u>HANYA DITAMPILKAN SATU KALI</u>.
-                    Segera serahkan atau catat kode ini sebelum menutup jendela.
+                    <strong>PERHATIAN KEAMANAN:</strong> Kode ini <u>HANYA DITAMPILKAN SATU KALI</u>
+                    . Segera serahkan atau catat kode ini sebelum menutup jendela.
                   </div>
                 </div>
               ) : (

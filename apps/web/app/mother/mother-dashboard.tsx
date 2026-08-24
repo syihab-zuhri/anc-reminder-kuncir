@@ -358,7 +358,11 @@ export function MotherDashboard() {
                           width="12"
                           height="12"
                           aria-hidden="true"
-                          style={{ display: "inline-block", verticalAlign: "-0.1em", marginRight: "0.25rem" }}
+                          style={{
+                            display: "inline-block",
+                            verticalAlign: "-0.1em",
+                            marginRight: "0.25rem",
+                          }}
                         >
                           <path
                             d="M10 2a5 5 0 0 0-5 5c0 3.75 5 9 5 9s5-5.25 5-9a5 5 0 0 0-5-5Z"

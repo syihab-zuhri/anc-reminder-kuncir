@@ -1,9 +1,11 @@
 # ReNCANA Implementasi Kelas Maksimal - ANC Reminder
 
 ## Timestamp: 2026-08-19
+
 ## Timeline: 2 Minggu Penuh (Implementation Completion)
 
 ## GENESIS - TELAH DISEBUKAN (2026-08-18)
+
 Membuat rencana untuk mengerahkan semua kekurangan (gap) yang belum terisi.
 
 ---
@@ -13,10 +15,13 @@ Membuat rencana untuk mengerahkan semua kekurangan (gap) yang belum terisi.
 ## PRIORITY 1 (Critical) - Old Overflow Threat Level
 
 ### 1. API Documentation (Swagger/OpenAPI)
+
 **Problem**: Documentation awal tidak menyertakan OpenAPI/SWAGGER spec untuk API
 
 **Implementation**:
+
 1. Install dependencies in `apps/api`:
+
    ```json
    "dependencies": {
      "@nestjs/swagger": "^8.0.0",
@@ -25,25 +30,26 @@ Membuat rencana untuk mengerahkan semua kekurangan (gap) yang belum terisi.
    ```
 
 2. Update `apps/api/src/main.ts`:
+
    ```typescript
-   import { NestFactory } from '@nestjs/core';
-   import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+   import { NestFactory } from "@nestjs/core";
+   import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 
    async function bootstrap() {
      const app = await NestFactory.create(AppModule);
      app.enableCors();
 
      const config = new DocumentBuilder()
-       .setTitle('ANC Reminder API')
-       .setDescription('Sistem Pengingat ANC Ibu Hamil - API Documentation')
-       .setVersion('1.0')
+       .setTitle("ANC Reminder API")
+       .setDescription("Sistem Pengingat ANC Ibu Hamil - API Documentation")
+       .setVersion("1.0")
        .addBearerAuth()
-       .addServer('http://localhost:3001', 'Development')
-       .addServer('https://api.anc-reminder.local', 'Production')
+       .addServer("http://localhost:3001", "Development")
+       .addServer("https://api.anc-reminder.local", "Production")
        .build();
 
      const document = SwaggerModule.createDocument(app, config);
-     SwaggerModule.setup('api-docs', app, document);
+     SwaggerModule.setup("api-docs", app, document);
 
      await app.listen(3001);
    }
@@ -51,6 +57,7 @@ Membuat rencana untuk mengerahkan semua kekurangan (gap) yang belum terisi.
    ```
 
 3. Update `package.json` to add documentation commands:
+
    ```json
    "scripts": {
      "docs:generate": "npx jsdoc ./src -r -d docs/api -t node_modules/tsdoc/tsdoc.json --{ underscoreNaming,excludePrivate }"
@@ -66,9 +73,11 @@ Membuat rencana untuk mengerahkan semua kekurangan (gap) yang belum terisi.
 **Status**: Selesai ✅
 
 ### 2. Secured Document (Single Master Document)
+
 **Created**: `docs/SECCURED_DOCUMENTATION.md`
 
 **Content**:
+
 - API reference documentation dengan security clearing house
 - Deployment guide untuk trusted origin
 - Security guidelines dengan flow anti-replay
@@ -77,36 +86,38 @@ Membuat rencana untuk mengerahkan semua kekurangan (gap) yang belum terisi.
 **Status**: Selesai ✅ (Dibuat 2026-08-18)
 
 ### 3. Advanced CORS Configuration
+
 **Problem**: restricted webview access but missing sec configuration for next.config.ts
 
 **Implementation**:
 Create `apps/web/next.config.ts`:
+
 ```typescript
-import type { NextConfig } from 'next';
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ['192.168.56.1', 'localhost', '127.0.0.1'],
+  allowedDevOrigins: ["192.168.56.1", "localhost", "127.0.0.1"],
 
   async headers() {
     return [
       {
-        source: '/api/:path*',
+        source: "/api/:path*",
         headers: [
           {
-            key: 'Access-Control-Allow-Origin',
-            value: '*',
+            key: "Access-Control-Allow-Origin",
+            value: "*",
           },
           {
-            key: 'Access-Control-Allow-Methods',
-            value: 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+            key: "Access-Control-Allow-Methods",
+            value: "GET, POST, PUT, DELETE, PATCH, OPTIONS",
           },
           {
-            key: 'Access-Control-Allow-Headers',
-            value: 'Content-Type, Authorization, X-Request-ID',
+            key: "Access-Control-Allow-Headers",
+            value: "Content-Type, Authorization, X-Request-ID",
           },
           {
-            key: 'Access-Control-Max-Age',
-            value: '86400',
+            key: "Access-Control-Max-Age",
+            value: "86400",
           },
         ],
       },
@@ -120,12 +131,13 @@ export default nextConfig;
 **Status**: Dibuat tapi belum terminash ✅
 
 ### 4. HTTP Response Interceptors (Testing Coverage)
+
 **Implementation** di `apps/api/src/common/interceptors/response.interceptor.ts`:
 
 ```typescript
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } from "@nestjs/common";
+import { Observable } from "rxjs";
+import { tap } from "rxjs/operators";
 
 @Injectable()
 export class ResponseLoggingInterceptor implements NestInterceptor {
@@ -134,7 +146,7 @@ export class ResponseLoggingInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
     const { method, url, body, ip } = request;
-    const userAgent = request.headers['user-agent'];
+    const userAgent = request.headers["user-agent"];
     const now = Date.now();
 
     console.log(`📞 [RESPONSE LOG] ${now} | ${method} ${url}`);
@@ -151,6 +163,7 @@ export class ResponseLoggingInterceptor implements NestInterceptor {
 ```
 
 Add to `apps/api/src/main.ts`:
+
 ```typescript
 app.useGlobalInterceptors(new ResponseLoggingInterceptor());
 ```
@@ -300,6 +313,7 @@ Total Timeline: 2 minggu penuh
 # MINOR REQUESTS
 
 ## Request from clients seeking comprehensive improvements:
+
 1. **Comprehensive migration/planning guide** — what if a client moved systems? (Connect Database Migration)
 2. **Mobile app fallback mode** — what if offline? (Offline-First Architecture)
 3. **Measure footprints** — what if deployed at scale? (Resource Management)
@@ -315,15 +329,18 @@ All handled with small modular improvements rather than rearchitecture.
 ## Phase 1: Documentation & Testing Foundation (Day 1-2)
 
 ### 1.1 Swagger/OpenAPI Implementation ✅
+
 Complete the implementation and test with Postman.
 
 ### 1.2 E2E Testing Setup (Cypress)
+
 ```bash
 cd apps/web
 npm install -D cypress @cypress/frontend @cypress/request @cypress/webpack-preprocessor
 ```
 
 Create `apps/web/cypress.config.ts`:
+
 ```typescript
 import { defineConfig } from 'cypress';
 import { defineComponent } from '@cypress/frontend';
@@ -358,8 +375,9 @@ export default defineConfig({
 ```
 
 Create `apps/web/cypress/support/e2e.ts`:
+
 ```typescript
-import './commands';
+import "./commands";
 
 declare global {
   namespace Cypress {
@@ -373,88 +391,97 @@ declare global {
   }
 }
 
-Cypress.Commands.add('loginStaff', (identifier, password) => {
-  return cy.request('POST', '/api/staff-session/login', {
-    identifier,
-    password,
-  }).its('body').then((body) => {
-    cy.setCookie('staff-session-token', body.access_token, {
-      httpOnly: true,
-      secure: false, // Set to true in production
-      sameSite: 'lax',
-      path: '/',
+Cypress.Commands.add("loginStaff", (identifier, password) => {
+  return cy
+    .request("POST", "/api/staff-session/login", {
+      identifier,
+      password,
+    })
+    .its("body")
+    .then((body) => {
+      cy.setCookie("staff-session-token", body.access_token, {
+        httpOnly: true,
+        secure: false, // Set to true in production
+        sameSite: "lax",
+        path: "/",
+      });
+      return body;
     });
-    return body;
-  });
 });
 
-Cypress.Commands.add('loginMother', (code) => {
-  return cy.request('POST', '/api/mother-session/login', {
-    access_code: code,
-  }).its('body').then((body) => {
-    cy.setCookie('mother-session-token', body.access_token, {
-      httpOnly: true,
-      secure: false, // Set to true in production
-      sameSite: 'lax',
-      path: '/',
+Cypress.Commands.add("loginMother", (code) => {
+  return cy
+    .request("POST", "/api/mother-session/login", {
+      access_code: code,
+    })
+    .its("body")
+    .then((body) => {
+      cy.setCookie("mother-session-token", body.access_token, {
+        httpOnly: true,
+        secure: false, // Set to true in production
+        sameSite: "lax",
+        path: "/",
+      });
+      return body;
     });
-    return body;
-  });
 });
 
-Cypress.Commands.add('logout', () => {
-  return cy.request('POST', '/api/mother-session/logout');
+Cypress.Commands.add("logout", () => {
+  return cy.request("POST", "/api/mother-session/logout");
 });
 
-Cypress.Commands.add('getMotherCode', () => {
-  cy.request('POST', '/api/mother-session/me')
-    .its('body')
+Cypress.Commands.add("getMotherCode", () => {
+  cy.request("POST", "/api/mother-session/me")
+    .its("body")
     .returns((response) => response.mother_access_code);
 });
 
-Cypress.Commands.add('getStaffToken', () => {
-  cy.getCookie('staff-session-token').then((cookie) => cookie?.value);
+Cypress.Commands.add("getStaffToken", () => {
+  cy.getCookie("staff-session-token").then((cookie) => cookie?.value);
 });
 ```
 
 Create `apps/web/cypress/e2e/staff-login.spec.ts`:
+
 ```typescript
-describe('Staff Authentication Flow', () => {
-  it('should login staff with valid credentials', () => {
-    const staff = Cypress.env('stAFF_ACCOUNT');
+describe("Staff Authentication Flow", () => {
+  it("should login staff with valid credentials", () => {
+    const staff = Cypress.env("stAFF_ACCOUNT");
     cy.loginStaff(staff.identifier, staff.password);
 
-    cy.url().should('include', '/staff/dashboard');
-    cy.contains('Selamat Datang').should('be.visible');
+    cy.url().should("include", "/staff/dashboard");
+    cy.contains("Selamat Datang").should("be.visible");
   });
 
-  it('should fail login with invalid credential', () => {
+  it("should fail login with invalid credential", () => {
     cy.request({
-      method: 'POST',
-      url: '/api/staff-session/login',
+      method: "POST",
+      url: "/api/staff-session/login",
       failOnStatusCode: false,
       body: {
-        identifier: 'invalid@example.com',
-        password: 'wrong-password',
+        identifier: "invalid@example.com",
+        password: "wrong-password",
       },
-    }).its('status').should('equal', 401);
+    })
+      .its("status")
+      .should("equal", 401);
   });
 
-  it('should logout session', () => {
-    cy.loginStaff('puskesmas.kuncir', 'replace-with-strong-password-2026');
+  it("should logout session", () => {
+    cy.loginStaff("puskesmas.kuncir", "replace-with-strong-password-2026");
 
-    cy.request('POST', '/api/staff-session/logout')
-      .its('status')
-      .should('equal', 204);
+    cy.request("POST", "/api/staff-session/logout").its("status").should("equal", 204);
 
-    cy.url().should('include', '/staff/login');
-    cy.getCookie('staff-session-token').should('be.empty');
+    cy.url().should("include", "/staff/login");
+    cy.getCookie("staff-session-token").should("be.empty");
   });
 });
 ```
 
 ### 1.3 Performance Baseline
+
 Create `apps/web/public/templates/performance/baseline.json`:
+
 ```json
 {
   "timestamp": "2026-08-19T10:00:00Z",
@@ -486,7 +513,9 @@ Create `apps/web/public/templates/performance/baseline.json`:
 ## Phase 2: Validation & Error Handling (Day 3-4)
 
 ### 2.1 Advanced Error Handling
+
 Update `apps/api/src/common/filters/http-exception.filter.ts`:
+
 ```typescript
 import {
   ExceptionFilter,
@@ -495,8 +524,8 @@ import {
   HttpException,
   HttpStatus,
   Logger,
-} from '@nestjs/common';
-import { Request, Response } from 'express';
+} from "@nestjs/common";
+import { Request, Response } from "express";
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -506,32 +535,31 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
-    const status = exception instanceof HttpException
-      ? exception.getStatus()
-      : HttpStatus.INTERNAL_SERVER_ERROR;
+    const status =
+      exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
 
     const errorResponse: any = {
-      message: exception instanceof HttpException
-        ? exception.getResponse()
-        : 'Internal Server Error',
+      message:
+        exception instanceof HttpException ? exception.getResponse() : "Internal Server Error",
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
-      stack: process.env.NODE_ENV === 'development' && exception instanceof Error
-        ? exception.stack
-        : undefined,
-      request_id: request.headers['x-request-id'],
-      severity: status >= 500 ? 'critical' : status >= 400 ? 'warning' : 'info',
+      stack:
+        process.env.NODE_ENV === "development" && exception instanceof Error
+          ? exception.stack
+          : undefined,
+      request_id: request.headers["x-request-id"],
+      severity: status >= 500 ? "critical" : status >= 400 ? "warning" : "info",
     };
 
     // Add common errors for better troubleshooting
     if (status === 401) {
-      errorResponse.message = 'Authentication failed. Please check your credentials.';
-      errorResponse.provider_hint = 'Login with your staff token and refresh token.';
+      errorResponse.message = "Authentication failed. Please check your credentials.";
+      errorResponse.provider_hint = "Login with your staff token and refresh token.";
     } else if (status === 403) {
-      errorResponse.message = 'You do not have permission to access this resource.';
+      errorResponse.message = "You do not have permission to access this resource.";
     } else if (status === 429) {
-      errorResponse.message = 'Too many requests. Please try again in a few minutes.';
+      errorResponse.message = "Too many requests. Please try again in a few minutes.";
     }
 
     this.logger.error(
@@ -545,12 +573,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
 ```
 
 ### 2.2 Connection Pool Monitoring
+
 Create `apps/database/src/monitoring/connection-monitor.service.ts`:
+
 ```typescript
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { Pool, PoolClient, PoolConfig } from 'pg';
-import { Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import { Pool, PoolClient, PoolConfig } from "pg";
+import { Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class ConnectionMonitorService implements OnModuleInit, OnModuleDestroy {
@@ -563,13 +593,13 @@ export class ConnectionMonitorService implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit() {
     const poolConfig: PoolConfig = {
-      host: this.configService.get<string>('DATABASE_HOST'),
-      port: this.configService.get<number>('DATABASE_PORT'),
-      database: this.configService.get<string>('DATABASE_NAME'),
-      user: this.configService.get<string>('DATABASE_USER'),
-      password: this.configService.get<string>('DATABASE_PASSWORD'),
-      max: this.configService.get<number>('DATABASE_POOL_SIZE'),
-      min: this.configService.get<number>('DATABASE_POOL_MIN'),
+      host: this.configService.get<string>("DATABASE_HOST"),
+      port: this.configService.get<number>("DATABASE_PORT"),
+      database: this.configService.get<string>("DATABASE_NAME"),
+      user: this.configService.get<string>("DATABASE_USER"),
+      password: this.configService.get<string>("DATABASE_PASSWORD"),
+      max: this.configService.get<number>("DATABASE_POOL_SIZE"),
+      min: this.configService.get<number>("DATABASE_POOL_MIN"),
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
     };
@@ -578,10 +608,10 @@ export class ConnectionMonitorService implements OnModuleInit, OnModuleDestroy {
 
     // Monitor connection pool
     this.monitorInterval = setInterval(() => {
-      this.poolConnector('monitor: pool.status');
+      this.poolConnector("monitor: pool.status");
     }, this.MONITOR_INTERVAL);
 
-    this.logger.log('Connection pool monitoring started');
+    this.logger.log("Connection pool monitoring started");
   }
 
   async getConnection(): Promise<PoolClient> {
@@ -598,27 +628,24 @@ export class ConnectionMonitorService implements OnModuleInit, OnModuleDestroy {
 
       this.logger.debug(
         `[${operation}]\n` +
-        ` - Client: ${clientVersion}\n` +
-        ` - Protocol: ${effective_protocol_version}\n` +
-        ` - Server: ${server_version}\n` +
-        ` - Active connections: ${acquired}\n` +
-        ` - Idle connections: ${this.pool.idleCount}\n` +
-        ` - Total: ${this.pool.totalCount}\n`
+          ` - Client: ${clientVersion}\n` +
+          ` - Protocol: ${effective_protocol_version}\n` +
+          ` - Server: ${server_version}\n` +
+          ` - Active connections: ${acquired}\n` +
+          ` - Idle connections: ${this.pool.idleCount}\n` +
+          ` - Total: ${this.pool.totalCount}\n`,
       );
 
       client.release();
     } catch (error) {
-      this.logger.error(
-        `[${operation}]\n` +
-        ` - Error: ${error.message}\n`
-      );
+      this.logger.error(`[${operation}]\n` + ` - Error: ${error.message}\n`);
     }
   }
 
   onModuleDestroy() {
     clearInterval(this.monitorInterval);
     this.pool.end().then(() => {
-      this.logger.log('Connection pool closed and monitoring stopped');
+      this.logger.log("Connection pool closed and monitoring stopped");
     });
   }
 }
@@ -627,13 +654,15 @@ export class ConnectionMonitorService implements OnModuleInit, OnModuleDestroy {
 ## Phase 3: Backend Features & Security (Day 5-7)
 
 ### 3.1 MFA Implementation (Planned but Vital)
+
 Despite being marked as PROPOSED, we should provide infrastructure:
 `apps/api/src/modules/auth/mfa.service.ts`:
+
 ```typescript
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import speakeasy from 'speakeasy';
-import qrcode from 'qrcode';
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import speakeasy from "speakeasy";
+import qrcode from "qrcode";
 
 @Injectable()
 export class MFAService {
@@ -642,7 +671,7 @@ export class MFAService {
   async generateSecret(email: string): Promise<string> {
     const secret = speakeasy.generateSecret({
       name: `ANC Reminder (${email})`,
-      issuer: 'ANC Reminder',
+      issuer: "ANC Reminder",
       digits: 6,
     });
 
@@ -655,13 +684,15 @@ export class MFAService {
   }
 
   async verifyOTP(secret: string, token: string): Promise<boolean> {
-    return speakeasy.totpv(secret, { encoding: 'base32' }) === token;
+    return speakeasy.totpv(secret, { encoding: "base32" }) === token;
   }
 }
 ```
 
 ### 3.2 Session Management with MFA
+
 Update `apps/api/src/modules/auth/auth.service.ts`:
+
 ```typescript
 MfaRequiredException: {
 
@@ -689,26 +720,22 @@ MfaRequiredException: {
 ```
 
 ### 3.3 Edge Case Handling - Authentication Timeout
-Create `apps/api/src/common/decorators/timeout.decorator.ts`:
-```typescript
-import { SetMetadata } from '@nestjs/common';
-import { TIMEOUT_METADATA } from './timeout-key.constants';
 
-export const Timeout = (timeout: number) =>
-  SetMetadata(TIMEOUT_METADATA, timeout);
+Create `apps/api/src/common/decorators/timeout.decorator.ts`:
+
+```typescript
+import { SetMetadata } from "@nestjs/common";
+import { TIMEOUT_METADATA } from "./timeout-key.constants";
+
+export const Timeout = (timeout: number) => SetMetadata(TIMEOUT_METADATA, timeout);
 ```
 
 Create `apps/api/src/common/filters/timeout.filter.ts`:
+
 ```typescript
-import { 
-  ExceptionFilter, 
-  Catch, 
-  ArgumentsHost, 
-  Logger, 
-  NotFoundException 
-} from '@nestjs/common';
-import { TicketPendingParseReriptionError } from '@anc/contracts';
-import { Request, Response } from 'express';
+import { ExceptionFilter, Catch, ArgumentsHost, Logger, NotFoundException } from "@nestjs/common";
+import { TicketPendingParseReriptionError } from "@anc/contracts";
+import { Request, Response } from "express";
 
 @Catch(TicketPendingParseReriptionError)
 export class TimeoutFilter implements ExceptionFilter {
@@ -718,11 +745,11 @@ export class TimeoutFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
 
-    this.logger.error('Authentication timeout occurred');
+    this.logger.error("Authentication timeout occurred");
     response.status(408).json({
-      message: 'Request timeout',
-      code: 'TOO_MANY_REQUESTS',
-      request_id: ctx.getRequest<Request>().headers['x-request-id'],
+      message: "Request timeout",
+      code: "TOO_MANY_REQUESTS",
+      request_id: ctx.getRequest<Request>().headers["x-request-id"],
     });
   }
 }
@@ -731,7 +758,9 @@ export class TimeoutFilter implements ExceptionFilter {
 ## Phase 4: Android Native Implementation (Day 7-10)
 
 ### 4.1 Secure Storage Plugin
+
 `apps/android/android/app/src/main/java/id/my/kuncir/posyandu/anc/SecureStoragePlugin.java`:
+
 ```java
 package id.my.kuncir.posyandu.anc;
 
@@ -757,7 +786,7 @@ import java.util.Set;
 public class SecureStoragePlugin extends Plugin {
     private static final String KEYSTORE_TYPE = "AndroidKeyStore";
     private static final String KEY_ALIAS = "ANC_Storage";
-    
+
     private EncryptedSharedPreferences encryptedPrefs;
 
     @Override
@@ -862,7 +891,9 @@ public class SecureStoragePlugin extends Plugin {
 ```
 
 ### 4.2 FCM Notifications Plugin
+
 `apps/android/android/app/src/main/java/id/my/kuncir/posyandu/anc/FcmNotificationsPlugin.java`:
+
 ```java
 package id.my.kuncir.posyandu.anc;
 
@@ -890,7 +921,7 @@ public class FcmNotificationsPlugin extends Plugin {
     private static final String TAG = "FcmNotificationsPlugin";
     private static final int NOTIFICATION_ID = 1001;
     private static final String CHANNEL_ID = "anc_reminder_channel";
-    
+
     private NotificationManagerCompat notificationManager;
     private PendingIntent notificationPendingIntent;
 
@@ -898,20 +929,20 @@ public class FcmNotificationsPlugin extends Plugin {
     public void load() {
         super.load();
         notificationManager = NotificationManagerCompat.from(getActivity());
-        
+
         // Create notification channel
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             CharSequence name = "ANC Reminder";
             String description = "Notifications for ANC reminders";
             int importance = NotificationManager.IMPORTANCE_DEFAULT;
-            
+
             android.app.NotificationChannel channel = new android.app.NotificationChannel(
                 CHANNEL_ID, name, importance
             );
             channel.setDescription(description);
             notificationManager.createNotificationChannel(channel);
         }
-        
+
         // Register Firebase messaging
         FirebaseMessaging.getInstance().addOnMessageListener(this::onMessageReceived);
         FirebaseMessaging.getInstance().addOnTokenRefreshListener(this::onTokenRefresh);
@@ -961,20 +992,20 @@ public class FcmNotificationsPlugin extends Plugin {
 
     private void onMessageReceived(RemoteMessage message) {
         Log.d(TAG, "FCM Message Received: " + message.getNotification());
-        
+
         RemoteMessage.Notification notification = message.getNotification();
         Bundle data = message.getData();
-        
+
         if (notification != null) {
             showNotification(notification.getTitle(), notification.getBody(), data);
         }
-        
+
         sendEvent("messageReceived", message.toMap());
     }
 
     private void onTokenRefresh(String newToken) {
         Log.d(TAG, "FCM Token Refreshed: " + newToken);
-        
+
         JSObject result = new JSObject();
         result.put("token", newToken);
         sendEvent("tokenRefresh", result);
@@ -982,18 +1013,18 @@ public class FcmNotificationsPlugin extends Plugin {
 
     private void showNotification(String title, String body, Bundle data) {
         Context context = getActivity();
-        
+
         Intent intent = new Intent(context, MainActivity.class);
         intent.setAction("ANC_NOTIFICATION");
         intent.putExtra("notification_data", data.toByteArray());
-        
+
         notificationPendingIntent = PendingIntent.getActivity(
             context,
             NOTIFICATION_ID,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
-        
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
@@ -1002,14 +1033,16 @@ public class FcmNotificationsPlugin extends Plugin {
             .setContentIntent(notificationPendingIntent)
             .setAutoCancel(true)
             .setOngoing(false);
-        
+
         notificationManager.notify(NOTIFICATION_ID, builder.build());
     }
 }
 ```
 
 ### 4.3 Updated build.gradle
+
 `apps/android/android/app/build.gradle`:
+
 ```gradle
 plugins {
     id 'com.android.application'
@@ -1029,10 +1062,10 @@ android {
         targetSdk 35
         versionCode 1
         versionName "1.0.0"
-        
+
         manifestPlaceholders += [authPackage: "id.my.kuncir.posyandu.anc"]
     }
-    
+
     buildTypes {
         release {
             minifyEnabled true
@@ -1051,16 +1084,16 @@ android {
             ]
         }
     }
-    
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    
+
     kotlinOptions {
         jvmTarget = '17'
     }
-    
+
     packaging {
         resources {
             excludes += ['/META-INF/{AL2.0,LGPL2.1}']
@@ -1073,15 +1106,15 @@ dependencies {
     implementation 'com.getcapacitor:android-core:6.1.2'
     implementation 'com.getcapacitor:android-helpers:6.1.2'
     implementation 'com.getcapacitor:android-webview:6.1.2'
-    
+
     // Firebase
     implementation platform('com.google.firebase:firebase-bom:33.1.2')
     implementation 'com.google.firebase:firebase-messaging-directboot'
-    
+
     // Security
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'
     implementation 'androidx.core:core-ktx:1.15.0'
-    
+
     // Third-party
     implementation 'org.altbeacon:android-beacon-library:2.19.4'
     implementation 'com.github.bumptech.glide:glide:4.16.0'
@@ -1093,30 +1126,26 @@ apply plugin: 'com.google.gms.google-services'
 ## Phase 5: K3 Features Implementation (Day 10-14)
 
 ### 5.1 Komplikasi Management
+
 `apps/web/src/pages/staff/dashboard/complications/complications-timeline.vue`:
+
 ```vue
 <template>
   <div class="complications-dashboard">
     <div class="header">
       <h2>Manajemen Komplikasi</h2>
-      <button @click="showModal = true" class="add-button">
-        + Tambah Komplikasi
-      </button>
+      <button @click="showModal = true" class="add-button">+ Tambah Komplikasi</button>
     </div>
 
     <div class="complication-cards">
-      <div 
-        v-for="complication in complications" 
-        :key="complication.id" 
-        class="complication-card"
-      >
+      <div v-for="complication in complications" :key="complication.id" class="complication-card">
         <div class="card-header">
           <span class="status" :class="complication.status">
             {{ getStatusLabel(complication.status) }}
           </span>
           <h3>{{ complication.name }}</h3>
         </div>
-        
+
         <div class="card-body">
           <div class="detail-row">
             <span class="label">Usia Minimal:</span>
@@ -1131,44 +1160,36 @@ apply plugin: 'com.google.gms.google-services'
             <span>{{ complication.procedure }}</span>
           </div>
         </div>
-        
+
         <div class="card-actions">
-          <button @click="viewDetails(complication.id)" class="view-button">
-            Detail
-          </button>
-          <button @click="followUp(complication.id)" class="followup-button">
-            Set Follow-up
-          </button>
+          <button @click="viewDetails(complication.id)" class="view-button">Detail</button>
+          <button @click="followUp(complication.id)" class="followup-button">Set Follow-up</button>
         </div>
       </div>
     </div>
-    
+
     <!-- Modal for Adding/Editing Complication -->
     <div v-if="showModal" class="modal">
       <div class="modal-content">
-        <h3>{{ editingComplication ? 'Edit' : 'Tambah' }} Komplikasi</h3>
-        
+        <h3>{{ editingComplication ? "Edit" : "Tambah" }} Komplikasi</h3>
+
         <form @submit.prevent="saveComplication">
           <div class="form-group">
             <label>Nama Komplikasi</label>
-            <input 
-              v-model="form.name" 
-              required 
-              placeholder="Contoh: Pendengaran Batas Berat"
-            >
+            <input v-model="form.name" required placeholder="Contoh: Pendengaran Batas Berat" />
           </div>
-          
+
           <div class="form-group">
             <label>Usia Minimal (bulan)</label>
-            <input 
-              v-model.number="form.minAge" 
-              type="number" 
-              required 
-              min="1" 
+            <input
+              v-model.number="form.minAge"
+              type="number"
+              required
+              min="1"
               placeholder="contoh: 18"
-            >
+            />
           </div>
-          
+
           <div class="form-group">
             <label>Level Risiko</label>
             <select v-model="form.severity">
@@ -1178,7 +1199,7 @@ apply plugin: 'com.google.gms.google-services'
               <option value="low">Low Risk</option>
             </select>
           </div>
-          
+
           <div class="form-group">
             <label>Prosedur Routing</label>
             <select v-model="form.procedure">
@@ -1189,23 +1210,19 @@ apply plugin: 'com.google.gms.google-services'
               <option value="teruskan">Teruskan ke Next Step</option>
             </select>
           </div>
-          
+
           <div class="form-group">
             <label>Deser Deserialization After Assumptions File Check</label>
-            <textarea 
-              v-model="form.description" 
-              rows="4" 
+            <textarea
+              v-model="form.description"
+              rows="4"
               placeholder="Deskripsi singkat prosedur dan langkah-langkah..."
             ></textarea>
           </div>
-          
+
           <div class="form-buttons">
-            <button type="submit" class="save-button">
-              Simpan
-            </button>
-            <button type="button" @click="showModal = false" class="cancel-button">
-              Batal
-            </button>
+            <button type="submit" class="save-button">Simpan</button>
+            <button type="button" @click="showModal = false" class="cancel-button">Batal</button>
           </div>
         </form>
       </div>
@@ -1214,8 +1231,8 @@ apply plugin: 'com.google.gms.google-services'
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { usePharmacyStore } from '@/stores/pharmacy';
+import { ref, onMounted } from "vue";
+import { usePharmacyStore } from "@/stores/pharmacy";
 
 const pharmacyStore = usePharmacyStore();
 
@@ -1227,34 +1244,34 @@ const showModal = ref(false);
 const editingComplication = ref<any>(null);
 const complications = ref<any[]>([]);
 const form = ref({
-  name: '',
+  name: "",
   minAge: null,
   severity: null,
   procedure: null,
-  description: '',
+  description: "",
 });
 
 const getStatusLabel = (status: string) => {
   const labels: Record<string, string> = {
-    'pending': 'Menunggu',
-    'in-progress': 'Sedang Berjalan',
-    'completed': 'Selesai',
-    'cancelled': 'Dibatalkan',
-    'active': 'Aktif',
-    'inactive': 'Tidak Aktif',
+    pending: "Menunggu",
+    "in-progress": "Sedang Berjalan",
+    completed: "Selesai",
+    cancelled: "Dibatalkan",
+    active: "Aktif",
+    inactive: "Tidak Aktif",
   };
   return labels[status] || status;
 };
 
 const viewDetails = (id: string) => {
   showModal.value = true;
-  editingComplication.value = complications.value.find(c => c.id === id);
+  editingComplication.value = complications.value.find((c) => c.id === id);
   Object.assign(form.value, editingComplication.value);
 };
 
 const followUp = (id: string) => {
   // TODO: Implement follow-up scheduling
-  alert('Follow-up schedule akan dibuat');
+  alert("Follow-up schedule akan dibuat");
 };
 
 const saveComplication = async () => {
@@ -1265,24 +1282,24 @@ const saveComplication = async () => {
       await pharmacyStore.addComplication(form.value);
     }
     showModal.value = false;
-    
+
     // Refresh the list
     await pharmacyStore.loadComplications();
-    
+
     // Clear the form
     Object.assign(form.value, {
-      name: '',
+      name: "",
       minAge: null,
       severity: null,
       procedure: null,
-      description: '',
+      description: "",
     });
     editingComplication.value = null;
-    
-    alert('Komplikasi berhasil disimpan');
+
+    alert("Komplikasi berhasil disimpan");
   } catch (error) {
-    console.error('Error saving complication:', error);
-    alert('Gagal menyimpan komplikasi: ' + error.message);
+    console.error("Error saving complication:", error);
+    alert("Gagal menyimpan komplikasi: " + error.message);
   }
 };
 
@@ -1389,7 +1406,8 @@ onMounted(async () => {
   gap: 10px;
 }
 
-.view-button, .followup-button {
+.view-button,
+.followup-button {
   flex: 1;
   padding: 8px;
   border: none;
@@ -1463,7 +1481,8 @@ onMounted(async () => {
   margin-top: 20px;
 }
 
-.save-button, .cancel-button {
+.save-button,
+.cancel-button {
   padding: 10px 20px;
   border: none;
   border-radius: 4px;
@@ -1492,7 +1511,9 @@ onMounted(async () => {
 ```
 
 ### 5.2 SAP Tangsip Procedures
+
 `apps/web/src/pages/staff/sap-tanggap/sap-routes.vue`:
+
 ```vue
 <template>
   <div class="sap-tanggap">
@@ -1506,9 +1527,9 @@ onMounted(async () => {
 
     <div class="sap-container">
       <div class="sap-tabs">
-        <button 
-          v-for="tab in tabs" 
-          :key="tab.id" 
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
           :class="{ active: activeTab === tab.id }"
           @click="activeTab = tab.id"
         >
@@ -1517,31 +1538,19 @@ onMounted(async () => {
       </div>
 
       <div class="sap-content">
-        <SAPKP6is 
-          v-if="activeTab === 'kp6is'"
-          :health-center="healthCenter"
-        />
-        <SAPProcedures 
-          v-if="activeTab === 'procedures'"
-          :procedures="sapProcedures"
-        />
-        <SAPVerifications 
-          v-if="activeTab === 'verifications'"
-          :verifications="苏普verifications"
-        />
-        <SAPAllTests 
-          v-if="activeTab === 'all-tests'"
-          :all-tests="allTests"
-        />
+        <SAPKP6is v-if="activeTab === 'kp6is'" :health-center="healthCenter" />
+        <SAPProcedures v-if="activeTab === 'procedures'" :procedures="sapProcedures" />
+        <SAPVerifications v-if="activeTab === 'verifications'" :verifications="苏普verifications" />
+        <SAPAllTests v-if="activeTab === 'all-tests'" :all-tests="allTests" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
-import { useStaffStore } from '@/stores/staff';
-import { fetchHealthCenter, fetchHealthCenterSAP } from '@/services/health-center';
+import { ref, computed, onMounted, watch } from "vue";
+import { useStaffStore } from "@/stores/staff";
+import { fetchHealthCenter, fetchHealthCenterSAP } from "@/services/health-center";
 
 const staffStore = useStaffStore();
 const healthCenter = ref<any>(null);
@@ -1549,19 +1558,19 @@ const sapProcedures = ref<any[]>([]);
 const allTests = ref<any[]>([]);
 const 苏普verifications = ref<any[]>([]);
 
-const activeTab = ref('kp6is');
+const activeTab = ref("kp6is");
 const tabs = ref([
-  { id: 'kp6is', label: 'KPI/6-指标评估' },
-  { id: 'procedures', label: 'Prosedur' },
-  { id: 'verifications', label: 'Verifikasil Tahapan' },
-  { id: 'all-tests', label: 'Semua Tes Penengan' },
+  { id: "kp6is", label: "KPI/6-指标评估" },
+  { id: "procedures", label: "Prosedur" },
+  { id: "verifications", label: "Verifikasil Tahapan" },
+  { id: "all-tests", label: "Semua Tes Penengan" },
 ]);
 
-const lastUpdated = ref('');
+const lastUpdated = ref("");
 
 const getStatusBadge = () => {
-  if (!healthCenter.value) return 'No Data';
-  return 'Pre-Admission Phase: ' + (healthCenter.value.sap_pre_admission ? 'Y' : 'N');
+  if (!healthCenter.value) return "No Data";
+  return "Pre-Admission Phase: " + (healthCenter.value.sap_pre_admission ? "Y" : "N");
 };
 
 onMounted(async () => {
@@ -1573,14 +1582,14 @@ const loadData = async () => {
     staffStore.loadStaff();
     healthCenter.value = await fetchHealthCenter(staffStore.currentStaff?.health_center_id);
     const sapData = await fetchHealthCenterSAP(healthCenter.value?.sap_id);
-    
+
     sapProcedures.value = sapData.procedures || [];
     allTests.value = sapData.all_tests || [];
     苏普verifications.value = sapData.verifications || [];
-    
-    lastUpdated.value = new Date().toLocaleString('id-ID');
+
+    lastUpdated.value = new Date().toLocaleString("id-ID");
   } catch (error) {
-    console.error('Error fetching SAP data:', error);
+    console.error("Error fetching SAP data:", error);
   }
 };
 </script>
@@ -1663,7 +1672,9 @@ const loadData = async () => {
 ## Phase 6: CI/CD Pipeline Enhancement (Day 14)
 
 ### 6.1 Automated Deployment
+
 `github/workflows/deploy-production.yml`:
+
 ```yaml
 name: Deploy Production
 
@@ -1674,16 +1685,16 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Target environment'
+        description: "Target environment"
         required: true
-        default: 'production'
+        default: "production"
         type: choice
         options:
           - production
           - staging
 
 env:
-  DEPLOY_BRANCH: 'staging'
+  DEPLOY_BRANCH: "staging"
 
 jobs:
   deploy-to-staging:
@@ -1696,8 +1707,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          cache: 'npm'
+          node-version: "24"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -1778,31 +1789,37 @@ jobs:
 ## Implementation Timeline:
 
 ### Day 1-2: Foundations & Documentation
+
 - ✅ API Documentation (Swagger/OpenAPI) - Selesai
 - E2E Testing Setup (Cypress)
 - Documentation Updates
 
 ### Day 3-4: Validation & Error Handling
+
 - Advanced Error Handling Implementation
 - Monitoring & Logging
 - Connection Pool Monitoring
 
 ### Day 5-7: Backend Features
+
 - MFA Infrastructure
 - Session Management Enhancement
 - Performance Monitoring
 
 ### Day 7-10: Android Native Implementation
+
 - Secure Storage Plugin (Java/Kotlin)
 - FCM Notifications Plugin
 - Capacitor Native Configuration
 
 ### Day 10-14: Feature Implementation
+
 - K3 Komplikasi Management
 - SAP Tanggap Procedures
 - Advanced User Interface
 
 ### Day 14: CI/CD Integration
+
 - Deployment Pipeline
 - Rollback Procedures
 - Production Monitoring Setup
@@ -1812,12 +1829,14 @@ jobs:
 # UPDATE JABATAN KALINKASI
 
 ## Koneksi Antar-Dokumen:
+
 - `docs/API-reference.md` ↔ `apps/api/src/swagger/config.ts`
 - `docs/Troubleshooting-guide.md` ↔ `apps/api/src/common/filters/http-exception.filter.ts`
 - `apps/web/next.config.ts` ↔ `supabase/config.toml`
 - `apps/android/README.md` ↔ `ANALISIS_KURANG.md`
 
 ## Feedback Pattern:
+
 - Kriteria dari client diasimilasi makan demen nuansa nuansa nuansa freezer nuansa... nuansa nuansa simple filter nuansa feedback pattern nuansa nuansa overdose nuansa...
 
 ---
