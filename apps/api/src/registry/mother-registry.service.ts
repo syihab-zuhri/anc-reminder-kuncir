@@ -1,7 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import type { ApiConfig } from "@anc/config";
-import type { MotherRegistrationRequest, MotherRegistrationResponse } from "@anc/contracts";
+import type {
+  MotherRecordArchiveRequest,
+  MotherRecordArchiveResponse,
+  MotherRecordUpdateRequest,
+  MotherRecordUpdateResponse,
+  MotherRegistrationRequest,
+  MotherRegistrationResponse,
+} from "@anc/contracts";
 
 import type { AuditService } from "../audit/audit.service.js";
 import type { StaffActor } from "../auth/staff-auth.types.js";
@@ -19,6 +26,8 @@ import {
 import {
   ActiveAncPlanInvalidError,
   ActiveAncPlanUnavailableError,
+  MotherRecordHasActivePregnancyError,
+  MotherRecordUnavailableError,
   type MotherRegistryRepository,
 } from "./mother-registry.repository.js";
 import { NikCipher } from "./nik-cipher.js";
@@ -115,6 +124,123 @@ export class MotherRegistryService {
     }
   }
 
+  public async update(
+    actor: StaffActor,
+    motherId: string,
+    input: MotherRecordUpdateRequest,
+  ): Promise<MotherRecordUpdateResponse> {
+    const healthCenterId = this.requireManagedCenter(actor);
+    try {
+      const outcome = await this.idempotency.runForStaff(
+        {
+          actor,
+          operation: "MOTHER_RECORD_UPDATE",
+          idempotencyKey: input.idempotency_key,
+          requestIdentity: { mother_id: motherId, ...input },
+        },
+        async (client) => {
+          const record = await this.repository.updateRecord(client, {
+            motherId,
+            healthCenterId,
+            fullName: input.full_name,
+            address: input.address,
+            phoneNormalized:
+              input.phone_number === undefined
+                ? null
+                : normalizeIndonesianPhone(input.phone_number),
+          });
+          return { resourceType: "MOTHER", resourceId: record.id, value: record };
+        },
+        async (client, resource) => {
+          this.assertResourceType(resource.resourceType, "MOTHER");
+          const record = await this.repository.findRecordUpdate(
+            client,
+            resource.resourceId,
+            healthCenterId,
+          );
+          if (record === null) throw new Error("Idempotency update resource is missing");
+          return record;
+        },
+      );
+      if (!outcome.replayed) {
+        await this.audit.record({
+          actorType: "STAFF",
+          actorId: actor.staffUserId,
+          action: "MOTHER_RECORD_UPDATED",
+          resourceType: "MOTHER",
+          resourceId: outcome.value.id,
+          metadata: { reason: input.reason },
+        });
+      }
+      return outcome.value;
+    } catch (error) {
+      throw mapMotherRecordError(error);
+    }
+  }
+
+  public async archive(
+    actor: StaffActor,
+    motherId: string,
+    input: MotherRecordArchiveRequest,
+  ): Promise<MotherRecordArchiveResponse> {
+    this.policy.assertCapability(actor, "MOTHER_RECORD_ARCHIVE");
+    const healthCenterId = actor.healthCenterId;
+    if (healthCenterId === null) throw forbidden();
+    try {
+      const outcome = await this.idempotency.runForStaff(
+        {
+          actor,
+          operation: "MOTHER_RECORD_ARCHIVE",
+          idempotencyKey: input.idempotency_key,
+          requestIdentity: { mother_id: motherId, ...input },
+        },
+        async (client) => {
+          const record = await this.repository.archiveRecord(client, {
+            motherId,
+            healthCenterId,
+            actorStaffUserId: actor.staffUserId,
+            reason: input.reason,
+            archivedAt: this.clock(),
+          });
+          return { resourceType: "MOTHER", resourceId: record.id, value: record };
+        },
+        async (client, resource) => {
+          this.assertResourceType(resource.resourceType, "MOTHER");
+          const record = await this.repository.findArchivedRecord(
+            client,
+            resource.resourceId,
+            healthCenterId,
+          );
+          if (record === null) throw new Error("Idempotency archive resource is missing");
+          return record;
+        },
+      );
+      if (!outcome.replayed) {
+        await this.audit.record({
+          actorType: "STAFF",
+          actorId: actor.staffUserId,
+          action: "MOTHER_RECORD_ARCHIVED",
+          resourceType: "MOTHER",
+          resourceId: outcome.value.id,
+          metadata: { reason: input.reason },
+        });
+      }
+      return outcome.value;
+    } catch (error) {
+      throw mapMotherRecordError(error);
+    }
+  }
+
+  private requireManagedCenter(actor: StaffActor): string {
+    this.policy.assertCapability(actor, "MOTHER_REGISTRY_MANAGE");
+    if (actor.healthCenterId === null) throw forbidden();
+    return actor.healthCenterId;
+  }
+
+  private assertResourceType(actual: string, expected: string): void {
+    if (actual !== expected) throw new Error("Unexpected idempotency resource type");
+  }
+
   private async recordRegistrationAudit(
     actor: StaffActor,
     registration: MotherRegistrationResponse,
@@ -141,6 +267,24 @@ export class MotherRegistryService {
       resourceId: registration.consent.id,
     });
   }
+}
+
+function mapMotherRecordError(error: unknown): unknown {
+  if (error instanceof MotherRecordUnavailableError) {
+    return new ApiException({
+      status: HttpStatus.NOT_FOUND,
+      code: "MOTHER_NOT_FOUND",
+      message: "Data Ibu Hamil tidak ditemukan atau sudah diarsipkan.",
+    });
+  }
+  if (error instanceof MotherRecordHasActivePregnancyError) {
+    return new ApiException({
+      status: HttpStatus.CONFLICT,
+      code: "MOTHER_ARCHIVE_ACTIVE_PREGNANCY",
+      message: "Kehamilan aktif harus ditutup sebelum data Ibu Hamil diarsipkan.",
+    });
+  }
+  return error;
 }
 
 export function normalizeIndonesianPhone(value: string): string {

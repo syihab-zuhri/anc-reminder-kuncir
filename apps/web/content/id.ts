@@ -6,6 +6,7 @@ export const landingCopy = {
   navigation: {
     workflow: "Cara kerja",
     access: "Ruang akses",
+    mother: "Masuk ibu hamil",
     staff: "Masuk petugas",
   },
   hero: {
@@ -72,16 +73,16 @@ export const landingCopy = {
     ],
   },
   access: {
-    eyebrow: "Akses bertahap",
+    eyebrow: "Ruang akses",
     title: "Akses yang tepat, data yang secukupnya.",
     description:
-      "Portal petugas telah tersambung ke layanan autentikasi. Akses pribadi ibu hamil tetap menunggu tahap implementasinya sendiri.",
+      "Portal petugas dan portal ibu hamil telah terhubung ke layanan sistem pendampingan ANC.",
     staffTitle: "Portal petugas",
     staffDescription: "Untuk Puskesmas dan Bidan sesuai kewenangan.",
     motherTitle: "Akses ibu hamil",
     motherDescription: "Untuk melihat informasi kehamilan milik sendiri.",
     staffStatus: "Buka portal",
-    motherStatus: "Segera tersedia",
+    motherStatus: "Buka portal",
   },
   footer: {
     statement: "Pendampingan ANC yang tenang, jelas, dan dapat ditindaklanjuti.",

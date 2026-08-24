@@ -46,6 +46,7 @@ const cancelledMilestoneId = "61000000-0000-4000-8000-000000000005";
 const notApplicableMilestoneId = "61000000-0000-4000-8000-000000000006";
 const puskesmasId = "40000000-0000-4000-8000-000000000001";
 const bidanId = "40000000-0000-4000-8000-000000000002";
+const superAdminId = "40000000-0000-4000-8000-000000000003";
 const password = "AmanSekali2026";
 const now = new Date("2026-08-10T09:00:00.000Z");
 
@@ -102,13 +103,14 @@ describe("pregnancy lifecycle API", () => {
     );
 
     const passwordHash = await new PasswordHasher().hash(password);
-    for (const [id, role, loginIdentifier] of [
-      [puskesmasId, "PUSKESMAS", "puskesmas"],
-      [bidanId, "BIDAN", "bidan"],
+    for (const [id, role, loginIdentifier, hcId] of [
+      [puskesmasId, "PUSKESMAS", "puskesmas", centerId],
+      [bidanId, "BIDAN", "bidan", centerId],
+      [superAdminId, "SUPER_ADMIN", "super_admin", null],
     ] as const) {
       auth.seedUser({
         id,
-        healthCenterId: centerId,
+        healthCenterId: hcId,
         displayName: role,
         role,
         status: "ACTIVE",
@@ -298,10 +300,10 @@ describe("pregnancy lifecycle API", () => {
       })
       .expect(409);
 
-    const bidanToken = await login("bidan");
+    const superAdminToken = await login("super_admin");
     await request(server())
       .post(`/api/v1/pregnancies/${pregnancyId}/close`)
-      .set("authorization", `Bearer ${bidanToken}`)
+      .set("authorization", `Bearer ${superAdminToken}`)
       .send({
         idempotency_key: "70000000-0000-4000-8000-000000000004",
         reason: "Tidak diizinkan",

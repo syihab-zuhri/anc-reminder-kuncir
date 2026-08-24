@@ -112,6 +112,7 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
        LEFT JOIN villages v ON v.id = m.village_id
        LEFT JOIN pregnancies p ON p.mother_id = m.id AND p.status = 'ACTIVE'
        WHERE m.health_center_id = $1
+         AND m.archived_at IS NULL
          AND (
            $2::staff_role = 'PUSKESMAS'
            OR (
@@ -204,6 +205,7 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
        LEFT JOIN pregnancies p ON p.mother_id = m.id AND p.status = 'ACTIVE'
        WHERE m.id = $1
          AND m.health_center_id = $2
+         AND m.archived_at IS NULL
          AND (
            $3::staff_role = 'PUSKESMAS'
            OR (

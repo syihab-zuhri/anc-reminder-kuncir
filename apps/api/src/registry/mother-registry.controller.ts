@@ -1,9 +1,24 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from "@nestjs/common";
 import {
   motherDetailResponseSchema,
   motherListQuerySchema,
   motherListResponseSchema,
   motherRegistrationRequestSchema,
+  motherRecordArchiveRequestSchema,
+  motherRecordUpdateRequestSchema,
+  type MotherRecordArchiveResponse,
+  type MotherRecordUpdateResponse,
   type MotherDetailResponse,
   type MotherListResponse,
   type MotherRegistrationResponse,
@@ -35,6 +50,32 @@ export class MotherRegistryController {
     return this.service.register(
       requireActor(request),
       parseRequest(motherRegistrationRequestSchema, body),
+    );
+  }
+
+  @Patch(":id")
+  public update(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ): Promise<MotherRecordUpdateResponse> {
+    return this.service.update(
+      requireActor(request),
+      parseRequest(uuidPathSchema, id),
+      parseRequest(motherRecordUpdateRequestSchema, body),
+    );
+  }
+
+  @Delete(":id")
+  public archive(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ): Promise<MotherRecordArchiveResponse> {
+    return this.service.archive(
+      requireActor(request),
+      parseRequest(uuidPathSchema, id),
+      parseRequest(motherRecordArchiveRequestSchema, body),
     );
   }
 

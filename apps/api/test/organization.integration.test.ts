@@ -111,6 +111,29 @@ describe("organization and assignment API", () => {
     const staffId = stringField(bodyRecord(staffResponse), "id");
     expect(organization.passwordHashes.get(staffId)).not.toContain("BidanBaru2026");
 
+    const puskesmasStaffResponse = await request(server())
+      .post("/api/v1/staff/users")
+      .set("authorization", `Bearer ${token}`)
+      .send({
+        login_identifier: "operator.puskesmas",
+        display_name: "Operator Puskesmas",
+        role: "PUSKESMAS",
+        password: "OperatorKuncir2026",
+      })
+      .expect(201);
+    expect(bodyRecord(puskesmasStaffResponse)["role"]).toBe("PUSKESMAS");
+
+    await request(server())
+      .post("/api/v1/staff/users")
+      .set("authorization", `Bearer ${token}`)
+      .send({
+        login_identifier: "super.admin.baru",
+        display_name: "Super Admin Baru",
+        role: "SUPER_ADMIN",
+        password: "SuperAdminKuncir2026",
+      })
+      .expect(400);
+
     const assignmentResponse = await request(server())
       .post("/api/v1/staff/assignments")
       .set("authorization", `Bearer ${token}`)

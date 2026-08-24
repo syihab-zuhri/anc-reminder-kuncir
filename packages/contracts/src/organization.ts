@@ -77,6 +77,26 @@ export const facilitySchema = z
   .strict();
 export type Facility = z.infer<typeof facilitySchema>;
 
+export const villageUpdateRequestSchema = z
+  .object({
+    code: organizationCodeSchema.optional(),
+    name: z.string().trim().min(2).max(160).optional(),
+    status: healthCenterStatusSchema.optional(),
+  })
+  .strict();
+export type VillageUpdateRequest = z.infer<typeof villageUpdateRequestSchema>;
+
+export const facilityUpdateRequestSchema = z
+  .object({
+    village_id: z.string().uuid().nullable().optional(),
+    code: organizationCodeSchema.optional(),
+    name: z.string().trim().min(2).max(160).optional(),
+    facility_type: facilityTypeSchema.optional(),
+    status: healthCenterStatusSchema.optional(),
+  })
+  .strict();
+export type FacilityUpdateRequest = z.infer<typeof facilityUpdateRequestSchema>;
+
 export const staffAssignmentSchema = z
   .object({
     id: z.string().uuid(),
@@ -86,3 +106,16 @@ export const staffAssignmentSchema = z
   })
   .strict();
 export type StaffAssignment = z.infer<typeof staffAssignmentSchema>;
+
+export const staffAssignmentDetailSchema = z
+  .object({
+    id: z.string().uuid(),
+    staff_user_id: z.string().uuid(),
+    staff_name: z.string().min(1),
+    staff_identifier: z.string().min(1),
+    scope_type: staffAssignmentScopeTypeSchema,
+    scope_id: z.string().uuid(),
+    village_name: z.string().nullable().optional(),
+  })
+  .strict();
+export type StaffAssignmentDetail = z.infer<typeof staffAssignmentDetailSchema>;

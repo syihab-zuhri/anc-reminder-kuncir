@@ -336,6 +336,133 @@ export class FakeOrganizationScopeRepository implements OrganizationScopeReposit
     return true;
   }
 
+  public async updateVillage(
+    healthCenterId: string,
+    villageId: string,
+    input: { code?: string; name?: string; status?: "ACTIVE" | "INACTIVE" },
+  ): Promise<Village | null> {
+    const index = this.villages.findIndex(
+      (v) => v.id === villageId && v.health_center_id === healthCenterId,
+    );
+    const existing = this.villages[index];
+    if (existing === undefined) return null;
+    const updated: Village = {
+      ...existing,
+      ...(input.code !== undefined ? { code: input.code } : {}),
+      ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.status !== undefined ? { status: input.status } : {}),
+    };
+    this.villages[index] = updated;
+    return updated;
+  }
+
+  public async deleteVillage(healthCenterId: string, villageId: string): Promise<boolean> {
+    const index = this.villages.findIndex(
+      (v) => v.id === villageId && v.health_center_id === healthCenterId,
+    );
+    if (index < 0) return false;
+    this.villages.splice(index, 1);
+    return true;
+  }
+
+  public async updateFacility(
+    healthCenterId: string,
+    facilityId: string,
+    input: {
+      village_id?: string | null;
+      code?: string;
+      name?: string;
+      facility_type?: Facility["facility_type"];
+      status?: "ACTIVE" | "INACTIVE";
+    },
+  ): Promise<Facility | null> {
+    const index = this.facilities.findIndex(
+      (f) => f.id === facilityId && f.health_center_id === healthCenterId,
+    );
+    const existing = this.facilities[index];
+    if (existing === undefined) return null;
+    const updated: Facility = {
+      ...existing,
+      ...(input.code !== undefined ? { code: input.code } : {}),
+      ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.facility_type !== undefined ? { facility_type: input.facility_type } : {}),
+      ...(input.village_id !== undefined ? { village_id: input.village_id } : {}),
+      ...(input.status !== undefined ? { status: input.status } : {}),
+    };
+    this.facilities[index] = updated;
+    return updated;
+  }
+
+  public async deleteFacility(healthCenterId: string, facilityId: string): Promise<boolean> {
+    const index = this.facilities.findIndex(
+      (f) => f.id === facilityId && f.health_center_id === healthCenterId,
+    );
+    if (index < 0) return false;
+    this.facilities.splice(index, 1);
+    return true;
+  }
+
+  public async updateStaff(
+    healthCenterId: string,
+    staffUserId: string,
+    input: { displayName?: string; passwordHash?: string },
+  ): Promise<StaffSummary | null> {
+    const index = this.staff.findIndex(
+      (s) => s.id === staffUserId && s.health_center_id === healthCenterId,
+    );
+    const existing = this.staff[index];
+    if (existing === undefined) return null;
+    const updated: StaffSummary = {
+      ...existing,
+      ...(input.displayName !== undefined ? { display_name: input.displayName } : {}),
+    };
+    this.staff[index] = updated;
+    if (input.passwordHash !== undefined) {
+      this.passwordHashes.set(staffUserId, input.passwordHash);
+    }
+    return updated;
+  }
+
+  public async deleteStaff(healthCenterId: string, staffUserId: string): Promise<boolean> {
+    const index = this.staff.findIndex(
+      (s) => s.id === staffUserId && s.health_center_id === healthCenterId,
+    );
+    if (index < 0) return false;
+    this.staff.splice(index, 1);
+    return true;
+  }
+
+  public async listAssignments(healthCenterId: string): Promise<
+    readonly {
+      id: string;
+      staff_user_id: string;
+      staff_name: string;
+      staff_identifier: string;
+      scope_type: "AREA" | "MOTHER";
+      scope_id: string;
+      village_name?: string | null;
+    }[]
+  > {
+    return this.assignments
+      .filter((a) => {
+        const staff = this.staff.find((s) => s.id === a.staff_user_id);
+        return staff && staff.health_center_id === healthCenterId;
+      })
+      .map((a) => {
+        const staff = this.staff.find((s) => s.id === a.staff_user_id);
+        const village = this.villages.find((v) => v.id === a.scope_id);
+        return {
+          id: a.id,
+          staff_user_id: a.staff_user_id,
+          staff_name: staff?.display_name ?? "Bidan",
+          staff_identifier: staff?.login_identifier ?? "bidan",
+          scope_type: a.scope_type,
+          scope_id: a.scope_id,
+          village_name: village?.name ?? null,
+        };
+      });
+  }
+
   public seedMotherScope(healthCenterId: string, motherId: string): void {
     this.scopeCenters.set(`MOTHER:${motherId}`, healthCenterId);
   }

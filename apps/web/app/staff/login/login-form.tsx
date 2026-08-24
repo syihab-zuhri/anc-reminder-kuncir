@@ -52,7 +52,7 @@ export function LoginForm({ notice }: LoginFormProps) {
     <form className="staff-login-form" onSubmit={submit} noValidate>
       {notice === undefined ? null : (
         <p className="staff-form-notice" role="status">
-          <span aria-hidden="true">✓</span>
+          <span aria-hidden="true"></span>
           {noticeCopy[notice]}
         </p>
       )}
@@ -77,7 +77,7 @@ export function LoginForm({ notice }: LoginFormProps) {
       <div className="staff-field">
         <div className="staff-field-label">
           <label htmlFor="password">Kata sandi</label>
-          <span>Minimal 12 karakter</span>
+          <span>Minimal 8 karakter, huruf dan angka</span>
         </div>
         <input
           id="password"

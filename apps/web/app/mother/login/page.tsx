@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { MotherLoginForm } from "./login-form";
 
 export default async function MotherLoginPage(props: {
@@ -25,6 +26,10 @@ export default async function MotherLoginPage(props: {
           </div>
         )}
         <MotherLoginForm />
+        <div className="mother-login-links">
+          <Link href="/">← Kembali ke Beranda</Link>
+          <Link href="/staff/login">Masuk sebagai Petugas →</Link>
+        </div>
       </div>
     </section>
   );

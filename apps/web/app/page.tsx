@@ -32,10 +32,16 @@ export default function HomePage() {
           <a href="#akses">{navigation.access}</a>
         </nav>
 
-        <a className="header-action" href="/staff/login">
-          {navigation.staff}
-          <ArrowIcon />
-        </a>
+        <div className="header-actions">
+          <a className="header-action header-action-mother" href="/mother/login">
+            {navigation.mother}
+            <ArrowIcon />
+          </a>
+          <a className="header-action" href="/staff/login">
+            {navigation.staff}
+            <ArrowIcon />
+          </a>
+        </div>
       </header>
 
       <main id="konten-utama">
@@ -142,7 +148,7 @@ export default function HomePage() {
             <p>{access.description}</p>
           </div>
 
-          <div className="access-options" aria-label="Pilihan akses mendatang">
+          <div className="access-options" aria-label="Pilihan akses portal">
             <a className="access-option access-option-active" href="/staff/login">
               <div>
                 <span className="access-number" aria-hidden="true">
@@ -154,7 +160,7 @@ export default function HomePage() {
               <span className="coming-soon access-ready">{access.staffStatus}</span>
             </a>
 
-            <article className="access-option">
+            <a className="access-option access-option-active" href="/mother/login">
               <div>
                 <span className="access-number" aria-hidden="true">
                   02
@@ -162,8 +168,8 @@ export default function HomePage() {
                 <h3>{access.motherTitle}</h3>
                 <p>{access.motherDescription}</p>
               </div>
-              <span className="coming-soon">{access.motherStatus}</span>
-            </article>
+              <span className="coming-soon access-ready">{access.motherStatus}</span>
+            </a>
           </div>
         </section>
       </main>

@@ -8,6 +8,7 @@ export type StaffCapability =
   | "STAFF_SELF_READ"
   | "MOTHER_BASIC_READ"
   | "MOTHER_REGISTRY_MANAGE"
+  | "MOTHER_RECORD_ARCHIVE"
   | "VISIT_CONFIRM_FLEXIBLE"
   | "WA_FALLBACK_ASSIGNED"
   | "ORGANIZATION_MANAGE"
@@ -23,11 +24,13 @@ export type StaffCapability =
 const bidanCapabilities = new Set<StaffCapability>([
   "STAFF_SELF_READ",
   "MOTHER_BASIC_READ",
+  "MOTHER_REGISTRY_MANAGE",
   "VISIT_CONFIRM_FLEXIBLE",
   "WA_FALLBACK_ASSIGNED",
 ]);
 const puskesmasCapabilities = new Set<StaffCapability>([
   ...bidanCapabilities,
+  "MOTHER_RECORD_ARCHIVE",
   "MOTHER_REGISTRY_MANAGE",
   "ORGANIZATION_MANAGE",
   "STAFF_MANAGE",

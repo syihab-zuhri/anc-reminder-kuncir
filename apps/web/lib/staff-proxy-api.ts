@@ -67,26 +67,41 @@ async function executeProxyCall(
   let requestBody: string | undefined;
 
   if (isMutating) {
-    requestBody = await request.text().catch(() => "");
+    const raw = await request.text().catch(() => "");
+    if (raw.trim().length > 0) {
+      requestBody = raw;
+    }
+  }
+
+  const reqHeaders: Record<string, string> = {
+    authorization: `Bearer ${accessToken}`,
+  };
+
+  if (requestBody !== undefined) {
+    reqHeaders["content-type"] = "application/json";
   }
 
   try {
     const upstreamRes = await fetch(targetUrl, {
       method: request.method,
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${accessToken}`,
-      },
+      headers: reqHeaders,
       body: requestBody,
       cache: "no-store",
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
 
-    const responseBody = await upstreamRes.text().catch(() => "");
     const headers = new Headers();
     const contentType = upstreamRes.headers.get("content-type");
     if (contentType !== null) headers.set("content-type", contentType);
 
+    if (upstreamRes.status === 204) {
+      return new NextResponse(null, {
+        status: 204,
+        headers,
+      });
+    }
+
+    const responseBody = await upstreamRes.text().catch(() => "");
     return new NextResponse(responseBody, {
       status: upstreamRes.status,
       headers,

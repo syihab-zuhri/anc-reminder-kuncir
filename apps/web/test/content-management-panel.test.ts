@@ -9,7 +9,7 @@ import {
   SYNTHETIC_PREVIEW_VALUES,
 } from "../components/content-management-panel";
 
-describe("content management panel (TASK-P4-010)", () => {
+describe("content management panel", () => {
   it("renders placeholders with fixed non-patient synthetic values", () => {
     const preview = renderSyntheticContentPreview(
       "Pengingat {{milestone_code}} dari {{facility_name}}.",

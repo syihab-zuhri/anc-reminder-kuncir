@@ -81,7 +81,7 @@ export function MotherLoginForm() {
       </div>
 
       <button className="btn-primary" type="submit" disabled={submitting}>
-        {submitting ? "Memverifikasi\u2026" : "Masuk"}
+        {submitting ? "Memverifikasi…" : "Masuk ke Portal"}
       </button>
     </form>
   );

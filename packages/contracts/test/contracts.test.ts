@@ -67,6 +67,38 @@ describe("shared domain contracts", () => {
       }).success,
     ).toBe(true);
     expect(
+      staffCreateRequestSchema.safeParse({
+        login_identifier: "bidan.delapan",
+        display_name: "Bidan Delapan",
+        role: "BIDAN",
+        password: "Bidan123",
+      }).success,
+    ).toBe(true);
+    expect(
+      staffCreateRequestSchema.safeParse({
+        login_identifier: "bidan.tujuh",
+        display_name: "Bidan Tujuh",
+        role: "BIDAN",
+        password: "Bidan12",
+      }).success,
+    ).toBe(false);
+    expect(
+      staffCreateRequestSchema.safeParse({
+        login_identifier: "operator.puskesmas",
+        display_name: "Operator Puskesmas",
+        role: "PUSKESMAS",
+        password: "OperatorKuncir2026",
+      }).success,
+    ).toBe(true);
+    expect(
+      staffCreateRequestSchema.safeParse({
+        login_identifier: "super.admin.baru",
+        display_name: "Super Admin Baru",
+        role: "SUPER_ADMIN",
+        password: "SuperAdminKuncir2026",
+      }).success,
+    ).toBe(false);
+    expect(
       villageCreateRequestSchema.safeParse({ code: "KNC-01", name: "Desa Kuncir" }).success,
     ).toBe(true);
     expect(staffRefreshRequestSchema.safeParse({ refresh_token: "raw-token" }).success).toBe(false);
