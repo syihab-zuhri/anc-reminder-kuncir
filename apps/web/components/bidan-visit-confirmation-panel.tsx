@@ -5,6 +5,7 @@ import type {
   MotherSummary,
   PregnancyMilestoneListResponse,
   PregnancyMilestoneResponse,
+  Village,
 } from "@anc/contracts";
 import { useEffect, useState } from "react";
 
@@ -24,10 +25,12 @@ interface ConfirmationSuccessData {
 export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmationPanelProps) {
   // Loaded data states
   const [mothers, setMothers] = useState<readonly MotherSummary[]>([]);
+  const [villages, setVillages] = useState<readonly Village[]>([]);
   const [facilities, setFacilities] = useState<readonly Facility[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(false);
 
   // Selected state
+  const [selectedVillageId, setSelectedVillageId] = useState("");
   const [selectedMotherId, setSelectedMotherId] = useState("");
   const [milestones, setMilestones] = useState<readonly PregnancyMilestoneResponse[]>([]);
   const [loadingMilestones, setLoadingMilestones] = useState(false);
@@ -52,9 +55,10 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
     async function loadData(signal: AbortSignal): Promise<void> {
       setLoadingInitial(true);
       try {
-        const [mRes, fRes] = await Promise.all([
+        const [mRes, fRes, vRes] = await Promise.all([
           fetch("/api/staff-proxy/mothers", { signal }),
           fetch("/api/staff-proxy/staff/organization/facilities", { signal }),
+          fetch("/api/staff-proxy/staff/organization/villages", { signal }).catch(() => null),
         ]);
 
         if (mRes.ok) {
@@ -68,6 +72,10 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
             setSelectedFacilityId(fData[0].id);
           }
         }
+        if (vRes && vRes.ok) {
+          const vData = (await vRes.json()) as readonly Village[];
+          setVillages(vData ?? []);
+        }
       } catch (err) {
         if (!(err instanceof DOMException && err.name === "AbortError")) {
           // Best-effort load
@@ -77,6 +85,20 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
       }
     }
   }, [userRole, selectedFacilityId]);
+
+  // When village filter changes, reset mother and milestone selection
+  const handleSelectVillage = (villageId: string) => {
+    setSelectedVillageId(villageId);
+    setSelectedMotherId("");
+    setSelectedMilestoneId("");
+    setMilestones([]);
+    setFeedback(null);
+    setSuccessData(null);
+  };
+
+  const filteredMothers = selectedVillageId
+    ? mothers.filter((m) => m.village_id === selectedVillageId)
+    : mothers;
 
   // When mother selection changes, load pregnancy milestones
   const handleSelectMother = async (motherId: string): Promise<void> => {
@@ -243,7 +265,19 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
                 flexShrink: 0,
               }}
             >
-              ✓
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                width="18"
+                height="18"
+                aria-hidden="true"
+              >
+                <polyline points="4 10 8 14 16 6" />
+              </svg>
             </div>
             <div style={{ flex: 1 }}>
               <div
@@ -336,94 +370,142 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
         </div>
       )}
 
-      <form onSubmit={(e) => void handleConfirmVisit(e)} className="staff-form-grid">
-        <div className="form-group">
-          <label htmlFor="confirm-mother">1. Pilih Ibu Hamil *</label>
-          <select
-            id="confirm-mother"
-            className="staff-input"
-            value={selectedMotherId}
-            onChange={(e) => void handleSelectMother(e.target.value)}
-            required
-          >
-            <option value="">
-              -- {loadingInitial ? "Memuat pasien..." : "Pilih Ibu Hamil"} --
-            </option>
-            {mothers.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.full_name} ({m.phone_masked}) -{" "}
-                {m.active_pregnancy?.trimester_label ?? "Kehamilan Aktif"}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {selectedMotherId && (
-          <>
+      <div className="admin-form-card">
+        <h3 className="admin-form-card-title">Formulir Konfirmasi Pemeriksaan ANC</h3>
+        <form onSubmit={(e) => void handleConfirmVisit(e)}>
+          <div className="admin-form-grid-2col">
+            {/* 1. Pilih Desa / Wilayah Binaan */}
             <div className="form-group">
-              <label htmlFor="confirm-milestone">2. Pilih Jadwal Milestone Kunjungan *</label>
-              {loadingMilestones ? (
-                <p className="field-hint">Memuat jadwal milestone...</p>
-              ) : milestones.length === 0 ? (
-                <p className="field-hint">Tidak ada data milestone kehamilan aktif.</p>
-              ) : (
-                <select
-                  id="confirm-milestone"
-                  className="staff-input"
-                  value={selectedMilestoneId}
-                  onChange={(e) => setSelectedMilestoneId(e.target.value)}
-                  required
-                >
-                  <option value="">-- Pilih Milestone --</option>
-                  {milestones.map((ms) => (
-                    <option key={ms.id} value={ms.id}>
-                      {ms.code} ({ms.trimester_label}) - Status: {ms.visit_status}
+              <label htmlFor="confirm-village">1. Pilih Desa / Wilayah Binaan</label>
+              <select
+                id="confirm-village"
+                className="staff-input"
+                value={selectedVillageId}
+                onChange={(e) => handleSelectVillage(e.target.value)}
+                disabled={loadingInitial}
+              >
+                <option value="">-- Semua Wilayah ({mothers.length} Pasien Terdaftar) --</option>
+                {villages.map((v) => {
+                  const countInVillage = mothers.filter((m) => m.village_id === v.id).length;
+                  return (
+                    <option key={v.id} value={v.id}>
+                      {v.name} ({countInVillage} Pasien)
                     </option>
-                  ))}
-                </select>
-              )}
+                  );
+                })}
+              </select>
+              <small className="field-hint">
+                Saring daftar ibu hamil berdasarkan desa domisili.
+              </small>
             </div>
 
+            {/* 2. Pilih Pasien Ibu Hamil */}
             <div className="form-group">
-              <label htmlFor="confirm-facility">3. Fasilitas Tempat Pemeriksaan *</label>
+              <label htmlFor="confirm-mother">2. Pilih Pasien Ibu Hamil *</label>
               <select
-                id="confirm-facility"
+                id="confirm-mother"
                 className="staff-input"
-                value={selectedFacilityId}
-                onChange={(e) => setSelectedFacilityId(e.target.value)}
+                value={selectedMotherId}
+                onChange={(e) => void handleSelectMother(e.target.value)}
+                disabled={loadingInitial}
                 required
               >
-                <option value="">-- Pilih Fasilitas Kesehatan --</option>
-                {facilities.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name} ({f.facility_type})
+                <option value="">
+                  --{" "}
+                  {loadingInitial
+                    ? "Memuat pasien..."
+                    : filteredMothers.length === 0
+                      ? "Tidak ada pasien di wilayah ini"
+                      : `Pilih Ibu Hamil (${filteredMothers.length} Tersedia)`}{" "}
+                  --
+                </option>
+                {filteredMothers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.full_name} ({m.phone_masked}) - {m.village_name ?? "Tanpa Desa"} [
+                    {m.active_pregnancy?.trimester_label ?? "Kehamilan Aktif"}]
                   </option>
                 ))}
               </select>
+              <small className="field-hint">
+                Pilih ibu hamil untuk memuat jadwal milestone ANC.
+              </small>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="confirm-date">4. Tanggal Aktual Kunjungan *</label>
-              <input
-                id="confirm-date"
-                className="staff-input"
-                type="date"
-                required
-                value={occurredOn}
-                onChange={(e) => setOccurredOn(e.target.value)}
-              />
-            </div>
+            {selectedMotherId && (
+              <>
+                {/* 3. Pilih Jadwal Milestone */}
+                <div className="form-group">
+                  <label htmlFor="confirm-milestone">3. Pilih Jadwal Milestone Kunjungan *</label>
+                  {loadingMilestones ? (
+                    <p className="field-hint">Memuat jadwal milestone...</p>
+                  ) : milestones.length === 0 ? (
+                    <p className="field-hint">Tidak ada data milestone kehamilan aktif.</p>
+                  ) : (
+                    <select
+                      id="confirm-milestone"
+                      className="staff-input"
+                      value={selectedMilestoneId}
+                      onChange={(e) => setSelectedMilestoneId(e.target.value)}
+                      required
+                    >
+                      <option value="">-- Pilih Milestone --</option>
+                      {milestones.map((ms) => (
+                        <option key={ms.id} value={ms.id}>
+                          {ms.code} ({ms.trimester_label}) - Status: {ms.visit_status}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
 
-            <button
-              className="btn-primary"
-              type="submit"
-              disabled={submitting || !selectedMilestoneId || !selectedFacilityId}
-            >
-              {submitting ? "Menyimpan data..." : "Simpan Konfirmasi Kunjungan"}
-            </button>
-          </>
-        )}
-      </form>
+                {/* 4. Fasilitas Tempat Pemeriksaan */}
+                <div className="form-group">
+                  <label htmlFor="confirm-facility">4. Fasilitas Tempat Pemeriksaan *</label>
+                  <select
+                    id="confirm-facility"
+                    className="staff-input"
+                    value={selectedFacilityId}
+                    onChange={(e) => setSelectedFacilityId(e.target.value)}
+                    required
+                  >
+                    <option value="">-- Pilih Fasilitas Kesehatan --</option>
+                    {facilities.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.name} ({f.facility_type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 5. Tanggal Aktual Kunjungan */}
+                <div className="form-group form-group-full">
+                  <label htmlFor="confirm-date">5. Tanggal Aktual Kunjungan *</label>
+                  <input
+                    id="confirm-date"
+                    className="staff-input"
+                    type="date"
+                    required
+                    value={occurredOn}
+                    onChange={(e) => setOccurredOn(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          {selectedMotherId && (
+            <div className="admin-form-actions">
+              <button
+                className="btn-primary"
+                type="submit"
+                disabled={submitting || !selectedMilestoneId || !selectedFacilityId}
+              >
+                {submitting ? "Menyimpan data..." : "Simpan Konfirmasi Kunjungan"}
+              </button>
+            </div>
+          )}
+        </form>
+      </div>
     </div>
   );
 }

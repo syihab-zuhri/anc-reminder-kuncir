@@ -54,12 +54,16 @@ export function MotherLoginForm() {
         <label htmlFor="mother-fullname">Nama Lengkap</label>
         <input
           id="mother-fullname"
+          className={error ? "input-has-error" : ""}
           type="text"
           required
           autoComplete="name"
           placeholder="Masukkan nama lengkap Anda"
           value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
+          onChange={(e) => {
+            setFullName(e.target.value);
+            if (error) setError(null);
+          }}
         />
       </div>
 
@@ -67,13 +71,17 @@ export function MotherLoginForm() {
         <label htmlFor="mother-access-code">Kode Akses</label>
         <input
           id="mother-access-code"
+          className={error ? "input-has-error" : ""}
           type="text"
           required
           autoComplete="off"
           inputMode="text"
           placeholder="Masukkan kode akses 16 karakter"
           value={accessCode}
-          onChange={(e) => setAccessCode(e.target.value)}
+          onChange={(e) => {
+            setAccessCode(e.target.value);
+            if (error) setError(null);
+          }}
         />
         <small className="field-help">
           Kode akses diberikan oleh bidan atau petugas Puskesmas saat pendaftaran ANC.

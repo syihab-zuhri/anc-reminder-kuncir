@@ -62,10 +62,14 @@ export function LoginForm({ notice }: LoginFormProps) {
         <input
           id="login-identifier"
           name="login_identifier"
+          className={error ? "input-has-error" : ""}
           type="text"
           autoComplete="username"
           value={loginIdentifier}
-          onChange={(event) => setLoginIdentifier(event.target.value)}
+          onChange={(event) => {
+            setLoginIdentifier(event.target.value);
+            if (error) setError(undefined);
+          }}
           minLength={3}
           maxLength={120}
           required
@@ -82,10 +86,14 @@ export function LoginForm({ notice }: LoginFormProps) {
         <input
           id="password"
           name="password"
+          className={error ? "input-has-error" : ""}
           type="password"
           autoComplete="current-password"
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(event) => {
+            setPassword(event.target.value);
+            if (error) setError(undefined);
+          }}
           required
           disabled={pending}
           placeholder="Masukkan kata sandi"
