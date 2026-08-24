@@ -174,7 +174,7 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
 
       setFeedback({
         type: "success",
-        message: `Konfirmasi pemeriksaan ${activeMilestone?.code ?? "ANC"} berhasil disimpan ke database Supabase!`,
+        message: `Konfirmasi pemeriksaan ${activeMilestone?.code ?? "ANC"} berhasil disimpan!`,
       });
 
       // Refresh milestones list
@@ -210,47 +210,48 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
     <div className="staff-panel-card">
       <header className="staff-panel-header">
         <div>
-          <span className="staff-kicker">Konfirmasi Pemeriksaan Lapangan</span>
-          <h2>Konfirmasi Sudah Periksa (K1 – K8)</h2>
+          <span className="staff-kicker">Konfirmasi Lapangan</span>
+          <h2>Konfirmasi Periksa (K1–K8)</h2>
+          <p className="field-hint">Catat kehadiran dan tanggal pemeriksaan kunjungan ANC.</p>
         </div>
       </header>
 
       {/* Prominent Success Notification Card */}
       {successData && (
         <div
-          className="staff-success-box"
           style={{
-            padding: "1.5rem",
+            padding: "1.25rem",
             background: "#f0fdf4",
-            borderRadius: "10px",
-            border: "2px solid #22c55e",
-            boxShadow: "0 4px 12px rgba(34, 197, 94, 0.15)",
-            marginBottom: "1.75rem",
+            border: "1px solid #86efac",
+            borderRadius: "8px",
+            marginBottom: "1.5rem",
+            boxShadow: "0 2px 8px rgba(34, 197, 94, 0.08)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
             <div
               style={{
-                width: "48px",
-                height: "48px",
+                width: "36px",
+                height: "36px",
                 borderRadius: "50%",
                 background: "#22c55e",
                 color: "#ffffff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "1.6rem",
-                fontWeight: "bold",
+                display: "grid",
+                placeItems: "center",
+                fontSize: "1.2rem",
+                fontWeight: 700,
                 flexShrink: 0,
               }}
-            ></div>
+            >
+              ✓
+            </div>
             <div style={{ flex: 1 }}>
               <div
                 style={{
                   display: "inline-block",
                   padding: "0.2rem 0.6rem",
                   background: "#dcfce7",
-                  color: "#15803d",
+                  color: "#166534",
                   borderRadius: "9999px",
                   fontSize: "0.8rem",
                   fontWeight: 700,
@@ -258,7 +259,7 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
                   marginBottom: "0.35rem",
                 }}
               >
-                BERHASIL DIKONFIRMASI KE SUPABASE
+                BERHASIL DIKONFIRMASI
               </div>
               <h3 style={{ margin: "0 0 0.5rem 0", color: "#166534", fontSize: "1.3rem" }}>
                 Pemeriksaan ANC {successData.milestoneCode} Berhasil Dicatat!
@@ -418,7 +419,7 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
               type="submit"
               disabled={submitting || !selectedMilestoneId || !selectedFacilityId}
             >
-              {submitting ? "Menyimpan ke Supabase..." : "Simpan Konfirmasi Kunjungan"}
+              {submitting ? "Menyimpan data..." : "Simpan Konfirmasi Kunjungan"}
             </button>
           </>
         )}
