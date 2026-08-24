@@ -733,7 +733,9 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
         <div>
           <span className="staff-kicker">Administrasi Wilayah</span>
           <h2>Pengaturan Fasilitas &amp; Petugas</h2>
-          <p className="field-hint">Kelola fasilitas kesehatan, desa binaan, dan akun staf bidan.</p>
+          <p className="field-hint">
+            Kelola fasilitas kesehatan, desa binaan, dan akun staf bidan.
+          </p>
         </div>
       </header>
 

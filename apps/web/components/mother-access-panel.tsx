@@ -199,7 +199,9 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
         <div>
           <span className="staff-kicker">Akses Mandiri</span>
           <h2>Kelola Kode Akses Pasien</h2>
-          <p className="field-hint">Penerbitan dan pencabutan kode akses portal mandiri ibu hamil.</p>
+          <p className="field-hint">
+            Penerbitan dan pencabutan kode akses portal mandiri ibu hamil.
+          </p>
         </div>
       </header>
 

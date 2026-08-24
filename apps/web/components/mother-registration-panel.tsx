@@ -209,7 +209,9 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
         <div>
           <span className="staff-kicker">Pendaftaran Baru</span>
           <h2>Pendaftaran Ibu Hamil</h2>
-          <p className="field-hint">Registrasi profil ibu hamil &amp; persetujuan pemantauan ANC.</p>
+          <p className="field-hint">
+            Registrasi profil ibu hamil &amp; persetujuan pemantauan ANC.
+          </p>
         </div>
       </header>
 
