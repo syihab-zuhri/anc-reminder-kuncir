@@ -20,9 +20,15 @@ out/
 *-fbsvc-*.json
 supabase.config.md
 supabase/.temp/*
+supabase/.branches/
 supabase/.environment
 *.env.production
 # 🔑 Protect production environment files only
+
+# Tooling caches
+.eslintcache
+.vercel/
+.turbo/
 
 # Runtime files
 *.log
@@ -49,6 +55,15 @@ skills-lock.json
 .DS_Store
 Thumbs.db
 desktop.ini
+$RECYCLE.BIN/
+ehthumbs.db
+._*
+.AppleDouble
+.Spotlight-V100
+.Trashes
+*.swp
+*~
+.history/
 
 # Test artifacts
 playwright-report/
@@ -59,6 +74,7 @@ human.md
 run.md
 sesion-agent.md
 ibumil.md
+my.md
 
 # Local source-package exports
 posyandu-kuncir-source-*.zip
