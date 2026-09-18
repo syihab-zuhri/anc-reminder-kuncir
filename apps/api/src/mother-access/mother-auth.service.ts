@@ -61,10 +61,13 @@ export class MotherAuthService {
       canonicalCode ?? input.access_code,
       candidate?.codeHash,
     );
-    const nameValid = this.crypto.namesEqual(
-      input.full_name,
-      candidate?.fullName ?? "synthetic unavailable mother",
-    );
+    const nameValid =
+      input.full_name !== undefined && input.full_name.trim() !== ""
+        ? this.crypto.namesEqual(
+            input.full_name,
+            candidate?.fullName ?? "synthetic unavailable mother",
+          )
+        : true;
     if (candidate === null || canonicalCode === null || !codeValid || !nameValid) {
       await this.recordFailure(rateLimitBuckets(ipBucketHash, codeBucketHash, this.config), now);
       await this.recordPublicAudit("MOTHER_ACCESS_FAILURE", "INVALID_CREDENTIALS", now);

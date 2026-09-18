@@ -61,6 +61,61 @@ export function MotherDashboard() {
     }
   }, [router]);
 
+  // Synchronize push notification registration when running inside Capacitor Android app
+  useEffect(() => {
+    if (session.kind !== "ready") return;
+
+    let unmounted = false;
+    async function syncCapacitorPush() {
+      try {
+        const cap = (
+          window as unknown as {
+            Capacitor?: {
+              isNativePlatform?: () => boolean;
+              Plugins?: {
+                PushNotifications?: {
+                  checkPermissions: () => Promise<{ receive: string }>;
+                  requestPermissions: () => Promise<{ receive: string }>;
+                  register: () => Promise<void>;
+                  addListener: (
+                    event: string,
+                    cb: (payload: { value: string }) => void,
+                  ) => Promise<{ remove: () => Promise<void> }>;
+                };
+              };
+            };
+          }
+        ).Capacitor;
+
+        if (cap?.isNativePlatform?.() && cap.Plugins?.PushNotifications) {
+          const pn = cap.Plugins.PushNotifications;
+          let perm = await pn.checkPermissions();
+          if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale") {
+            perm = await pn.requestPermissions();
+          }
+          if (perm.receive === "granted") {
+            await pn.register();
+            await pn.addListener("registration", async (token) => {
+              if (unmounted) return;
+              await fetch("/api/mother-proxy/mother/me/devices/android", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ push_token: token.value }),
+              });
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Capacitor push sync skipped:", err);
+      }
+    }
+
+    void syncCapacitorPush();
+    return () => {
+      unmounted = true;
+    };
+  }, [session.kind]);
+
   async function handleLogout(): Promise<void> {
     if (loggingOut) return;
     setLoggingOut(true);
@@ -256,7 +311,7 @@ export function MotherDashboard() {
                     <span>
                       Rekomendasi:{" "}
                       <strong>
-                        {data.next_milestone.recommended_facility_name ?? "Posyandu / Bidan Desa"}
+                        {data.next_milestone.recommended_facility_name ?? "TPMB / Bidan"}
                       </strong>
                     </span>
                   </p>
@@ -272,6 +327,166 @@ export function MotherDashboard() {
               </div>
             </section>
           )}
+
+          {/* Notifikasi Pengingat HP Pasien (ntfy) */}
+          <section
+            style={{
+              marginTop: "1rem",
+              padding: "1.1rem",
+              background: "#eff6ff",
+              border: "1.5px solid #bfdbfe",
+              borderRadius: "12px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.75rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: "0.5rem",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <div
+                  style={{
+                    background: "#2563eb",
+                    color: "#ffffff",
+                    borderRadius: "8px",
+                    width: "32px",
+                    height: "32px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    width="18"
+                    height="18"
+                    aria-hidden="true"
+                  >
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#1e3a8a", fontWeight: 600 }}>
+                    Pengingat Jadwal di HP (Push Notifikasi)
+                  </h4>
+                  <p style={{ margin: 0, fontSize: "0.8rem", color: "#3b82f6" }}>
+                    Dapatkan alarm & pemberitahuan otomatis H-3 & H-1 sebelum jadwal kunjungan.
+                  </p>
+                </div>
+              </div>
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  padding: "0.2rem 0.6rem",
+                  borderRadius: "9999px",
+                  background: "#dbeafe",
+                  color: "#1e40af",
+                  fontWeight: 600,
+                }}
+              >
+                Aktif & Siaga
+              </span>
+            </div>
+
+            <div
+              style={{
+                fontSize: "0.83rem",
+                color: "#1e293b",
+                background: "#ffffff",
+                padding: "0.85rem",
+                borderRadius: "8px",
+                border: "1px solid #e2e8f0",
+                lineHeight: 1.5,
+              }}
+            >
+              <div style={{ marginBottom: "0.5rem" }}>
+                <strong>Topik Notifikasi Anda:</strong>{" "}
+                <code
+                  style={{
+                    background: "#f1f5f9",
+                    padding: "0.2rem 0.45rem",
+                    borderRadius: "4px",
+                    color: "#0f172a",
+                    fontWeight: 600,
+                  }}
+                >
+                  posyandukkn26-bumil-
+                  {session.kind === "ready" ? session.identity.id.split("-")[0] : "pasien"}
+                </code>
+              </div>
+              <div
+                style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}
+              >
+                <a
+                  href={`https://ntfy.posyandukkn26.my.id/posyandukkn26-bumil-${session.kind === "ready" ? session.identity.id.split("-")[0] : "pasien"}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    background: "#2563eb",
+                    color: "#ffffff",
+                    textDecoration: "none",
+                    padding: "0.45rem 0.9rem",
+                    borderRadius: "6px",
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    width="14"
+                    height="14"
+                    aria-hidden="true"
+                  >
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="10" y1="14" x2="21" y2="3" />
+                  </svg>
+                  Buka Saluran Pengingat HP
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const motherIdShort =
+                      session.kind === "ready" ? session.identity.id.split("-")[0] : "pasien";
+                    const topic = `posyandukkn26-bumil-${motherIdShort}`;
+                    void navigator.clipboard.writeText(topic);
+                    alert(
+                      `Nama topik "${topic}" berhasil disalin. Buka aplikasi ntfy lalu tambahkan topik ini.`,
+                    );
+                  }}
+                  style={{
+                    background: "#f8fafc",
+                    border: "1px solid #cbd5e1",
+                    padding: "0.45rem 0.85rem",
+                    borderRadius: "6px",
+                    fontSize: "0.82rem",
+                    color: "#334155",
+                    cursor: "pointer",
+                    fontWeight: 500,
+                  }}
+                >
+                  Salin Nama Topik
+                </button>
+              </div>
+            </div>
+          </section>
 
           {/* Timeline K1-K8 */}
           <section className="timeline-section">
@@ -382,6 +597,57 @@ export function MotherDashboard() {
                 );
               })}
             </div>
+          </section>
+
+          {/* Edukasi Tanda Bahaya Kehamilan & Bantuan Bidan */}
+          <section
+            style={{
+              marginTop: "1.5rem",
+              padding: "1.25rem",
+              background: "#fff1f2",
+              border: "1px solid #fecdd3",
+              borderRadius: "12px",
+            }}
+          >
+            <h4
+              style={{
+                margin: "0 0 0.5rem",
+                color: "#9f1239",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+              }}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                width="18"
+                height="18"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span>Tanda Bahaya Kehamilan (Segera ke Puskesmas/IGD)</span>
+            </h4>
+            <ul
+              style={{
+                margin: 0,
+                paddingLeft: "1.25rem",
+                fontSize: "0.85rem",
+                color: "#881337",
+                display: "grid",
+                gap: "0.3rem",
+              }}
+            >
+              <li>Perdarahan dari jalan lahir atau keluar cairan ketuban sebelum waktunya.</li>
+              <li>Sakit kepala hebat, pandangan kabur, atau kejang/bengkak pada kaki dan wajah.</li>
+              <li>Demam tinggi, muntah terus-menerus hingga tidak mau makan.</li>
+              <li>Gerakan janin berkurang atau tidak terasa sama sekali.</li>
+            </ul>
           </section>
 
           <footer className="mother-dashboard-footer">

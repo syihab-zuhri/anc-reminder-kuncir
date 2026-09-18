@@ -2,12 +2,14 @@
 
 import type { MotherAccessCredentialIssueResponse, MotherSummary, Village } from "@anc/contracts";
 import { useEffect, useState } from "react";
+import { useToast } from "../lib/toast-context";
 
 interface MotherAccessPanelProps {
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
 }
 
 export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<"issue" | "reissue" | "revoke">("issue");
 
   // Loaded mothers and villages from Supabase
@@ -29,6 +31,7 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
     access_code: string;
     action_kind: "INITIAL" | "REISSUE";
   } | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
 
   const [revokedSuccess, setRevokedSuccess] = useState<boolean>(false);
 
@@ -76,6 +79,19 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
         </p>
       </div>
     );
+  }
+
+  // Handle Copy Code to Clipboard
+  async function handleCopyCode(): Promise<void> {
+    if (!issuedCodeResult) return;
+    try {
+      await navigator.clipboard.writeText(issuedCodeResult.access_code);
+      setCopiedCode(true);
+      toast.success("Kode akses berhasil disalin ke clipboard.", "Tersalin");
+      setTimeout(() => setCopiedCode(false), 3000);
+    } catch {
+      toast.error("Gagal menyalin kode otomatis. Silakan salin secara manual.", "Salin Manual");
+    }
   }
 
   async function handleIssueCredential(e: React.FormEvent): Promise<void> {
@@ -377,9 +393,34 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
             hash dan tidak dapat menampilkan kembali teks jernih kode ini setelah ditutup.
           </div>
 
-          <button className="btn-primary" type="button" onClick={() => setIssuedCodeResult(null)}>
-            Saya Sudah Menyerahkan Kode Kepada Pasien
-          </button>
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            <button className="btn-primary" type="button" onClick={() => void handleCopyCode()}>
+              <span
+                className="icon-label"
+                style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+              >
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  width="15"
+                  height="15"
+                >
+                  <rect x="7" y="7" width="10" height="10" rx="2" />
+                  <path d="M4 13V5a2 2 0 0 1 2-2h8" />
+                </svg>
+                <span>{copiedCode ? "Kode Tersalin!" : "Salin Kode Akses"}</span>
+              </span>
+            </button>
+            <button
+              className="btn-secondary"
+              type="button"
+              onClick={() => setIssuedCodeResult(null)}
+            >
+              Saya Sudah Menyerahkan Kode Kepada Pasien
+            </button>
+          </div>
         </div>
       )}
 

@@ -81,3 +81,24 @@ RENCANA_IMPLEMENTASI_KELAS_MAKSIMAL.md
 posyandu-kuncir-source-*.zip
 
 ANC_Reminder_Blueprint_v1.1.0
+
+# Local DB dumps and backups
+*.dump
+*.sql.gz
+*.tar.gz
+
+# Credentials and sensitive notes
+login*.txt
+login info.txt
+login-info.txt
+
+# Server runtime and web server files
+.htaccess
+.user.ini
+.well-known/
+404.html
+502.html
+.snapshots/
+
+# Cancelled unapplied migrations
+packages/database/migrations/000018_add_registration_status.cjs

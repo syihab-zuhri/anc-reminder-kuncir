@@ -101,7 +101,7 @@ async function claimNextAttempt(pool: DatabasePool, now: Date): Promise<ClaimedP
             device.push_token_encrypted,
             content.title,
             content.body,
-            milestone.milestone_code::text,
+            milestone.code::text AS milestone_code,
             center.name AS facility_name,
             pregnancy.mother_id,
             pregnancy.health_center_id

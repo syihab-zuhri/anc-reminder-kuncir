@@ -24,6 +24,28 @@ describe("health endpoints", () => {
     }
   });
 
+  it("sets hardened HTTP headers and trusts only the loopback reverse proxy", async () => {
+    app = await createApiApplication({
+      config: apiConfigFixture(),
+      databasePool: {} as DatabasePool,
+      readinessCheck: vi.fn(() => Promise.resolve(readyDatabase)),
+      closePool: vi.fn(() => Promise.resolve()),
+      logger: loggerFor([]),
+    });
+    await app.init();
+
+    const response = await request(httpServer(app)).get("/api/v1/health/live").expect(200);
+    const express = app.getHttpAdapter().getInstance() as {
+      get(name: string): unknown;
+    };
+
+    expect(responseHeader(response, "x-content-type-options")).toBe("nosniff");
+    expect(responseHeader(response, "x-frame-options")).toBe("SAMEORIGIN");
+    expect(responseHeader(response, "referrer-policy")).toBe("no-referrer");
+    expect(responseHeader(response, "content-security-policy")).toContain("default-src 'self'");
+    expect(express.get("trust proxy")).toBe("loopback");
+  });
+
   it("serves liveness without checking the database", async () => {
     const readinessCheck = vi.fn(() => Promise.resolve(readyDatabase));
     const closePool = vi.fn(() => Promise.resolve());

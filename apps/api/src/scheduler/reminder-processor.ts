@@ -41,14 +41,35 @@ export async function processReminderCycles(
 
   // 1. Query due/overdue milestones from ACTIVE pregnancies where REMINDER consent is GRANTED
   const query = `
+    WITH active_milestones AS (
+      SELECT DISTINCT ON (p.id)
+        pm.id AS milestone_id,
+        p.mother_id AS mother_id,
+        p.health_center_id AS health_center_id,
+        pm.due_at AS due_at,
+        rule.code AS milestone_code,
+        COALESCE(
+          (pm.due_at AT TIME ZONE $3)::date - make_interval(days => $2),
+          CASE 
+            WHEN rule.target_week_start IS NOT NULL THEN p.dating_date + (rule.target_week_start * 7)
+            ELSE NULL
+          END
+        ) AS reminder_start,
+        rule.reminder_enabled
+      FROM pregnancies p
+      JOIN pregnancy_milestones pm ON pm.pregnancy_id = p.id
+      JOIN anc_milestone_rules rule ON pm.rule_id = rule.id
+      WHERE p.status = 'ACTIVE'
+        AND pm.visit_status NOT IN ('CONFIRMED', 'CANCELLED', 'NOT_APPLICABLE')
+      ORDER BY p.id, rule.code ASC
+    )
     SELECT 
-      pm.id AS milestone_id,
-      p.mother_id AS mother_id,
-      p.health_center_id AS health_center_id,
-      pm.due_at AS due_at
-    FROM pregnancy_milestones pm
-    JOIN pregnancies p ON pm.pregnancy_id = p.id
-    JOIN mothers m ON p.mother_id = m.id
+      am.milestone_id,
+      am.mother_id,
+      am.health_center_id,
+      am.due_at
+    FROM active_milestones am
+    JOIN mothers m ON am.mother_id = m.id
     JOIN LATERAL (
       SELECT status
         FROM consent_records
@@ -57,15 +78,15 @@ export async function processReminderCycles(
        LIMIT 1
     ) c ON true
     LEFT JOIN reminder_cycles rc 
-      ON rc.milestone_id = pm.id 
-     AND DATE(rc.cycle_anchor_at) = DATE($1::timestamptz)
-    WHERE p.status = 'ACTIVE'
-      AND pm.visit_status IN ('DUE', 'OVERDUE')
+      ON rc.milestone_id = am.milestone_id 
+     AND DATE(rc.cycle_anchor_at AT TIME ZONE $3) = $1::date
+    WHERE am.reminder_enabled = true
       AND c.status = 'GRANTED'
+      AND $1::date >= am.reminder_start
       AND rc.id IS NULL
       AND NOT EXISTS (
         SELECT 1 FROM reminder_cycles last_rc
-         WHERE last_rc.milestone_id = pm.id
+         WHERE last_rc.milestone_id = am.milestone_id
            AND last_rc.status <> 'CANCELLED'
            AND last_rc.cycle_anchor_at >= $1::timestamptz - make_interval(days => $2)
       )
@@ -80,7 +101,7 @@ export async function processReminderCycles(
       mother_id: string;
       health_center_id: string;
       due_at: string;
-    }>(query, [targetDate, intervalDays]);
+    }>(query, [targetDate, intervalDays, timezone]);
 
     let createdCycles = 0;
     let pushAttempts = 0;

@@ -1,5 +1,6 @@
 import { createDatabasePool } from "../packages/database/dist/index.js";
 import { PasswordHasher } from "../apps/api/dist/auth/password-hasher.js";
+import { NikCipher } from "../apps/api/dist/registry/nik-cipher.js";
 import crypto from "node:crypto";
 
 async function seedMother() {
@@ -12,7 +13,7 @@ async function seedMother() {
 
     // Check health center and active plan
     const hcRes = await client.query("SELECT id FROM health_centers WHERE code = $1", [
-      "PKM_KUNCIR",
+      "PKM-KUNCIR",
     ]);
     const hcId = hcRes.rows[0].id;
 
@@ -31,10 +32,11 @@ async function seedMother() {
     );
     let motherId = motherCheck.rows[0]?.id;
 
+    const cipher = new NikCipher(process.env.NIK_ENCRYPTION_KEY);
+    const validNikCiphertext = cipher.encrypt("3518012345670001");
+
     if (!motherId) {
       motherId = crypto.randomUUID();
-      // Dummy encrypted NIK
-      const dummyNikCipher = Buffer.from("DUMMY_ENCRYPTED_NIK_3518012345670001").toString("base64");
 
       await client.query(
         `INSERT INTO mothers (id, health_center_id, village_id, full_name, nik_ciphertext, address, phone_normalized)
@@ -44,10 +46,17 @@ async function seedMother() {
           hcId,
           villageId,
           "Siti Aminah",
-          dummyNikCipher,
+          validNikCiphertext,
           "Dusun Krajan RT 02 RW 01, Desa Kuncir",
           "081234567890",
         ],
+      );
+
+      // Consent record for reminder
+      await client.query(
+        `INSERT INTO consent_records (id, mother_id, purpose, status, source, recorded_at)
+         VALUES ($1, $2, 'REMINDER', 'GRANTED', 'STAFF_REGISTRATION', now())`,
+        [crypto.randomUUID(), motherId],
       );
 
       // Pregnancy: HPHT = 18 weeks ago (e.g. 2026-04-10)
@@ -76,7 +85,8 @@ async function seedMother() {
 
     // Mother access credential (Crockford Base32 format: ANC-2345-6789-ABCD-EFGH)
     const accessCodePlaintext = "ANC-2345-6789-ABCD-EFGH";
-    const motherSecret = "dev_mother_session_secret_key_at_least_32_chars";
+    const motherSecret =
+      process.env.MOTHER_SESSION_SECRET || "dev_mother_session_secret_key_at_least_32_chars";
 
     const hasher = new PasswordHasher();
     const scryptHash = await hasher.hash(accessCodePlaintext);
@@ -88,14 +98,17 @@ async function seedMother() {
       .digest("hex");
 
     const staffRes = await client.query("SELECT id FROM staff_users WHERE login_identifier = $1", [
-      "petugas.kuncir",
+      "puskesmas.kuncir",
     ]);
     const authorId = staffRes.rows[0].id;
 
-    await client.query(
-      "UPDATE mother_access_credentials SET status = 'REVOKED', revoked_at = now(), revoked_by_staff_id = $2, revocation_reason = 'SEED_REPLACE_DEMO' WHERE mother_id = $1 AND status = 'ACTIVE'",
-      [motherId, authorId],
-    );
+    await client.query("DELETE FROM mother_sessions WHERE mother_id = $1", [motherId]);
+
+    await client.query("DELETE FROM mother_access_credentials WHERE code_lookup_hash = $1", [
+      lookupHash,
+    ]);
+
+    await client.query("DELETE FROM mother_access_credentials WHERE mother_id = $1", [motherId]);
 
     await client.query(
       `INSERT INTO mother_access_credentials (id, mother_id, code_hash, code_lookup_hash, status, issued_at, issued_by_staff_id)

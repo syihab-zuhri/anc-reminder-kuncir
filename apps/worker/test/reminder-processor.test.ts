@@ -10,7 +10,10 @@ describe("reminder content snapshots (TASK-P4-009)", () => {
     const client = {
       query: vi.fn(async (sql: string, params: unknown[] = []) => {
         queries.push({ sql, params });
-        if (sql.includes("FROM pregnancy_milestones pm")) {
+        if (
+          sql.includes("FROM pregnancy_milestones pm") ||
+          sql.includes("JOIN pregnancy_milestones pm")
+        ) {
           return {
             rows: [
               {
@@ -40,14 +43,16 @@ describe("reminder content snapshots (TASK-P4-009)", () => {
       waFallbackActionsCount: 1,
     });
     const cycleInsert = queries.find((entry) => entry.sql.includes("INSERT INTO reminder_cycles"));
-    const eligibilityQuery = queries.find((entry) =>
-      entry.sql.includes("FROM pregnancy_milestones pm"),
+    const eligibilityQuery = queries.find(
+      (entry) =>
+        entry.sql.includes("FROM pregnancy_milestones pm") ||
+        entry.sql.includes("JOIN pregnancy_milestones pm"),
     );
     expect(eligibilityQuery?.sql).toContain("JOIN LATERAL");
     expect(eligibilityQuery?.sql).toContain("ORDER BY recorded_at DESC, id DESC");
     expect(eligibilityQuery?.sql).toContain("make_interval(days => $2)");
     expect(eligibilityQuery?.sql).toContain("last_rc.status <> 'CANCELLED'");
-    expect(eligibilityQuery?.params).toEqual(["2026-08-13", 3]);
+    expect(eligibilityQuery?.params).toEqual(["2026-08-13", 3, "Asia/Jakarta"]);
     expect(cycleInsert?.sql).toContain("push_template_version_id");
     expect(cycleInsert?.sql).toContain("ct.content_type = 'PUSH_REMINDER'");
     expect(cycleInsert?.params[4]).toBe("30000000-0000-4000-8000-000000000001");
@@ -74,10 +79,12 @@ describe("reminder content snapshots (TASK-P4-009)", () => {
 
     await processReminderCycles(pool, "2026-08-13", { intervalDays: 7 });
 
-    const eligibilityQuery = queries.find((entry) =>
-      entry.sql.includes("FROM pregnancy_milestones pm"),
+    const eligibilityQuery = queries.find(
+      (entry) =>
+        entry.sql.includes("FROM pregnancy_milestones pm") ||
+        entry.sql.includes("JOIN pregnancy_milestones pm"),
     );
-    expect(eligibilityQuery?.params).toEqual(["2026-08-13", 7]);
+    expect(eligibilityQuery?.params).toEqual(["2026-08-13", 7, "Asia/Jakarta"]);
   });
 
   it("routes to push attempts only when an Android device is active", async () => {
@@ -85,7 +92,10 @@ describe("reminder content snapshots (TASK-P4-009)", () => {
     const client = {
       query: vi.fn(async (sql: string, params: unknown[] = []) => {
         queries.push({ sql, params });
-        if (sql.includes("FROM pregnancy_milestones pm")) {
+        if (
+          sql.includes("FROM pregnancy_milestones pm") ||
+          sql.includes("JOIN pregnancy_milestones pm")
+        ) {
           return {
             rows: [
               {

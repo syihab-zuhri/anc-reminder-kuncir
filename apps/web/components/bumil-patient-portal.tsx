@@ -282,7 +282,7 @@ export function BumilPatientPortal() {
                       <strong>
                         {nextMilestone.required_facility_policy === "PUSKESMAS_REQUIRED"
                           ? "Puskesmas Kuncir (Skrining Dokter Terpadu)"
-                          : "Posyandu / Praktik Bidan Desa Setempat"}
+                          : "TPMB / Praktik Mandiri Bidan Setempat"}
                       </strong>
                     </span>
                   </p>
@@ -400,7 +400,7 @@ export function BumilPatientPortal() {
                         <span>
                           {m.code === "K1" || m.code === "K5"
                             ? "Puskesmas (Dokter)"
-                            : "Posyandu / Bidan Desa"}
+                            : "TPMB / Bidan"}
                         </span>
                       </p>
                     </div>

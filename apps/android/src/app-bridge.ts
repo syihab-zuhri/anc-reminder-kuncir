@@ -54,8 +54,15 @@ export class CapacitorAppBridge {
       if (identity === null || typeof identity !== "object" || !("id" in identity)) return;
 
       const storage = new AndroidSecureStorage();
+      await storage.setMotherSession({
+        access_token: "anc_mt_session_cookie_bridge",
+        mother_id: (identity as { id: string }).id,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      });
       const nativePush = new CapacitorNativePushBridge();
-      const transport = new ApiDeviceRegistrationTransport(this.config.apiBaseUrl);
+      const transport = new ApiDeviceRegistrationTransport(
+        `${this.config.serverUrl}/api/mother-proxy`,
+      );
 
       this.pushCoordinator = new AndroidPushRegistrationCoordinator(nativePush, storage, transport);
       await this.pushCoordinator.synchronize();

@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
+import { ToastProvider } from "../lib/toast-context";
+import { NetworkStatusBanner } from "../components/network-status-banner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -29,7 +31,12 @@ type RootLayoutProps = Readonly<{
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="id">
-      <body>{children}</body>
+      <body>
+        <ToastProvider>
+          <NetworkStatusBanner />
+          {children}
+        </ToastProvider>
+      </body>
     </html>
   );
 }

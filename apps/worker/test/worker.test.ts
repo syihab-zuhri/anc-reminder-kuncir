@@ -70,14 +70,17 @@ describe("one-shot worker bootstrap", () => {
       logger: loggerFor([]),
     });
 
-    const eligibility = statements.find((entry) =>
-      entry.sql.includes("FROM pregnancy_milestones pm"),
+    const eligibility = statements.find(
+      (entry) =>
+        entry.sql.includes("FROM pregnancy_milestones pm") ||
+        entry.sql.includes("JOIN pregnancy_milestones pm"),
     );
     expect(eligibility).toBeDefined();
     expect(eligibility?.params?.[0]).toBe(
       localDateString(new Date(), workerConfig.primaryTimezone),
     );
     expect(eligibility?.params?.[1]).toBe(workerConfig.reminderIntervalDays);
+    expect(eligibility?.params?.[2]).toBe(workerConfig.primaryTimezone);
   });
 
   it("fails before opening a pool when startup environment is invalid", async () => {

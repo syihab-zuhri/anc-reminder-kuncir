@@ -129,13 +129,92 @@ export class FcmHttpV1PushAdapter implements PushDeliveryAdapter {
 }
 
 export function createFcmPushAdapter(
-  projectId: string,
-  rawServiceAccountJson: string,
+  projectId?: string,
+  rawServiceAccountJson?: string,
 ): PushDeliveryAdapter {
+  if (
+    projectId === undefined ||
+    projectId.trim() === "" ||
+    projectId === "test-project-123" ||
+    rawServiceAccountJson === undefined ||
+    rawServiceAccountJson.trim() === ""
+  ) {
+    return new NtfyPushAdapter();
+  }
   return new FcmHttpV1PushAdapter(
     projectId,
     new GoogleServiceAccountAccessTokenProvider(rawServiceAccountJson),
   );
+}
+
+export class NtfyPushAdapter implements PushDeliveryAdapter {
+  public constructor(
+    private readonly baseUrl: string = "https://ntfy.posyandukkn26.my.id",
+    private readonly fetchImplementation: typeof fetch = fetch,
+  ) {}
+
+  public async send(message: PushMessage): Promise<PushDeliveryResult> {
+    try {
+      const targetUrl = this.baseUrl.replace(/\/+$/u, "");
+      const response = await this.fetchImplementation(targetUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify({
+          topic: message.token,
+          title: message.title,
+          message: message.body,
+          priority: 4,
+          tags: ["maternity", "calendar", message.milestoneCode.toLowerCase()],
+          click: "https://posyandukkn26.my.id/mother",
+          actions: [
+            {
+              action: "view",
+              label: "Buka Portal Ibu",
+              url: "https://posyandukkn26.my.id/mother",
+              clear: true,
+            },
+          ],
+        }),
+      });
+
+      const payload = await readJsonResponse(response);
+      if (response.ok) {
+        const providerMessageId = stringProperty(payload, "id") ?? "ntfy-" + Date.now().toString();
+        return { status: "SUCCESS", providerMessageId };
+      }
+
+      const retryAfterSeconds = parseRetryAfter(response.headers.get("retry-after"));
+      if (retryableHttpStatuses.has(response.status)) {
+        return {
+          status: "RETRYABLE_FAILURE",
+          errorCode: `HTTP_${response.status}`,
+          invalidateDevice: false,
+          ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
+        };
+      }
+
+      return {
+        status: "TERMINAL_FAILURE",
+        errorCode: `HTTP_${response.status}`,
+        invalidateDevice: response.status === 404,
+      };
+    } catch {
+      return {
+        status: "RETRYABLE_FAILURE",
+        errorCode: "NETWORK_UNAVAILABLE",
+        invalidateDevice: false,
+      };
+    }
+  }
+}
+
+export function createNtfyPushAdapter(
+  baseUrl?: string,
+  fetchImplementation?: typeof fetch,
+): PushDeliveryAdapter {
+  return new NtfyPushAdapter(baseUrl, fetchImplementation);
 }
 
 function parseServiceAccount(raw: string): ServiceAccountJson {
