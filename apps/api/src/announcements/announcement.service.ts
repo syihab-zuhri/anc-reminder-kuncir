@@ -4,22 +4,66 @@ import type {
   AnnouncementCreateResponse,
   AnnouncementListResponse,
 } from "@anc/contracts";
-import type { DeviceTokenCrypto } from "@anc/database";
 
 import type { StaffActor } from "../auth/staff-auth.types.js";
 import type { Clock } from "../auth/staff-auth.service.js";
 import { AuditService } from "../audit/audit.service.js";
 import { AuthorizationPolicy } from "../authorization/authorization.policy.js";
-import type { PushDeliveryAdapter } from "../scheduler/scheduler.service.js";
 import type { AnnouncementRepository } from "./announcement.repository.js";
+
+const NTFY_BASE_URL = "https://ntfy.posyandukkn26.my.id";
+const NTFY_BROADCAST_TOPIC = "posyandu-broadcast";
+
+/**
+ * Kirim pengumuman ke topic ntfy statis `posyandu-broadcast`.
+ * Semua HP bumil yang subscribe topic ini akan menerima notifikasi
+ * tanpa perlu FCM credentials atau per-device token decryption.
+ */
+async function sendNtfyBroadcast(
+  title: string,
+  body: string,
+  announcementId: string,
+): Promise<{ readonly success: boolean; readonly providerMessageId: string | null }> {
+  try {
+    const url = `${NTFY_BASE_URL.replace(/\/+$/u, "")}/${NTFY_BROADCAST_TOPIC}`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        topic: NTFY_BROADCAST_TOPIC,
+        title,
+        message: body,
+        priority: 4,
+        tags: ["loudspeaker", "posyandu"],
+        click: "https://posyandukkn26.my.id/mother",
+        actions: [
+          {
+            action: "view",
+            label: "Buka Portal Ibu",
+            url: "https://posyandukkn26.my.id/mother",
+            clear: true,
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      return { success: false, providerMessageId: null };
+    }
+
+    const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
+    const id = typeof payload?.["id"] === "string" ? payload["id"] : `ntfy-${announcementId}`;
+    return { success: true, providerMessageId: id };
+  } catch {
+    return { success: false, providerMessageId: null };
+  }
+}
 
 @Injectable()
 export class AnnouncementService {
   public constructor(
     private readonly repository: AnnouncementRepository,
     private readonly policy: AuthorizationPolicy,
-    private readonly tokenCrypto: DeviceTokenCrypto,
-    private readonly pushAdapter: PushDeliveryAdapter,
     private readonly audit: AuditService,
     private readonly clock: Clock,
   ) {}
@@ -38,60 +82,29 @@ export class AnnouncementService {
       occurredAt,
     });
 
-    // Broadcast to all ACTIVE Android devices. Sequential with light pacing to
-    // avoid hammering the ntfy broker; failures are captured per-device, not
-    // allowed to abort the batch.
+    // Kirim ke topic ntfy broadcast statis — semua subscriber terima sekaligus.
+    const result = await sendNtfyBroadcast(
+      announcement.title,
+      announcement.body,
+      announcement.id,
+    );
+
+    // Catat 1 delivery record mewakili broadcast (device_id = null tidak diizinkan
+    // skema, jadi simpan sebagai virtual device ID = announcement.id agar constraint
+    // unique terpenuhi). Kita reuse announcement_id sebagai scope marker.
+    const successCount = result.success ? 1 : 0;
+    const failedCount = result.success ? 0 : 1;
+
+    // Coba rekam ke tabel deliveries jika ada device aktif, otherwise catat broadcast.
     const devices = await this.repository.listActiveDevices();
-    let successCount = 0;
-    let failedCount = 0;
-
-    for (const device of devices) {
-      let pushToken: string;
-      try {
-        pushToken = this.tokenCrypto.decrypt(device.pushTokenEnvelope);
-      } catch {
-        pushToken = "";
-      }
-
-      if (pushToken === "") {
-        failedCount += 1;
+    if (devices.length > 0) {
+      for (const device of devices) {
         await this.repository.recordDelivery({
           announcementId: announcement.id,
           deviceId: device.id,
-          status: "FAILED",
-          providerMessageId: null,
-          errorCode: "DECRYPT_FAILED",
-          occurredAt: this.clock(),
-        });
-        continue;
-      }
-
-      const result = await this.pushAdapter.send({
-        token: pushToken,
-        title: announcement.title,
-        body: announcement.body,
-        reminderCycleId: announcement.id,
-        milestoneCode: "K1", // satisfies adapter contract; routing payload
-      });
-
-      if (result.status === "SUCCESS") {
-        successCount += 1;
-        await this.repository.recordDelivery({
-          announcementId: announcement.id,
-          deviceId: device.id,
-          status: "SUCCESS",
+          status: result.success ? "SUCCESS" : "FAILED",
           providerMessageId: result.providerMessageId,
-          errorCode: null,
-          occurredAt: this.clock(),
-        });
-      } else {
-        failedCount += 1;
-        await this.repository.recordDelivery({
-          announcementId: announcement.id,
-          deviceId: device.id,
-          status: "FAILED",
-          providerMessageId: null,
-          errorCode: result.errorCode,
+          errorCode: result.success ? null : "NTFY_BROADCAST_FAILED",
           occurredAt: this.clock(),
         });
       }
@@ -117,7 +130,7 @@ export class AnnouncementService {
       body: announcement.body,
       created_at: announcement.createdAt.toISOString(),
       sent_at: (announcement.sentAt ?? occurredAt).toISOString(),
-      total_devices: successCount + failedCount,
+      total_devices: devices.length > 0 ? devices.length : successCount + failedCount,
       success_count: successCount,
       failed_count: failedCount,
     };
