@@ -26,6 +26,8 @@ export function staffCookieOptions(
   };
 }
 
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
 export function trustedMutationOrigin(
   requestUrl: string,
   origin: string | null,
@@ -33,8 +35,25 @@ export function trustedMutationOrigin(
 ): boolean {
   if (origin === null) return false;
   try {
-    const expectedOrigin = new URL(configuredAppBaseUrl ?? requestUrl).origin;
-    return new URL(origin).origin === expectedOrigin && origin === new URL(origin).origin;
+    const originParsed = new URL(origin);
+    if (origin !== originParsed.origin) return false;
+
+    const requestParsed = new URL(requestUrl);
+    if (originParsed.origin === requestParsed.origin) return true;
+
+    if (
+      LOOPBACK_HOSTS.has(originParsed.hostname) &&
+      LOOPBACK_HOSTS.has(requestParsed.hostname) &&
+      originParsed.port === requestParsed.port
+    ) {
+      return true;
+    }
+
+    if (configuredAppBaseUrl !== undefined && configuredAppBaseUrl.trim().length > 0) {
+      const configuredParsed = new URL(configuredAppBaseUrl);
+      if (originParsed.origin === configuredParsed.origin) return true;
+    }
+    return false;
   } catch {
     return false;
   }

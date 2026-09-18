@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const motherAccessValidateRequestSchema = z
   .object({
-    full_name: z.string().trim().min(1).max(160),
+    full_name: z.string().trim().min(1).max(160).optional(),
     access_code: z.string().trim().min(1).max(64),
   })
   .strict();

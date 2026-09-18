@@ -475,6 +475,23 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
                 value={hemoglobinGdl}
                 onChange={(e) => setHemoglobinGdl(e.target.value)}
               />
+              {Number(hemoglobinGdl) > 0 && Number(hemoglobinGdl) < 11.0 && (
+                <div
+                  style={{
+                    marginTop: "0.35rem",
+                    padding: "0.4rem 0.6rem",
+                    background: "#fef3c7",
+                    border: "1px solid #fde68a",
+                    borderRadius: "6px",
+                    fontSize: "0.78rem",
+                    color: "#92400e",
+                    fontWeight: 600,
+                  }}
+                >
+                  ⚠️ Indikasi Anemia (Hb &lt; 11.0 g/dL): Rekomendasikan evaluasi kepatuhan Tablet
+                  Tambah Darah (TTD) &amp; konsultasi nutrisi.
+                </div>
+              )}
               <small className="field-help">
                 Standar anemia: &lt; 11.0 g/dL (Trimester 1 &amp; 3); &lt; 10.5 g/dL (Trimester 2).
               </small>
@@ -512,6 +529,23 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
                 />
               </div>
             </div>
+
+            {(Number(systolicMmHg) >= 140 || Number(diastolicMmHg) >= 90) && (
+              <div
+                style={{
+                  padding: "0.4rem 0.6rem",
+                  background: "#fee2e2",
+                  border: "1px solid #fecaca",
+                  borderRadius: "6px",
+                  fontSize: "0.78rem",
+                  color: "#991b1b",
+                  fontWeight: 600,
+                }}
+              >
+                🚨 Waspada Hipertensi / Risiko Preeklamsia (TD ≥ 140/90 mmHg): Segera jadwalkan
+                pemeriksaan dokter &amp; tes proteinuria.
+              </div>
+            )}
 
             <div className="form-group" style={{ margin: 0 }}>
               <label htmlFor="weight" style={{ fontWeight: 650, fontSize: "0.85rem" }}>

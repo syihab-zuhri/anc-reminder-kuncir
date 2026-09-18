@@ -142,12 +142,16 @@ export class ApiDeviceRegistrationTransport implements DeviceRegistrationTranspo
   }
 
   public async register(accessToken: string, pushToken: string): Promise<void> {
+    const headers: Record<string, string> = {
+      "content-type": "application/json",
+    };
+    if (accessToken && !accessToken.includes("cookie_bridge")) {
+      headers["authorization"] = `Bearer ${accessToken}`;
+    }
     const response = await this.fetchImplementation(this.endpoint, {
       method: "PUT",
-      headers: {
-        authorization: `Bearer ${accessToken}`,
-        "content-type": "application/json",
-      },
+      headers,
+      credentials: "include",
       body: JSON.stringify({ push_token: pushToken }),
       cache: "no-store",
     });

@@ -7,6 +7,11 @@ import type {
   Village,
 } from "@anc/contracts";
 import { useCallback, useEffect, useId, useState } from "react";
+import { useToast } from "../lib/toast-context";
+import { MotherAccessCodeModal } from "./mothers/mother-access-code-modal";
+import { MotherArchiveModal } from "./mothers/mother-archive-modal";
+import { MotherDetailModal } from "./mothers/mother-detail-modal";
+import { MotherEditModal } from "./mothers/mother-edit-modal";
 
 interface RegisteredMothersPanelProps {
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
@@ -26,6 +31,7 @@ interface RegisteredMothersPanelProps {
 }
 
 export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMothersPanelProps) {
+  const toast = useToast();
   const searchInputId = useId();
   const villageFilterId = useId();
   const statusFilterId = useId();
@@ -59,6 +65,7 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
   const [accessCodeError, setAccessCodeError] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
 
+  // Edit Patient Modal State
   const [editingMother, setEditingMother] = useState<MotherSummary | null>(null);
   const [editFullName, setEditFullName] = useState("");
   const [editAddress, setEditAddress] = useState("");
@@ -66,6 +73,8 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
   const [editReason, setEditReason] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+
+  // Archive Patient Modal State
   const [archiveMother, setArchiveMother] = useState<MotherSummary | null>(null);
   const [archiveReason, setArchiveReason] = useState("");
   const [archiving, setArchiving] = useState(false);
@@ -148,7 +157,7 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
 
       try {
         const params = new URLSearchParams();
-        params.set("limit", "20");
+        params.set("limit", "10");
         if (search.trim()) params.set("search", search.trim());
         if (villageId.trim()) params.set("village_id", villageId.trim());
         if (status !== "ALL") params.set("pregnancy_status", status);
@@ -206,7 +215,7 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
       setError(null);
       try {
         const params = new URLSearchParams();
-        params.set("limit", "20");
+        params.set("limit", "10");
         if (searchQuery.trim()) params.set("search", searchQuery.trim());
         if (selectedVillageId.trim()) params.set("village_id", selectedVillageId.trim());
         if (selectedStatus !== "ALL") params.set("pregnancy_status", selectedStatus);
@@ -240,6 +249,73 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
       }
     }
   }, [userRole, selectedVillageId, selectedStatus, searchQuery]);
+
+  // Handle Export to CSV
+  function handleExportCSV(): void {
+    if (mothers.length === 0) {
+      toast.info("Tidak ada data untuk diekspor");
+      return;
+    }
+
+    const headers = [
+      "No",
+      "ID Pasien",
+      "Nama Lengkap",
+      "Desa / Dusun",
+      "Alamat Domisili",
+      "Nomor HP (Tersamar)",
+      "Status Kehamilan",
+      "Tanggal HPHT",
+      "Usia Kehamilan (Minggu)",
+      "Trimester",
+      "Tanggal Terdaftar",
+    ];
+
+    const rows = mothers.map((m, idx) => {
+      const villageName =
+        m.village_name ?? villages.find((v) => v.id === m.village_id)?.name ?? "-";
+      const pregnancy = m.active_pregnancy;
+      const statusLabel = pregnancy
+        ? pregnancy.status === "ACTIVE"
+          ? "Aktif"
+          : pregnancy.status
+        : "Tidak Ada";
+
+      const hpht = pregnancy?.dating_date ?? "-";
+      const gaDisplay = pregnancy
+        ? `${pregnancy.completed_weeks} mgg ${pregnancy.completed_days} hr`
+        : "-";
+      const trimester = pregnancy?.trimester_label ?? "-";
+      const registeredAt = m.created_at ? new Date(m.created_at).toLocaleDateString("id-ID") : "-";
+
+      return [
+        idx + 1,
+        `"${m.id}"`,
+        `"${(m.full_name || "").replace(/"/g, '""')}"`,
+        `"${villageName.replace(/"/g, '""')}"`,
+        `"${(m.address || "").replace(/"/g, '""')}"`,
+        `"${m.phone_masked || "-"}"`,
+        `"${statusLabel}"`,
+        `"${hpht}"`,
+        `"${gaDisplay}"`,
+        `"${trimester}"`,
+        `"${registeredAt}"`,
+      ].join(",");
+    });
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const dateStr = new Date().toISOString().split("T")[0];
+    link.setAttribute("href", url);
+    link.setAttribute("download", `data-ibu-hamil-anc-${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success("Data ibu hamil berhasil diekspor ke format CSV/Excel");
+  }
 
   // Handle Search Submission
   function handleSearchSubmit(e: React.FormEvent): void {
@@ -322,16 +398,20 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
         MotherAccessCredentialIssueResponse | { error?: { message?: string } } | null;
 
       if (!res.ok || !data || "error" in data || !("one_time_code" in data)) {
-        setAccessCodeError(
+        const err =
           (data as { error?: { message?: string } })?.error?.message ??
-            "Gagal menerbitkan kode akses ibu hamil.",
-        );
+          "Gagal menerbitkan kode akses ibu hamil.";
+        setAccessCodeError(err);
+        toast.error(err, "Penerbitan Gagal");
         return;
       }
 
       setIssuedCode(data.one_time_code);
+      toast.success(`Kode akses ${data.one_time_code} berhasil diterbitkan.`, "Kode Akses Siap");
     } catch {
-      setAccessCodeError("Terjadi gangguan jaringan saat menerbitkan kode akses.");
+      const connErr = "Terjadi gangguan jaringan saat menerbitkan kode akses.";
+      setAccessCodeError(connErr);
+      toast.error(connErr, "Koneksi Terputus");
     } finally {
       setIssuingCode(false);
     }
@@ -343,9 +423,10 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
     try {
       await navigator.clipboard.writeText(issuedCode);
       setCopiedCode(true);
+      toast.success("Kode akses berhasil disalin ke clipboard.", "Tersalin");
       setTimeout(() => setCopiedCode(false), 3000);
     } catch {
-      // Best-effort copy fallback
+      toast.error("Gagal menyalin kode otomatis. Silakan salin secara manual.", "Salin Manual");
     }
   }
 
@@ -358,35 +439,48 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
     setEditError(null);
   }
 
-  async function handleSaveEdit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault();
+  async function handleSaveEdit(e: React.FormEvent): Promise<void> {
+    e.preventDefault();
     if (!editingMother) return;
     setSavingEdit(true);
     setEditError(null);
+
+    const bodyPayload: Record<string, unknown> = {
+      idempotency_key: crypto.randomUUID(),
+      full_name: editFullName.trim(),
+      address: editAddress.trim(),
+      reason: editReason.trim(),
+    };
+    if (editPhone.trim()) {
+      bodyPayload.phone_number = editPhone.trim();
+    }
+
     try {
-      const response = await fetch(
-        `/api/staff-proxy/mothers/${encodeURIComponent(editingMother.id)}`,
-        {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            idempotency_key: crypto.randomUUID(),
-            full_name: editFullName.trim(),
-            address: editAddress.trim(),
-            ...(editPhone.trim() ? { phone_number: editPhone.trim() } : {}),
-            reason: editReason.trim(),
-          }),
-        },
-      );
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        setEditError(data?.error?.message ?? "Data Ibu Hamil belum dapat diperbarui.");
+      const res = await fetch(`/api/staff-proxy/mothers/${encodeURIComponent(editingMother.id)}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(bodyPayload),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        const msg = errData?.error?.message ?? errData?.message ?? "Gagal memperbarui data ibu.";
+        setEditError(msg);
+        toast.error(msg, "Perubahan Gagal");
         return;
       }
+
+      const updated = (await res.json()) as MotherSummary;
+      setMothers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+      toast.success(
+        `Data ibu hamil "${updated.full_name}" berhasil diperbarui.`,
+        "Pembaruan Berhasil",
+      );
       setEditingMother(null);
-      await fetchMothers();
     } catch {
-      setEditError("Koneksi terputus saat menyimpan perubahan data.");
+      const msg = "Terjadi gangguan koneksi saat menyimpan perubahan data.";
+      setEditError(msg);
+      toast.error(msg, "Koneksi Terputus");
     } finally {
       setSavingEdit(false);
     }
@@ -398,55 +492,64 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
     setArchiveError(null);
   }
 
-  async function handleArchive(event: React.FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault();
+  async function handleArchive(e: React.FormEvent): Promise<void> {
+    e.preventDefault();
     if (!archiveMother) return;
     setArchiving(true);
     setArchiveError(null);
+
     try {
-      const activePregnancy = archiveMother.active_pregnancy;
-      if (activePregnancy !== null) {
-        const closeResponse = await fetch(
-          `/api/staff-proxy/pregnancies/${encodeURIComponent(activePregnancy.id)}/close`,
+      if (archiveMother.active_pregnancy) {
+        const closeRes = await fetch(
+          `/api/staff-proxy/pregnancies/${encodeURIComponent(archiveMother.active_pregnancy.id)}/close`,
           {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
               idempotency_key: crypto.randomUUID(),
-              reason: `Pengarsipan data Ibu Hamil: ${archiveReason.trim()}`,
+              reason: `Penutupan sebelum pengarsipan: ${archiveReason.trim()}`,
             }),
           },
         );
-        if (!closeResponse.ok) {
-          const data = await closeResponse.json().catch(() => null);
-          setArchiveError(
-            data?.error?.message ?? "Kehamilan aktif belum dapat ditutup untuk pengarsipan.",
-          );
+        if (!closeRes.ok) {
+          const errData = await closeRes.json().catch(() => null);
+          const msg =
+            errData?.error?.message ??
+            errData?.message ??
+            "Gagal menutup kehamilan aktif pasien sebelum pengarsipan.";
+          setArchiveError(msg);
+          toast.error(msg, "Pengarsipan Gagal");
           return;
         }
-        setArchiveMother({ ...archiveMother, active_pregnancy: null });
       }
 
-      const response = await fetch(
-        `/api/staff-proxy/mothers/${encodeURIComponent(archiveMother.id)}`,
-        {
-          method: "DELETE",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            idempotency_key: crypto.randomUUID(),
-            reason: archiveReason.trim(),
-          }),
-        },
-      );
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        setArchiveError(data?.error?.message ?? "Data Ibu Hamil belum dapat diarsipkan.");
+      const res = await fetch(`/api/staff-proxy/mothers/${encodeURIComponent(archiveMother.id)}`, {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          idempotency_key: crypto.randomUUID(),
+          reason: archiveReason.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        const msg = errData?.error?.message ?? errData?.message ?? "Gagal mengarsipkan data ibu.";
+        setArchiveError(msg);
+        toast.error(msg, "Pengarsipan Gagal");
         return;
       }
+
+      setMothers((prev) => prev.filter((m) => m.id !== archiveMother.id));
+      toast.success(
+        `Data rekam medis "${archiveMother.full_name}" berhasil diarsipkan.`,
+        "Pengarsipan Berhasil",
+      );
       setArchiveMother(null);
-      await fetchMothers();
     } catch {
-      setArchiveError("Koneksi terputus saat mengarsipkan data.");
+      const msg = "Terjadi gangguan jaringan saat mengarsipkan data.";
+      setArchiveError(msg);
+      toast.error(msg, "Koneksi Terputus");
     } finally {
       setArchiving(false);
     }
@@ -458,287 +561,322 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
         <span className="staff-panel-badge badge-warning">Deny by Default</span>
         <h3>Data Ibu Hamil Terdaftar Tidak Tersedia untuk Super Admin</h3>
         <p>
-          Sesuai kebijakan keamanan dan privasi data kesehatan pasien, akun Super Admin dibatasi
-          secara ketat dan tidak diperkenankan membaca data medis operasional pasien.
+          Sesuai standar privasi data medis (Permenkes 24/2022), Super Admin hanya mengelola
+          konfigurasi teknis sistem dan tidak diberikan akses membaca rekam medis pasien.
         </p>
       </div>
     );
   }
 
-  // Compute Summary Counters from loaded items
-  const totalLoaded = mothers.length;
-  const activeCount = mothers.filter((m) => m.active_pregnancy?.status === "ACTIVE").length;
-  const closedCount = mothers.filter(
-    (m) => !m.active_pregnancy || m.active_pregnancy.status === "CLOSED",
-  ).length;
-
   return (
     <div className="staff-panel-card mothers-registry-panel">
       {/* Header */}
       <header className="staff-panel-header">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "1rem",
-          }}
-        >
-          <div>
-            <span className="staff-kicker">Data Pasien Terdaftar / Registry Wilayah</span>
-            <h2>Daftar Ibu Hamil Terdaftar</h2>
-            <p style={{ color: "var(--ink-muted)", fontSize: "0.92rem", margin: "0.25rem 0 0" }}>
-              Kelola, pantau linimasa ANC (K1–K8), dan terbitkan kode akses mandiri pasien dalam
-              wilayah binaan Anda.
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+        <div>
+          <span className="staff-kicker">Data Pasien Wilayah Kerja</span>
+          <h2>Daftar Ibu Hamil Terdaftar</h2>
+          <p className="field-hint">
+            Kelola dan pantau seluruh data kehamilan ibu di wilayah Puskesmas &amp; Posyandu.
+          </p>
+        </div>
+        <div>
+          {onNavigateTab && (
             <button
               type="button"
-              className="btn-secondary"
-              onClick={() => void fetchMothers()}
-              disabled={loading}
+              className="btn-primary"
+              onClick={() => onNavigateTab("register")}
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
             >
-              {loading ? "Memuat..." : "Segarkan Data"}
-            </button>
-            {onNavigateTab && (
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => onNavigateTab("register")}
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                width="16"
+                height="16"
+                aria-hidden="true"
               >
-                + Daftarkan Ibu Hamil Baru
-              </button>
-            )}
-          </div>
+                <path d="M10 4v12M4 10h12" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span>Daftarkan Pasien Baru</span>
+            </button>
+          )}
         </div>
       </header>
 
-      {/* Summary Metrics Row */}
-      <div className="metrics-row" style={{ marginBottom: "1.75rem" }}>
-        <div className="metric-card">
-          <span className="metric-label">Total Terdaftar (Tampil)</span>
-          <strong className="metric-value">{totalLoaded}</strong>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Kehamilan Aktif</span>
-          <strong className="metric-value" style={{ color: "#059669" }}>
-            {activeCount}
-          </strong>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Riwayat / Selesai</span>
-          <strong className="metric-value" style={{ color: "var(--ink-muted)" }}>
-            {closedCount}
-          </strong>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Cakupan Wilayah</span>
-          <strong
-            className="metric-value"
-            style={{ fontSize: "1.4rem", alignSelf: "center", margin: "auto 0" }}
-          >
-            {villages.length > 0 ? `${villages.length} Desa Binaan` : "Wilayah Puskesmas"}
-          </strong>
-        </div>
-      </div>
-
-      {/* Search & Filters Bar */}
-      <div
-        className="mothers-filter-card"
-        style={{
-          padding: "1.25rem",
-          background: "var(--paper)",
-          border: "1px solid var(--line)",
-          marginBottom: "1.5rem",
-        }}
-      >
-        <form
-          onSubmit={handleSearchSubmit}
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(13rem, 1fr)) auto",
-            gap: "1rem",
-            alignItems: "end",
-          }}
-        >
-          {/* Search Input */}
-          <div className="form-group" style={{ margin: 0 }}>
+      {/* Filter & Search Bar */}
+      <section className="mothers-filter-card" aria-label="Filter dan Pencarian Ibu Hamil">
+        <form onSubmit={handleSearchSubmit} className="mothers-filter-form">
+          {/* Search Query Input */}
+          <div className="filter-group">
             <label htmlFor={searchInputId}>Pencarian Pasien</label>
-            <input
-              id={searchInputId}
-              className="staff-input"
-              type="text"
-              placeholder="Cari nama ibu hamil atau telepon…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+            <div className="input-with-icon">
+              <input
+                id={searchInputId}
+                type="search"
+                className="staff-input"
+                placeholder="Cari nama lengkap pasien…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <button
+                type="submit"
+                className="btn-search"
+                aria-label="Jalankan Pencarian"
+                title="Cari"
+              >
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  width="16"
+                  height="16"
+                  aria-hidden="true"
+                >
+                  <circle cx="8.5" cy="8.5" r="5.5" />
+                  <path d="m13 13 4 4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
           </div>
 
-          {/* Village Filter */}
-          <div className="form-group" style={{ margin: 0 }}>
+          {/* Village Filter Dropdown */}
+          <div className="filter-group">
             <label htmlFor={villageFilterId}>Filter Desa / Dusun</label>
             <select
               id={villageFilterId}
-              className="staff-input"
+              className="staff-select"
               value={selectedVillageId}
               onChange={(e) => setSelectedVillageId(e.target.value)}
             >
-              <option value="">-- Semua Desa --</option>
+              <option value="">Semua Desa ({villages.length} Desa Terdaftar)</option>
               {villages.map((v) => (
                 <option key={v.id} value={v.id}>
-                  Desa {v.name}
+                  Desa {v.name} ({v.code})
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Status Filter */}
-          <div className="form-group" style={{ margin: 0 }}>
+          {/* Pregnancy Status Filter */}
+          <div className="filter-group">
             <label htmlFor={statusFilterId}>Status Kehamilan</label>
             <select
               id={statusFilterId}
-              className="staff-input"
+              className="staff-select"
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value as "ALL" | "ACTIVE" | "CLOSED")}
             >
               <option value="ALL">Semua Status</option>
-              <option value="ACTIVE">Kehamilan Aktif Saja</option>
-              <option value="CLOSED">Selesai / Riwayat</option>
+              <option value="ACTIVE">Kehamilan Aktif</option>
+              <option value="CLOSED">Selesai / Ditutup</option>
             </select>
           </div>
 
-          {/* Action Buttons */}
-          <div className="mothers-filter-actions" style={{ display: "flex", gap: "0.5rem" }}>
-            <button className="btn-primary" type="submit" disabled={loading}>
-              Cari
-            </button>
-            {(searchQuery || selectedVillageId || selectedStatus !== "ALL") && (
+          {/* Reset Filters Button */}
+          {(searchQuery || selectedVillageId || selectedStatus !== "ALL") && (
+            <div className="filter-group filter-actions">
               <button
-                className="btn-secondary"
                 type="button"
+                className="btn-secondary btn-reset-filters"
                 onClick={handleResetFilters}
-                disabled={loading}
               >
-                Reset
+                Reset Filter
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </form>
-      </div>
-
-      {/* Feedback Messages */}
-      {error && (
-        <div className="staff-alert alert-error" style={{ marginBottom: "1.5rem" }}>
-          <p>{error}</p>
-        </div>
-      )}
+      </section>
 
       {/* Loading State */}
       {loading && (
-        <div style={{ padding: "3rem 1rem", textAlign: "center" }}>
-          <div className="loading-spinner" style={{ margin: "0 auto 1rem" }} />
-          <p style={{ color: "var(--ink-muted)", fontSize: "0.95rem" }}>Memuat data ibu hamil…</p>
+        <div className="mothers-loading-state" aria-busy="true">
+          <div className="loading-spinner" />
+          <p>Memuat daftar ibu hamil dari database…</p>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="staff-alert alert-error" role="alert">
+          <p>{error}</p>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => void fetchMothers()}
+            style={{ marginTop: "0.5rem" }}
+          >
+            Coba Muat Ulang
+          </button>
         </div>
       )}
 
       {/* Empty State */}
-      {!loading && mothers.length === 0 && (
-        <div
-          style={{
-            padding: "3.5rem 1.5rem",
-            textAlign: "center",
-            background: "var(--paper)",
-            border: "1px dashed var(--line-strong)",
-            borderRadius: "4px",
-          }}
-        >
-          <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>Data</div>
-          <h3 style={{ fontSize: "1.25rem", fontWeight: 700, margin: "0 0 0.5rem" }}>
-            Belum Ada Data Ibu Hamil yang Ditemukan
-          </h3>
-          <p
-            style={{
-              color: "var(--ink-muted)",
-              fontSize: "0.9rem",
-              maxWidth: "28rem",
-              margin: "0 auto 1.5rem",
-            }}
-          >
+      {!loading && !error && mothers.length === 0 && (
+        <div className="mothers-empty-state">
+          <div className="empty-state-icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              width="48"
+              height="48"
+            >
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </div>
+          <h3>Tidak Ada Data Ibu Hamil Ditemukan</h3>
+          <p>
             {searchQuery || selectedVillageId || selectedStatus !== "ALL"
-              ? "Tidak ada pasien yang sesuai dengan kata kunci pencarian atau filter yang dipilih."
-              : "Belum ada ibu hamil yang terdaftar di sistem. Mulai dengan mendaftarkan ibu hamil baru."}
+              ? "Tidak ada data ibu hamil yang sesuai dengan kriteria filter yang Anda pilih."
+              : "Belum ada ibu hamil yang didaftarkan ke sistem di fasilitas ini."}
           </p>
-          {onNavigateTab && (
-            <button type="button" className="btn-primary" onClick={() => onNavigateTab("register")}>
-              + Daftarkan Ibu Hamil Sekarang
+          {searchQuery || selectedVillageId || selectedStatus !== "ALL" ? (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={handleResetFilters}
+              style={{ marginTop: "0.75rem" }}
+            >
+              Hapus Semua Filter
             </button>
-          )}
+          ) : onNavigateTab ? (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => onNavigateTab("register")}
+              style={{ marginTop: "0.75rem" }}
+            >
+              Daftarkan Ibu Hamil Pertama
+            </button>
+          ) : null}
         </div>
       )}
 
-      {/* Mothers Table */}
-      {!loading && mothers.length > 0 && (
-        <div className="table-responsive mothers-table-responsive">
-          <table className="staff-table mothers-table" style={{ width: "100%" }}>
+      {/* Table Toolbar: Info Counter & Ekspor CSV */}
+      {!loading && !error && mothers.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: "1.25rem",
+            marginBottom: "0.5rem",
+            flexWrap: "wrap",
+            gap: "0.5rem",
+          }}
+        >
+          <span className="field-hint" style={{ fontWeight: 600, color: "var(--ink-muted)" }}>
+            Menampilkan {mothers.length} data ibu hamil
+          </span>
+
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={handleExportCSV}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.35rem",
+              fontSize: "0.76rem",
+              padding: "0.25rem 0.65rem",
+              minHeight: "30px",
+            }}
+            title="Unduh seluruh data tabel ke file CSV/Excel"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              width="14"
+              height="14"
+              aria-hidden="true"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span>Ekspor CSV / Excel</span>
+          </button>
+        </div>
+      )}
+
+      {/* Data Table */}
+      {!loading && !error && mothers.length > 0 && (
+        <div className="table-responsive">
+          <table className="staff-table mothers-table">
             <thead>
               <tr>
-                <th style={{ minWidth: "12rem" }}>Nama &amp; Identitas</th>
-                <th style={{ minWidth: "11rem" }}>Kontak &amp; Wilayah</th>
-                <th style={{ minWidth: "14rem" }}>Usia Kehamilan &amp; Trimester</th>
-                <th style={{ minWidth: "9rem" }}>Waktu Terdaftar</th>
-                <th style={{ minWidth: "12rem", textAlign: "right" }}>Aksi</th>
+                <th scope="col" style={{ width: "30%" }}>
+                  Identitas Ibu Hamil
+                </th>
+                <th scope="col" style={{ width: "20%" }}>
+                  Wilayah / Kontak
+                </th>
+                <th scope="col" style={{ width: "25%" }}>
+                  Status Kehamilan Aktif
+                </th>
+                <th scope="col" style={{ width: "12%" }}>
+                  Terdaftar
+                </th>
+                <th scope="col" style={{ width: "13%", textAlign: "right" }}>
+                  Aksi
+                </th>
               </tr>
             </thead>
             <tbody>
               {mothers.map((mother) => {
                 const preg = mother.active_pregnancy;
-                const isPregnant = preg && preg.status === "ACTIVE";
-
                 return (
-                  <tr key={mother.id} style={{ transition: "background 0.15s ease" }}>
+                  <tr key={mother.id} className="mother-row">
                     {/* Column 1: Identity */}
-                    <td data-label="Nama & Identitas">
-                      <div style={{ display: "grid", gap: "0.2rem" }}>
-                        <strong style={{ fontSize: "1rem", color: "var(--ink)" }}>
-                          {mother.full_name}
-                        </strong>
-                        <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-                          <span
-                            className={`badge-status status-${isPregnant ? "active" : "due"}`}
-                            style={{ fontSize: "0.7rem", padding: "0.15rem 0.45rem" }}
-                          >
-                            {isPregnant ? "Hamil Aktif" : "Selesai / Non-Aktif"}
-                          </span>
+                    <td data-label="Identitas">
+                      <div className="mother-name-cell">
+                        <span className="mother-avatar-chip" aria-hidden="true">
+                          {mother.full_name.slice(0, 1).toUpperCase()}
+                        </span>
+                        <div>
+                          <strong className="mother-name-link">{mother.full_name}</strong>
+                          <div className="mother-meta-nik">
+                            Kontak: <code>{mother.phone_masked}</code>
+                          </div>
                         </div>
                       </div>
                     </td>
 
-                    {/* Column 2: Contact & Address */}
-                    <td data-label="Kontak & Wilayah">
-                      <div style={{ display: "grid", gap: "0.25rem", fontSize: "0.86rem" }}>
-                        <div>
-                          <strong style={{ color: "#0369a1" }}> {mother.phone_masked}</strong>
-                        </div>
-                        <div style={{ color: "var(--ink-muted)", fontSize: "0.82rem" }}>
+                    {/* Column 2: Region & Contact */}
+                    <td data-label="Wilayah & Kontak">
+                      <div style={{ display: "grid", gap: "0.2rem" }}>
+                        <span className="village-badge">
                           {mother.village_name ? `Desa ${mother.village_name}` : "Tanpa Desa"}
-                        </div>
-                        <small style={{ color: "var(--ink-faint)", lineHeight: 1.3 }}>
-                          {mother.address}
+                        </span>
+                        <small style={{ color: "var(--ink-muted)", fontSize: "0.8rem" }}>
+                          {mother.phone_masked}
                         </small>
                       </div>
                     </td>
 
-                    {/* Column 3: Gestational Age & Trimester */}
-                    <td data-label="Kehamilan">
+                    {/* Column 3: Active Pregnancy Status */}
+                    <td data-label="Status Kehamilan">
                       {preg ? (
-                        <div style={{ display: "grid", gap: "0.3rem" }}>
-                          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                        <div style={{ display: "grid", gap: "0.25rem" }}>
+                          <div
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "0.4rem",
+                            }}
+                          >
                             <span
+                              className="badge-status status-confirmed"
                               style={{
-                                padding: "0.2rem 0.5rem",
-                                background: "#1e3a8a",
+                                background: "#163d37",
                                 color: "#ffffff",
                                 fontSize: "0.72rem",
                                 fontWeight: 700,
@@ -857,206 +995,36 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
         </div>
       )}
 
+      {/* Edit Modal */}
       {editingMother && (
-        <div className="staff-modal-backdrop" role="presentation">
-          <div className="staff-modal-dialog modal-md" role="dialog" aria-modal="true">
-            <header className="staff-modal-header">
-              <div className="staff-modal-header-content">
-                <span className="staff-modal-kicker">Koreksi Data Administrasi</span>
-                <h3 className="staff-modal-title">Edit Data Pasien</h3>
-                <p className="staff-modal-subtitle">
-                  {editingMother.full_name} ({editingMother.phone_masked})
-                </p>
-              </div>
-              <button
-                type="button"
-                className="staff-modal-close-btn"
-                onClick={() => setEditingMother(null)}
-                aria-label="Tutup"
-              >
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  width="16"
-                  height="16"
-                >
-                  <path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            </header>
-
-            <form
-              onSubmit={handleSaveEdit}
-              style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}
-            >
-              <div className="staff-modal-body">
-                <p className="field-hint" style={{ margin: 0 }}>
-                  NIK tidak ditampilkan atau diubah di formulir ini. Kosongkan nomor telepon bila
-                  tidak berubah.
-                </p>
-                {editError && (
-                  <div className="staff-alert alert-error" style={{ margin: 0 }}>
-                    <p>{editError}</p>
-                  </div>
-                )}
-                <div className="form-group">
-                  <label htmlFor="edit-mother-name">Nama Lengkap Pasien *</label>
-                  <input
-                    id="edit-mother-name"
-                    className="staff-input"
-                    value={editFullName}
-                    onChange={(event) => setEditFullName(event.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="edit-mother-address">Alamat Domisili Lengkap *</label>
-                  <textarea
-                    id="edit-mother-address"
-                    className="staff-input"
-                    value={editAddress}
-                    onChange={(event) => setEditAddress(event.target.value)}
-                    rows={2}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="edit-mother-phone">Nomor Telepon Baru (Opsional)</label>
-                  <input
-                    id="edit-mother-phone"
-                    className="staff-input"
-                    inputMode="tel"
-                    value={editPhone}
-                    onChange={(event) => setEditPhone(event.target.value)}
-                    placeholder="Contoh: 0812 3456 7890"
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="edit-mother-reason">Alasan Perubahan Data *</label>
-                  <input
-                    id="edit-mother-reason"
-                    className="staff-input"
-                    value={editReason}
-                    onChange={(event) => setEditReason(event.target.value)}
-                    minLength={3}
-                    placeholder="Contoh: Koreksi ejaan nama sesuai KTP"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="staff-modal-footer">
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setEditingMother(null)}
-                  disabled={savingEdit}
-                >
-                  Batal
-                </button>
-                <button type="submit" className="btn-primary" disabled={savingEdit}>
-                  {savingEdit ? "Menyimpan..." : "Simpan Perubahan"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <MotherEditModal
+          mother={editingMother}
+          fullName={editFullName}
+          address={editAddress}
+          phone={editPhone}
+          reason={editReason}
+          saving={savingEdit}
+          error={editError}
+          onFullNameChange={setEditFullName}
+          onAddressChange={setEditAddress}
+          onPhoneChange={setEditPhone}
+          onReasonChange={setEditReason}
+          onSubmit={handleSaveEdit}
+          onClose={() => setEditingMother(null)}
+        />
       )}
 
+      {/* Archive Modal */}
       {archiveMother && (
-        <div className="staff-modal-backdrop" role="presentation">
-          <div className="staff-modal-dialog modal-md" role="dialog" aria-modal="true">
-            <header className="staff-modal-header" style={{ background: "#7f1d1d" }}>
-              <div className="staff-modal-header-content">
-                <span className="staff-modal-kicker" style={{ color: "#fca5a5" }}>
-                  Arsip Rekam Pasien
-                </span>
-                <h3 className="staff-modal-title">Hapus / Arsipkan Data</h3>
-                <p className="staff-modal-subtitle">
-                  {archiveMother.full_name} ({archiveMother.phone_masked})
-                </p>
-              </div>
-              <button
-                type="button"
-                className="staff-modal-close-btn"
-                onClick={() => setArchiveMother(null)}
-                aria-label="Tutup"
-              >
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  width="16"
-                  height="16"
-                >
-                  <path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            </header>
-
-            <form
-              onSubmit={handleArchive}
-              style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}
-            >
-              <div className="staff-modal-body">
-                <div className="staff-alert alert-error" style={{ margin: 0 }}>
-                  <p>
-                    Data tidak dimusnahkan. Rekam dan jejak audit dipertahankan, sedangkan akses
-                    portal dan perangkat pasien dicabut.
-                  </p>
-                </div>
-                {archiveMother.active_pregnancy && (
-                  <div className="staff-alert alert-info" style={{ margin: 0 }}>
-                    <p>
-                      Kehamilan aktif akan ditutup terlebih dahulu. Pengingat yang belum selesai
-                      akan dibatalkan secara tercatat.
-                    </p>
-                  </div>
-                )}
-                {archiveError && (
-                  <div className="staff-alert alert-error" style={{ margin: 0 }}>
-                    <p>{archiveError}</p>
-                  </div>
-                )}
-                <div className="form-group">
-                  <label htmlFor="archive-mother-reason">Alasan Pengarsipan Data *</label>
-                  <textarea
-                    id="archive-mother-reason"
-                    className="staff-input"
-                    value={archiveReason}
-                    onChange={(event) => setArchiveReason(event.target.value)}
-                    minLength={3}
-                    placeholder="Contoh: Pasien pindah domisili luar wilayah"
-                    rows={3}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="staff-modal-footer">
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setArchiveMother(null)}
-                  disabled={archiving}
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  style={{ background: "#b91c1c", borderColor: "#991b1b" }}
-                  disabled={archiving}
-                >
-                  {archiving ? "Mengarsipkan..." : "Arsipkan Data Pasien"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <MotherArchiveModal
+          mother={archiveMother}
+          reason={archiveReason}
+          archiving={archiving}
+          error={archiveError}
+          onReasonChange={setArchiveReason}
+          onSubmit={handleArchive}
+          onClose={() => setArchiveMother(null)}
+        />
       )}
 
       {/* Pagination / Load More Button */}
@@ -1074,468 +1042,31 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* PATIENT DETAIL & ANC TIMELINE MODAL                                       */}
-      {/* ========================================================================= */}
+      {/* Detail Modal */}
       {detailMother && (
-        <div
-          className="staff-modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="detail-modal-title"
-        >
-          <div className="staff-modal-dialog modal-lg">
-            {/* Modal Header */}
-            <header className="staff-modal-header">
-              <div className="staff-modal-header-content">
-                <span className="staff-modal-kicker">Detail Rekam Medis &amp; Linimasa</span>
-                <h3 id="detail-modal-title" className="staff-modal-title">
-                  {detailMother.full_name}
-                </h3>
-                <p className="staff-modal-subtitle">
-                  {detailMother.phone_masked} ·{" "}
-                  {detailMother.village_name ? `Desa ${detailMother.village_name}` : "Tanpa Desa"} ·{" "}
-                  {detailMother.address}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="staff-modal-close-btn"
-                onClick={() => setDetailMother(null)}
-                aria-label="Tutup Detail"
-              >
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  width="16"
-                  height="16"
-                >
-                  <path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            </header>
-
-            {/* Modal Body */}
-            <div className="staff-modal-body">
-              {/* Gestational Age Card */}
-              {detailMother.active_pregnancy ? (
-                <div
-                  className="mother-profile-card"
-                  style={{ padding: "1.15rem 1.25rem", margin: 0 }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      gap: "0.75rem",
-                    }}
-                  >
-                    <div>
-                      <span
-                        style={{
-                          fontSize: "0.74rem",
-                          fontWeight: 800,
-                          color: "var(--ink-muted)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                        }}
-                      >
-                        Usia Kehamilan Saat Ini
-                      </span>
-                      <div
-                        style={{
-                          fontSize: "1.35rem",
-                          fontWeight: 800,
-                          color: "var(--ink)",
-                          marginTop: "0.15rem",
-                        }}
-                      >
-                        {detailMother.active_pregnancy.completed_weeks} Minggu{" "}
-                        {detailMother.active_pregnancy.completed_days} Hari
-                      </div>
-                      <small style={{ color: "var(--ink-muted)", fontSize: "0.78rem" }}>
-                        Tanggal HPHT: <strong>{detailMother.active_pregnancy.dating_date}</strong>
-                      </small>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <span
-                        className="badge-status status-confirmed"
-                        style={{ fontSize: "0.8rem", padding: "0.3rem 0.75rem", fontWeight: 800 }}
-                      >
-                        {detailMother.active_pregnancy.trimester_label}
-                      </span>
-                      <div
-                        style={{
-                          marginTop: "0.3rem",
-                          fontSize: "0.75rem",
-                          color: "var(--ink-muted)",
-                        }}
-                      >
-                        Status: <strong>{detailMother.active_pregnancy.status}</strong>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="staff-alert alert-info" style={{ margin: 0 }}>
-                  <p>Pasien ini tidak memiliki riwayat kehamilan aktif saat ini.</p>
-                </div>
-              )}
-
-              {/* Milestones K1-K8 Section */}
-              <div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "0.75rem",
-                    flexWrap: "wrap",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <h4
-                    style={{
-                      margin: 0,
-                      fontSize: "1.05rem",
-                      fontWeight: 800,
-                      color: "var(--ink)",
-                    }}
-                  >
-                    Linimasa Paket ANC (K1 – K8)
-                  </h4>
-                  {milestones?.next_milestone_code && (
-                    <span
-                      style={{
-                        fontSize: "0.78rem",
-                        fontWeight: 800,
-                        color: "var(--ochre)",
-                        background: "rgba(225, 180, 92, 0.12)",
-                        padding: "0.2rem 0.55rem",
-                        borderRadius: "9999px",
-                      }}
-                    >
-                      Target: Milestone {milestones.next_milestone_code}
-                    </span>
-                  )}
-                </div>
-
-                {loadingMilestones && (
-                  <div style={{ padding: "2rem", textAlign: "center" }}>
-                    <div className="loading-spinner" style={{ margin: "0 auto 0.5rem" }} />
-                    <p style={{ fontSize: "0.85rem", color: "var(--ink-muted)" }}>
-                      Memuat jadwal pemeriksaan K1–K8…
-                    </p>
-                  </div>
-                )}
-
-                {milestonesError && (
-                  <div className="staff-alert alert-error">
-                    <p>{milestonesError}</p>
-                  </div>
-                )}
-
-                {milestones && (
-                  <div
-                    className="timeline-grid"
-                    style={{
-                      gridTemplateColumns: "repeat(auto-fill, minmax(11rem, 1fr))",
-                      gap: "0.65rem",
-                    }}
-                  >
-                    {milestones.milestones.map((m) => {
-                      const isConfirmed = m.visit_status === "CONFIRMED";
-                      const isDue = m.visit_status === "DUE";
-                      const isOverdue = m.visit_status === "OVERDUE";
-
-                      return (
-                        <div
-                          key={m.code}
-                          className="timeline-card"
-                          style={{
-                            padding: "0.75rem",
-                            background: isConfirmed
-                              ? "#f0fdf4"
-                              : isOverdue
-                                ? "#fef2f2"
-                                : isDue
-                                  ? "#fffbeb"
-                                  : "var(--paper)",
-                            borderColor: isConfirmed
-                              ? "#86efac"
-                              : isOverdue
-                                ? "#fca5a5"
-                                : isDue
-                                  ? "#fde047"
-                                  : "var(--line)",
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                            }}
-                          >
-                            <span className="timeline-code">{m.code}</span>
-                            <span
-                              className={`badge-status status-${m.visit_status.toLowerCase()}`}
-                              style={{ fontSize: "0.65rem", padding: "0.15rem 0.4rem" }}
-                            >
-                              {m.visit_status}
-                            </span>
-                          </div>
-
-                          <div
-                            style={{
-                              fontSize: "0.74rem",
-                              color: "var(--ink-muted)",
-                              fontWeight: 700,
-                            }}
-                          >
-                            {m.trimester_label}
-                          </div>
-
-                          <div style={{ fontSize: "0.74rem", color: "var(--ink)" }}>
-                            {m.due_at ? (
-                              <span>
-                                Jatuh Tempo: <strong>{m.due_at.slice(0, 10)}</strong>
-                              </span>
-                            ) : m.target_date_start && m.target_date_end ? (
-                              <span>
-                                {m.target_date_start} s/d {m.target_date_end}
-                              </span>
-                            ) : (
-                              <span>Sesuai Rekomendasi</span>
-                            )}
-                          </div>
-
-                          <div
-                            style={{
-                              fontSize: "0.7rem",
-                              color: "var(--ink-muted)",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "0.3rem",
-                            }}
-                          >
-                            <svg
-                              viewBox="0 0 20 20"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              width="12"
-                              height="12"
-                            >
-                              <path d="M10 2a5 5 0 0 0-5 5c0 3.75 5 9 5 9s5-5.25 5-9a5 5 0 0 0-5-5Z" />
-                              <circle cx="10" cy="7" r="1.5" />
-                            </svg>
-                            <span>
-                              {m.required_facility_policy === "PUSKESMAS_REQUIRED"
-                                ? "Puskesmas"
-                                : "Posyandu / Bidan"}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Quick Actions Inside Modal */}
-            <div className="staff-modal-footer">
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                {userRole === "PUSKESMAS" && (
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => {
-                      const target = detailMother;
-                      setDetailMother(null);
-                      handleOpenAccessCode(target);
-                    }}
-                  >
-                    Terbitkan Kode Akses
-                  </button>
-                )}
-                {onNavigateTab && (
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => {
-                      setDetailMother(null);
-                      onNavigateTab("confirm");
-                    }}
-                  >
-                    Konfirmasi Periksa
-                  </button>
-                )}
-              </div>
-
-              <button type="button" className="btn-primary" onClick={() => setDetailMother(null)}>
-                Tutup
-              </button>
-            </div>
-          </div>
-        </div>
+        <MotherDetailModal
+          mother={detailMother}
+          milestones={milestones}
+          loading={loadingMilestones}
+          error={milestonesError}
+          onClose={() => setDetailMother(null)}
+          onOpenAccessCode={handleOpenAccessCode}
+          isPuskesmas={userRole === "PUSKESMAS"}
+        />
       )}
 
-      {/* ========================================================================= */}
-      {/* QUICK ACCESS CODE MODAL                                                   */}
-      {/* ========================================================================= */}
+      {/* Quick Access Code Modal */}
       {accessCodeMother && (
-        <div
-          className="staff-modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="access-modal-title"
-        >
-          <div className="staff-modal-dialog modal-md">
-            <header className="staff-modal-header">
-              <div className="staff-modal-header-content">
-                <span className="staff-modal-kicker">Portal Mandiri Pasien</span>
-                <h3 id="access-modal-title" className="staff-modal-title">
-                  Kode Akses Pasien
-                </h3>
-                <p className="staff-modal-subtitle">
-                  {accessCodeMother.full_name} ({accessCodeMother.phone_masked})
-                </p>
-              </div>
-              <button
-                type="button"
-                className="staff-modal-close-btn"
-                onClick={() => setAccessCodeMother(null)}
-                aria-label="Tutup"
-              >
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  width="16"
-                  height="16"
-                >
-                  <path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            </header>
-
-            <div className="staff-modal-body">
-              <p style={{ color: "var(--ink-muted)", fontSize: "0.85rem", margin: 0 }}>
-                Pasien dapat masuk ke portal mandiri di <code>/mother/login</code> menggunakan Nama
-                Lengkap dan Kode Akses ini.
-              </p>
-
-              {accessCodeError && (
-                <div className="staff-alert alert-error" style={{ margin: 0 }}>
-                  <p>{accessCodeError}</p>
-                </div>
-              )}
-
-              {issuedCode ? (
-                <div style={{ display: "grid", gap: "1rem" }}>
-                  <div
-                    style={{
-                      padding: "1.35rem 1rem",
-                      background: "#0f172a",
-                      color: "#38bdf8",
-                      fontSize: "1.6rem",
-                      fontWeight: 900,
-                      fontFamily: "monospace",
-                      letterSpacing: "2.5px",
-                      textAlign: "center",
-                      borderRadius: "10px",
-                      boxShadow: "inset 0 2px 4px rgba(0,0,0,0.5)",
-                    }}
-                  >
-                    <code>{issuedCode}</code>
-                  </div>
-
-                  <div
-                    style={{
-                      padding: "0.85rem 1rem",
-                      background: "#fff1f2",
-                      border: "1px solid #fecdd3",
-                      borderRadius: "8px",
-                      color: "#be123c",
-                      fontSize: "0.82rem",
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    <strong>PERHATIAN KEAMANAN:</strong> Kode ini <u>HANYA DITAMPILKAN SATU KALI</u>
-                    . Segera serahkan atau catat kode ini sebelum menutup jendela.
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: "grid", gap: "0.75rem" }}>
-                  <p style={{ fontSize: "0.88rem", color: "var(--ink)", margin: 0 }}>
-                    Terbitkan kode akses 16-karakter format Crockford Base32 baru untuk{" "}
-                    <strong>{accessCodeMother.full_name}</strong>.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="staff-modal-footer">
-              {issuedCode ? (
-                <>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => void handleCopyCode()}
-                  >
-                    <span className="icon-label">
-                      <svg
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.75"
-                        width="15"
-                        height="15"
-                      >
-                        <rect x="7" y="7" width="10" height="10" rx="2" />
-                        <path d="M4 13V5a2 2 0 0 1 2-2h8" />
-                      </svg>
-                      <span>{copiedCode ? "Kode Tersalin!" : "Salin Kode Akses"}</span>
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setAccessCodeMother(null)}
-                  >
-                    Selesai &amp; Tutup
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setAccessCodeMother(null)}
-                    disabled={issuingCode}
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => void handleGenerateCode()}
-                    disabled={issuingCode}
-                  >
-                    {issuingCode ? "Menerbitkan Kode…" : "Terbitkan Kode Akses"}
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+        <MotherAccessCodeModal
+          mother={accessCodeMother}
+          issuedCode={issuedCode}
+          issuingCode={issuingCode}
+          accessCodeError={accessCodeError}
+          copiedCode={copiedCode}
+          onIssueCode={() => void handleGenerateCode()}
+          onCopyCode={() => void handleCopyCode()}
+          onClose={() => setAccessCodeMother(null)}
+        />
       )}
     </div>
   );

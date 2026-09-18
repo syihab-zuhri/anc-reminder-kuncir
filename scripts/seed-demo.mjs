@@ -12,7 +12,7 @@ async function seedData() {
 
     // Get health center
     const hcRes = await client.query("SELECT id FROM health_centers WHERE code = $1", [
-      "PKM_KUNCIR",
+      "PKM-KUNCIR",
     ]);
     const hcId = hcRes.rows[0].id;
 
@@ -69,7 +69,7 @@ async function seedData() {
       const planId = crypto.randomUUID();
       const staffRes = await client.query(
         "SELECT id FROM staff_users WHERE login_identifier = $1",
-        ["petugas.kuncir"],
+        ["puskesmas.kuncir"],
       );
       const authorId = staffRes.rows[0].id;
 

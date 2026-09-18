@@ -16,6 +16,7 @@ export function LoginForm({ notice }: LoginFormProps) {
   const router = useRouter();
   const [loginIdentifier, setLoginIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string>();
   const [pending, setPending] = useState(false);
 
@@ -83,21 +84,65 @@ export function LoginForm({ notice }: LoginFormProps) {
           <label htmlFor="password">Kata sandi</label>
           <span>Minimal 8 karakter, huruf dan angka</span>
         </div>
-        <input
-          id="password"
-          name="password"
-          className={error ? "input-has-error" : ""}
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(event) => {
-            setPassword(event.target.value);
-            if (error) setError(undefined);
-          }}
-          required
-          disabled={pending}
-          placeholder="Masukkan kata sandi"
-        />
+        <div className="staff-password-wrapper">
+          <input
+            id="password"
+            name="password"
+            className={error ? "input-has-error" : ""}
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => {
+              setPassword(event.target.value);
+              if (error) setError(undefined);
+            }}
+            required
+            disabled={pending}
+            placeholder="Masukkan kata sandi"
+          />
+          <button
+            type="button"
+            className="staff-password-toggle"
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+            title={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+          >
+            {showPassword ? (
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                width="18"
+                height="18"
+                aria-hidden="true"
+              >
+                <path
+                  d="M3.5 3.5l13 13M8.5 8.5a3 3 0 0 0 4.24 4.24M10 5.5c3.5 0 6.5 2.5 7.5 4.5a10.8 10.8 0 0 1-3.23 3.63M6.27 6.27A10.6 10.6 0 0 0 2.5 10c1 2 4 4.5 7.5 4.5.9 0 1.77-.16 2.57-.45"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ) : (
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                width="18"
+                height="18"
+                aria-hidden="true"
+              >
+                <path
+                  d="M2.5 10c1-2 4-4.5 7.5-4.5s6.5 2.5 7.5 4.5c-1 2-4 4.5-7.5 4.5S3.5 12 2.5 10z"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle cx="10" cy="10" r="3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
 
       {error === undefined ? null : (

@@ -9,6 +9,11 @@ import type {
   Village,
 } from "@anc/contracts";
 import { useCallback, useEffect, useState } from "react";
+import { AdminAssignmentsTab } from "./admin/admin-assignments-tab";
+import { AdminCarePlanTab } from "./admin/admin-careplan-tab";
+import { AdminFacilitiesTab } from "./admin/admin-facilities-tab";
+import { AdminStaffTab } from "./admin/admin-staff-tab";
+import { AdminVillagesTab } from "./admin/admin-villages-tab";
 
 interface OrganizationAdminPanelProps {
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
@@ -121,10 +126,10 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
     }
   }, []);
 
-  const fetchActiveCarePlan = useCallback(async (): Promise<void> => {
+  const fetchCarePlan = useCallback(async (): Promise<void> => {
     setLoadingPlan(true);
     try {
-      const res = await fetch("/api/staff-proxy/anc-plan/active");
+      const res = await fetch("/api/staff-proxy/staff/organization/careplan");
       if (res.ok) {
         const data = (await res.json()) as AncPlanResponse;
         setCarePlan(data);
@@ -136,68 +141,36 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
     }
   }, []);
 
-  // Initial load
   useEffect(() => {
     if (userRole !== "PUSKESMAS") return;
+
+    const controller = new AbortController();
+    void loadData();
+    return () => controller.abort();
 
     async function loadData(): Promise<void> {
       setLoadingData(true);
       try {
-        await Promise.all([fetchVillages(), fetchFacilities(), fetchStaff(), fetchAssignments()]);
+        await Promise.all([
+          fetchFacilities(),
+          fetchVillages(),
+          fetchStaff(),
+          fetchAssignments(),
+          fetchCarePlan(),
+        ]);
       } finally {
         setLoadingData(false);
       }
     }
-
-    void loadData();
-  }, [userRole, fetchVillages, fetchFacilities, fetchStaff, fetchAssignments]);
-
-  // Subtab-specific load
-  useEffect(() => {
-    async function loadSubtabData(): Promise<void> {
-      if (activeSubTab === "careplan" && userRole === "PUSKESMAS") {
-        await fetchActiveCarePlan();
-      }
-      if (activeSubTab === "assignments" && userRole === "PUSKESMAS") {
-        await fetchAssignments();
-      }
-    }
-    void loadSubtabData();
-  }, [activeSubTab, userRole, fetchActiveCarePlan, fetchAssignments]);
-
-  // Auto-fill codes when names change if code is empty or untouched
-  const handleFacilityNameChange = (val: string) => {
-    setFacilityName(val);
-    if (!facilityCode || facilityCode.startsWith("POS_") || facilityCode.startsWith("PKM_")) {
-      const slug = val
-        .toUpperCase()
-        .replace(/[^A-Z0-9]/g, "_")
-        .replace(/_+/g, "_")
-        .slice(0, 30);
-      setFacilityCode(slug ? (facilityType === "PUSKESMAS" ? `PKM_${slug}` : `POS_${slug}`) : "");
-    }
-  };
-
-  const handleVillageNameChange = (val: string) => {
-    setVillageName(val);
-    if (!villageCode || villageCode.startsWith("DS_")) {
-      const slug = val
-        .toUpperCase()
-        .replace(/[^A-Z0-9]/g, "_")
-        .replace(/_+/g, "_")
-        .slice(0, 30);
-      setVillageCode(slug ? `DS_${slug}` : "");
-    }
-  };
+  }, [userRole, fetchFacilities, fetchVillages, fetchStaff, fetchAssignments, fetchCarePlan]);
 
   if (userRole !== "PUSKESMAS") {
     return (
       <div className="staff-panel-card staff-panel-restricted">
         <span className="staff-panel-badge badge-warning">Akses Terbatas</span>
-        <h3>Administrasi Organisasi Khusus Puskesmas</h3>
+        <h3>Pengaturan Fasilitas &amp; Petugas Hanya Tersedia untuk Petugas Puskesmas</h3>
         <p>
-          Pengelolaan fasilitas, desa, akun petugas, penugasan wilayah kerja, dan aturan klinis
-          K1-K8 hanya dapat diakses oleh akun berwenang Puskesmas.
+          Manajemen organisasi faskes, desa binaan, dan akun staf bidan dikelola oleh Puskesmas.
         </p>
       </div>
     );
@@ -237,6 +210,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
       });
       setFacilityName("");
       setFacilityCode("");
+      setFacilityType("POSYANDU");
       setFacilityVillageId("");
       await fetchFacilities();
     } catch {
@@ -443,7 +417,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
           type: "error",
           message:
             data?.error?.message ??
-            "Gagal menghapus desa. Desa mungkin masih terhubung dengan fasilitas atau ibu hamil.",
+            "Gagal menghapus desa. Desa mungkin masih memiliki data warga atau fasilitas terdaftar.",
         });
         return;
       }
@@ -463,7 +437,18 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
   // --- STAFF CRUD ---
   async function handleCreateStaff(e: React.FormEvent): Promise<void> {
     e.preventDefault();
-    if (!staffIdentifier.trim() || !staffDisplayName.trim() || !staffPassword.trim()) return;
+    if (
+      !staffIdentifier.trim() ||
+      !staffDisplayName.trim() ||
+      !staffPassword.trim() ||
+      staffPassword.length < 8
+    ) {
+      setFeedback({
+        type: "error",
+        message: "Semua field wajib diisi dan kata sandi minimal 8 karakter.",
+      });
+      return;
+    }
     setSubmitting(true);
     setFeedback(null);
 
@@ -475,7 +460,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
           login_identifier: staffIdentifier.trim(),
           display_name: staffDisplayName.trim(),
           role: staffRole,
-          password: staffPassword,
+          password: staffPassword.trim(),
         }),
       });
 
@@ -483,18 +468,17 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
       if (!res.ok) {
         setFeedback({
           type: "error",
-          message: data?.error?.message ?? "Gagal membuat akun petugas baru.",
+          message: data?.error?.message ?? "Gagal membuat akun staf baru.",
         });
         return;
       }
 
       setFeedback({
         type: "success",
-        message: `Akun ${staffRole === "BIDAN" ? "Bidan" : "Petugas Puskesmas"} "${staffDisplayName}" berhasil dibuat.`,
+        message: `Akun ${staffRole} "${staffDisplayName}" (@${staffIdentifier}) berhasil dibuat.`,
       });
       setStaffIdentifier("");
       setStaffDisplayName("");
-      setStaffRole("BIDAN");
       setStaffPassword("");
       await fetchStaff();
     } catch {
@@ -625,7 +609,9 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
         } | null;
         setFeedback({
           type: "error",
-          message: data?.error?.message ?? "Gagal menghapus akun petugas.",
+          message:
+            data?.error?.message ??
+            "Gagal menghapus akun staf. Akun mungkin memiliki riwayat audit atau penugasan aktif.",
         });
         return;
       }
@@ -636,7 +622,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
       });
       await fetchStaff();
     } catch {
-      setFeedback({ type: "error", message: "Koneksi terputus saat menghapus akun." });
+      setFeedback({ type: "error", message: "Koneksi terputus saat menghapus akun petugas." });
     } finally {
       setSubmitting(false);
     }
@@ -645,48 +631,48 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
   // --- ASSIGNMENT CRUD ---
   async function handleAssignVillage(e: React.FormEvent): Promise<void> {
     e.preventDefault();
-    if (!assignStaffId.trim() || !assignVillageId.trim()) return;
+    if (!assignStaffId || !assignVillageId) return;
     setSubmitting(true);
     setFeedback(null);
 
     try {
-      const res = await fetch("/api/staff-proxy/staff/assignments", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          staff_user_id: assignStaffId.trim(),
-          scope_type: "AREA",
-          scope_id: assignVillageId.trim(),
-        }),
-      });
+      const res = await fetch(
+        `/api/staff-proxy/staff/users/${encodeURIComponent(assignStaffId)}/assignments`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            scope_type: "VILLAGE",
+            scope_id: assignVillageId,
+          }),
+        },
+      );
 
       const data = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
       if (!res.ok) {
         setFeedback({
           type: "error",
-          message: data?.error?.message ?? "Gagal menetapkan penugasan wilayah Bidan.",
+          message: data?.error?.message ?? "Gagal menetapkan penugasan wilayah.",
         });
         return;
       }
 
       setFeedback({
         type: "success",
-        message: "Penugasan desa untuk Bidan berhasil disimpan.",
+        message: "Penugasan wilayah desa berhasil disimpan.",
       });
       setAssignStaffId("");
       setAssignVillageId("");
       await fetchAssignments();
     } catch {
-      setFeedback({ type: "error", message: "Koneksi terputus saat menyimpan penugasan desa." });
+      setFeedback({ type: "error", message: "Koneksi terputus saat menyimpan penugasan." });
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleRevokeAssignment(assignmentId: string): Promise<void> {
-    if (!window.confirm("Cabut penugasan wilayah desa ini untuk Bidan yang bersangkutan?")) {
-      return;
-    }
+    if (!window.confirm("Cabut penugasan wilayah desa untuk petugas ini?")) return;
     setSubmitting(true);
     setFeedback(null);
 
@@ -824,10 +810,13 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
               height="15"
               aria-hidden="true"
             >
-              <circle cx="10" cy="7" r="3.5" />
-              <path d="M4 17a6 6 0 0 1 12 0" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M10 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM4 17a6 6 0 0 1 12 0"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
-            <span>Akun Staf</span>
+            <span>Akun Staf Bidan</span>
           </span>
           <span className="admin-subtab-badge">{staffList.length}</span>
         </button>
@@ -852,13 +841,9 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
               height="15"
               aria-hidden="true"
             >
-              <path
-                d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+              <path d="M4 4h12v12H4zM4 8h12M8 4v12" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span>Penugasan</span>
+            <span>Penugasan Wilayah</span>
           </span>
           <span className="admin-subtab-badge">{assignments.length}</span>
         </button>
@@ -884,885 +869,133 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
               aria-hidden="true"
             >
               <path
-                d="M14 2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Z"
+                d="M5 3h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2ZM7 7h6M7 10h6M7 13h4"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
-              <path d="M10 6v6M7 9h6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span>Aturan Klinis K1–K8</span>
+            <span>Aturan Jadwal ANC</span>
           </span>
+          <span className="admin-subtab-badge">K1–K8</span>
         </button>
       </div>
 
+      {/* Global Feedback Banner */}
       {feedback && (
         <div
           className={`staff-alert ${feedback.type === "success" ? "alert-success" : "alert-error"}`}
-          style={{ marginBottom: "1rem" }}
+          style={{ marginTop: "1.25rem", marginBottom: "0.5rem" }}
         >
           <p>{feedback.message}</p>
         </div>
       )}
 
-      {/* Sub-tab: Facilities */}
-      {activeSubTab === "facilities" && (
-        <div>
-          {editingFacility ? (
-            <div className="admin-form-card">
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "1rem",
-                }}
-              >
-                <h3 className="admin-form-card-title" style={{ margin: 0, border: 0, padding: 0 }}>
-                  Ubah Data Fasilitas
-                </h3>
-                <button
-                  className="btn-secondary"
-                  type="button"
-                  onClick={() => setEditingFacility(null)}
-                >
-                  Batal
-                </button>
-              </div>
-              <form onSubmit={(e) => void handleUpdateFacility(e)}>
-                <div className="admin-form-grid-2col">
-                  <div className="form-group">
-                    <label htmlFor="editFacilityName">Nama Fasilitas *</label>
-                    <input
-                      id="editFacilityName"
-                      className="staff-input"
-                      type="text"
-                      value={editFacilityName}
-                      onChange={(e) => setEditFacilityName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="editFacilityCode">Kode Fasilitas *</label>
-                    <input
-                      id="editFacilityCode"
-                      className="staff-input"
-                      type="text"
-                      value={editFacilityCode}
-                      onChange={(e) => setEditFacilityCode(e.target.value.toUpperCase())}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="editFacilityType">Tipe Fasilitas *</label>
-                    <select
-                      id="editFacilityType"
-                      className="staff-input"
-                      value={editFacilityType}
-                      onChange={(e) => setEditFacilityType(e.target.value as FacilityType)}
-                    >
-                      <option value="POSYANDU">POSYANDU</option>
-                      <option value="PUSKESMAS">PUSKESMAS</option>
-                      <option value="MIDWIFE_PRACTICE">MIDWIFE_PRACTICE</option>
-                      <option value="PONED">PONED</option>
-                      <option value="HOSPITAL">HOSPITAL</option>
-                      <option value="OTHER">OTHER</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="editFacilityVillageId">Desa / Kelurahan</label>
-                    <select
-                      id="editFacilityVillageId"
-                      className="staff-input"
-                      value={editFacilityVillageId}
-                      onChange={(e) => setEditFacilityVillageId(e.target.value)}
-                    >
-                      <option value="">-- Tanpa Desa / Cakupan Luas --</option>
-                      {villages.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.name} ({v.code})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="admin-form-actions">
-                  <button className="btn-primary" type="submit" disabled={submitting}>
-                    {submitting ? "Menyimpan Perubahan..." : "Simpan Perubahan Fasilitas"}
-                  </button>
-                  <button
-                    className="btn-secondary"
-                    type="button"
-                    onClick={() => setEditingFacility(null)}
-                  >
-                    Batal
-                  </button>
-                </div>
-              </form>
-            </div>
-          ) : (
-            <div className="admin-form-card">
-              <h3 className="admin-form-card-title">Tambah Fasilitas Kesehatan Baru</h3>
-              <form onSubmit={(e) => void handleCreateFacility(e)}>
-                <div className="admin-form-grid-2col">
-                  <div className="form-group">
-                    <label htmlFor="facilityName">Nama Fasilitas</label>
-                    <input
-                      id="facilityName"
-                      className="staff-input"
-                      type="text"
-                      placeholder="Contoh: Posyandu Melati 02"
-                      value={facilityName}
-                      onChange={(e) => handleFacilityNameChange(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="facilityCode">Kode Fasilitas (Identifier Unik)</label>
-                    <input
-                      id="facilityCode"
-                      className="staff-input"
-                      type="text"
-                      placeholder="Contoh: POS_MELATI_02"
-                      value={facilityCode}
-                      onChange={(e) => setFacilityCode(e.target.value.toUpperCase())}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="facilityType">Tipe Fasilitas</label>
-                    <select
-                      id="facilityType"
-                      className="staff-input"
-                      value={facilityType}
-                      onChange={(e) => setFacilityType(e.target.value as FacilityType)}
-                    >
-                      <option value="POSYANDU">POSYANDU (Pos Pelayanan Terpadu)</option>
-                      <option value="PUSKESMAS">PUSKESMAS (Pusat Kesehatan Masyarakat)</option>
-                      <option value="MIDWIFE_PRACTICE">
-                        MIDWIFE_PRACTICE (Praktik Mandiri Bidan)
-                      </option>
-                      <option value="PONED">
-                        PONED (Pelayanan Obstetri Neonatal Emergensi Dasar)
-                      </option>
-                      <option value="HOSPITAL">HOSPITAL (Rumah Sakit Rujukan)</option>
-                      <option value="OTHER">OTHER (Lainnya)</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="facilityVillageId">Desa / Kelurahan (Opsional)</label>
-                    <select
-                      id="facilityVillageId"
-                      className="staff-input"
-                      value={facilityVillageId}
-                      onChange={(e) => setFacilityVillageId(e.target.value)}
-                    >
-                      <option value="">-- Tanpa Desa / Cakupan Luas --</option>
-                      {villages.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.name} ({v.code})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="admin-form-actions">
-                  <button className="btn-primary" type="submit" disabled={submitting}>
-                    {submitting ? "Menyimpan data..." : "Simpan Fasilitas"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          <h4>Daftar Fasilitas Terdaftar ({facilities.length})</h4>
-          {facilities.length === 0 ? (
-            <p className="empty-notice">
-              {loadingData ? "Memuat data fasilitas..." : "Belum ada fasilitas terdaftar."}
-            </p>
-          ) : (
-            <div className="table-responsive">
-              <table className="staff-table">
-                <thead>
-                  <tr>
-                    <th>Kode</th>
-                    <th>Nama Fasilitas</th>
-                    <th>Tipe</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: "center" }}>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {facilities.map((f) => (
-                    <tr key={f.id}>
-                      <td>
-                        <span className="badge-code">{f.code}</span>
-                      </td>
-                      <td>
-                        <strong>{f.name}</strong>
-                      </td>
-                      <td>
-                        <span className="badge-action">{f.facility_type}</span>
-                      </td>
-                      <td>
-                        <span className="badge-status status-completed">{f.status}</span>
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
-                          <button
-                            className="btn-secondary"
-                            type="button"
-                            style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}
-                            onClick={() => startEditFacility(f)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="btn-danger"
-                            type="button"
-                            style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}
-                            onClick={() => void handleDeleteFacility(f)}
-                            disabled={submitting}
-                          >
-                            Hapus
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+      {loadingData && (
+        <div style={{ textAlign: "center", padding: "2rem", color: "var(--ink-muted)" }}>
+          <div className="loading-spinner" style={{ margin: "0 auto 0.5rem" }} />
+          <p>Memuat konfigurasi organisasi Puskesmas...</p>
         </div>
       )}
 
-      {/* Sub-tab: Villages */}
-      {activeSubTab === "villages" && (
-        <div>
-          {editingVillage ? (
-            <div className="admin-form-card">
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "1rem",
-                }}
-              >
-                <h3 className="admin-form-card-title" style={{ margin: 0, border: 0, padding: 0 }}>
-                  Ubah Data Desa / Kelurahan
-                </h3>
-                <button
-                  className="btn-secondary"
-                  type="button"
-                  onClick={() => setEditingVillage(null)}
-                >
-                  Batal
-                </button>
-              </div>
-              <form onSubmit={(e) => void handleUpdateVillage(e)}>
-                <div className="admin-form-grid-2col">
-                  <div className="form-group">
-                    <label htmlFor="editVillageName">Nama Desa *</label>
-                    <input
-                      id="editVillageName"
-                      className="staff-input"
-                      type="text"
-                      value={editVillageName}
-                      onChange={(e) => setEditVillageName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="editVillageCode">Kode Desa *</label>
-                    <input
-                      id="editVillageCode"
-                      className="staff-input"
-                      type="text"
-                      value={editVillageCode}
-                      onChange={(e) => setEditVillageCode(e.target.value.toUpperCase())}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="admin-form-actions">
-                  <button className="btn-primary" type="submit" disabled={submitting}>
-                    {submitting ? "Menyimpan Perubahan..." : "Simpan Perubahan Desa"}
-                  </button>
-                  <button
-                    className="btn-secondary"
-                    type="button"
-                    onClick={() => setEditingVillage(null)}
-                  >
-                    Batal
-                  </button>
-                </div>
-              </form>
-            </div>
-          ) : (
-            <div className="admin-form-card">
-              <h3 className="admin-form-card-title">Tambah Desa / Kelurahan Baru</h3>
-              <form onSubmit={(e) => void handleCreateVillage(e)}>
-                <div className="admin-form-grid-2col">
-                  <div className="form-group">
-                    <label htmlFor="villageName">Nama Desa</label>
-                    <input
-                      id="villageName"
-                      className="staff-input"
-                      type="text"
-                      placeholder="Contoh: Desa Kuncir Barat"
-                      value={villageName}
-                      onChange={(e) => handleVillageNameChange(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="villageCode">Kode Desa (Identifier Unik)</label>
-                    <input
-                      id="villageCode"
-                      className="staff-input"
-                      type="text"
-                      placeholder="Contoh: DS_KUNCIR_BARAT"
-                      value={villageCode}
-                      onChange={(e) => setVillageCode(e.target.value.toUpperCase())}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="admin-form-actions">
-                  <button className="btn-primary" type="submit" disabled={submitting}>
-                    {submitting ? "Menyimpan data..." : "Simpan Desa"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          <h4>Daftar Desa Terdaftar ({villages.length})</h4>
-          {villages.length === 0 ? (
-            <p className="empty-notice">
-              {loadingData ? "Memuat data desa..." : "Belum ada desa terdaftar."}
-            </p>
-          ) : (
-            <div className="table-responsive">
-              <table className="staff-table">
-                <thead>
-                  <tr>
-                    <th>Kode Desa</th>
-                    <th>Nama Desa</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: "center" }}>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {villages.map((v) => (
-                    <tr key={v.id}>
-                      <td>
-                        <span className="badge-code">{v.code}</span>
-                      </td>
-                      <td>
-                        <strong>{v.name}</strong>
-                      </td>
-                      <td>
-                        <span className="badge-status status-completed">{v.status}</span>
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
-                          <button
-                            className="btn-secondary"
-                            type="button"
-                            style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}
-                            onClick={() => startEditVillage(v)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="btn-danger"
-                            type="button"
-                            style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}
-                            onClick={() => void handleDeleteVillage(v)}
-                            disabled={submitting}
-                          >
-                            Hapus
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+      {/* Sub-tab 1: Facilities */}
+      {!loadingData && activeSubTab === "facilities" && (
+        <AdminFacilitiesTab
+          facilities={facilities}
+          villages={villages}
+          facilityName={facilityName}
+          facilityCode={facilityCode}
+          facilityType={facilityType}
+          facilityVillageId={facilityVillageId}
+          submitting={submitting}
+          editingFacility={editingFacility}
+          editFacilityName={editFacilityName}
+          editFacilityCode={editFacilityCode}
+          editFacilityType={editFacilityType}
+          editFacilityVillageId={editFacilityVillageId}
+          onFacilityNameChange={setFacilityName}
+          onFacilityCodeChange={setFacilityCode}
+          onFacilityTypeChange={setFacilityType}
+          onFacilityVillageIdChange={setFacilityVillageId}
+          onEditFacilityNameChange={setEditFacilityName}
+          onEditFacilityCodeChange={setEditFacilityCode}
+          onEditFacilityTypeChange={setEditFacilityType}
+          onEditFacilityVillageIdChange={setEditFacilityVillageId}
+          onCreateFacility={(e) => void handleCreateFacility(e)}
+          onUpdateFacility={(e) => void handleUpdateFacility(e)}
+          onDeleteFacility={(f) => void handleDeleteFacility(f)}
+          onStartEditFacility={startEditFacility}
+          onCancelEditFacility={() => setEditingFacility(null)}
+        />
       )}
 
-      {/* Sub-tab: Staff Accounts */}
-      {activeSubTab === "staff" && (
-        <div>
-          {editingStaff ? (
-            <div className="admin-form-card">
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "1rem",
-                }}
-              >
-                <h3 className="admin-form-card-title" style={{ margin: 0, border: 0, padding: 0 }}>
-                  Ubah Data Akun Petugas (@{editingStaff.login_identifier})
-                </h3>
-                <button
-                  className="btn-secondary"
-                  type="button"
-                  onClick={() => setEditingStaff(null)}
-                >
-                  Batal
-                </button>
-              </div>
-              <form onSubmit={(e) => void handleUpdateStaff(e)}>
-                <div className="admin-form-grid-2col">
-                  <div className="form-group">
-                    <label htmlFor="editStaffDisplayName">Nama Lengkap &amp; Gelar *</label>
-                    <input
-                      id="editStaffDisplayName"
-                      className="staff-input"
-                      type="text"
-                      value={editStaffDisplayName}
-                      onChange={(e) => setEditStaffDisplayName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="editStaffPassword">
-                      Reset Kata Sandi (Kosongkan jika tidak ingin mengubah)
-                    </label>
-                    <input
-                      id="editStaffPassword"
-                      className="staff-input"
-                      type="password"
-                      placeholder="Masukkan sandi baru (min 12 karakter)"
-                      value={editStaffPassword}
-                      onChange={(e) => setEditStaffPassword(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="admin-form-actions">
-                  <button className="btn-primary" type="submit" disabled={submitting}>
-                    {submitting ? "Menyimpan Perubahan..." : "Simpan Perubahan Akun"}
-                  </button>
-                  <button
-                    className="btn-secondary"
-                    type="button"
-                    onClick={() => setEditingStaff(null)}
-                  >
-                    Batal
-                  </button>
-                </div>
-              </form>
-            </div>
-          ) : (
-            <div className="admin-form-card">
-              <h3 className="admin-form-card-title">Buat Akun Petugas</h3>
-              <p className="field-hint" style={{ marginTop: "-0.5rem", marginBottom: "1.25rem" }}>
-                Pilih peran petugas sebelum membuat akun. Bidan dipilih secara default.
-              </p>
-              <form onSubmit={(e) => void handleCreateStaff(e)}>
-                <div className="admin-form-grid-2col">
-                  <div className="form-group">
-                    <label htmlFor="staffRole">Peran Petugas</label>
-                    <select
-                      id="staffRole"
-                      className="staff-input"
-                      value={staffRole}
-                      onChange={(e) => setStaffRole(e.target.value as "BIDAN" | "PUSKESMAS")}
-                    >
-                      <option value="BIDAN">Bidan</option>
-                      <option value="PUSKESMAS">Petugas Puskesmas</option>
-                    </select>
-                    <small className="field-hint">
-                      {staffRole === "BIDAN"
-                        ? "Bidan dapat menangani ibu hamil sesuai penugasan wilayahnya."
-                        : "Petugas Puskesmas memiliki akses pengelolaan organisasi."}
-                    </small>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="staffIdentifier">Identifier Login (Username)</label>
-                    <input
-                      id="staffIdentifier"
-                      className="staff-input"
-                      type="text"
-                      placeholder={
-                        staffRole === "BIDAN" ? "Contoh: bidan.ani" : "Contoh: operator.kuncir"
-                      }
-                      value={staffIdentifier}
-                      onChange={(e) =>
-                        setStaffIdentifier(e.target.value.toLowerCase().replace(/\s+/g, ""))
-                      }
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="staffDisplayName">Nama Lengkap Petugas & Gelar</label>
-                    <input
-                      id="staffDisplayName"
-                      className="staff-input"
-                      type="text"
-                      placeholder={
-                        staffRole === "BIDAN"
-                          ? "Contoh: Bidan Ani Sulastri, S.Tr.Keb"
-                          : "Contoh: Petugas Administrasi Puskesmas"
-                      }
-                      value={staffDisplayName}
-                      onChange={(e) => setStaffDisplayName(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="staffPassword">Kata Sandi Awal (Min 8 karakter)</label>
-                    <input
-                      id="staffPassword"
-                      className="staff-input"
-                      type="password"
-                      placeholder="Contoh: PosyanduKuncir2026!"
-                      value={staffPassword}
-                      onChange={(e) => setStaffPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="admin-form-actions">
-                  <button className="btn-primary" type="submit" disabled={submitting}>
-                    {submitting
-                      ? "Membuat akun..."
-                      : `Buat Akun ${staffRole === "BIDAN" ? "Bidan" : "Petugas Puskesmas"}`}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          <h4>Daftar Akun Petugas & Bidan ({staffList.length})</h4>
-          {staffList.length === 0 ? (
-            <p className="empty-notice">
-              {loadingData ? "Memuat data petugas..." : "Belum ada petugas terdaftar."}
-            </p>
-          ) : (
-            <div className="table-responsive">
-              <table className="staff-table">
-                <thead>
-                  <tr>
-                    <th>Username</th>
-                    <th>Nama Petugas</th>
-                    <th>Peran</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: "center" }}>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {staffList.map((s) => (
-                    <tr key={s.id}>
-                      <td>
-                        <span className="badge-code">@{s.login_identifier}</span>
-                      </td>
-                      <td>
-                        <strong>{s.display_name}</strong>
-                      </td>
-                      <td>
-                        <span className="badge-action">
-                          {s.role === "PUSKESMAS"
-                            ? "Petugas Puskesmas"
-                            : s.role === "BIDAN"
-                              ? "Bidan"
-                              : "Super Admin"}
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          className={`badge-status status-${s.status === "ACTIVE" ? "completed" : "overdue"}`}
-                        >
-                          {s.status}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        {s.role === "BIDAN" ? (
-                          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
-                            <button
-                              className="btn-secondary"
-                              type="button"
-                              style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}
-                              onClick={() => startEditStaff(s)}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              className={s.status === "ACTIVE" ? "btn-secondary" : "btn-primary"}
-                              type="button"
-                              style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}
-                              onClick={() => void handleToggleStaffStatus(s)}
-                              disabled={submitting}
-                            >
-                              {s.status === "ACTIVE" ? "⏸️ Suspend" : "▶️ Aktifkan"}
-                            </button>
-                            <button
-                              className="btn-danger"
-                              type="button"
-                              style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}
-                              onClick={() => void handleDeleteStaff(s)}
-                              disabled={submitting}
-                            >
-                              Hapus
-                            </button>
-                          </div>
-                        ) : (
-                          <small style={{ color: "var(--color-ink-muted)" }}>Admin Inti</small>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+      {/* Sub-tab 2: Villages */}
+      {!loadingData && activeSubTab === "villages" && (
+        <AdminVillagesTab
+          villages={villages}
+          villageName={villageName}
+          villageCode={villageCode}
+          submitting={submitting}
+          editingVillage={editingVillage}
+          editVillageName={editVillageName}
+          editVillageCode={editVillageCode}
+          onVillageNameChange={setVillageName}
+          onVillageCodeChange={setVillageCode}
+          onEditVillageNameChange={setEditVillageName}
+          onEditVillageCodeChange={setEditVillageCode}
+          onCreateVillage={(e) => void handleCreateVillage(e)}
+          onUpdateVillage={(e) => void handleUpdateVillage(e)}
+          onDeleteVillage={(v) => void handleDeleteVillage(v)}
+          onStartEditVillage={startEditVillage}
+          onCancelEditVillage={() => setEditingVillage(null)}
+        />
       )}
 
-      {/* Sub-tab: Bidan Village Assignments */}
-      {activeSubTab === "assignments" && (
-        <div>
-          <div className="admin-form-card">
-            <h3 className="admin-form-card-title">Tetapkan Penugasan Wilayah Kerja Bidan</h3>
-            <p className="field-hint" style={{ marginTop: "-0.5rem", marginBottom: "1.25rem" }}>
-              Bidan Desa hanya dapat mengakses dan mengonfirmasi ibu hamil yang berdomisili di desa
-              terpenuhi penugasannya.
-            </p>
-            <form onSubmit={(e) => void handleAssignVillage(e)}>
-              <div className="admin-form-grid-2col">
-                <div className="form-group">
-                  <label htmlFor="assignStaffId">Pilih Akun Bidan</label>
-                  <select
-                    id="assignStaffId"
-                    className="staff-input"
-                    value={assignStaffId}
-                    onChange={(e) => setAssignStaffId(e.target.value)}
-                    required
-                  >
-                    <option value="">-- Pilih Petugas Bidan --</option>
-                    {bidanUsers.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.display_name} (@{b.login_identifier})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="assignVillageId">Pilih Desa Penugasan</label>
-                  <select
-                    id="assignVillageId"
-                    className="staff-input"
-                    value={assignVillageId}
-                    onChange={(e) => setAssignVillageId(e.target.value)}
-                    required
-                  >
-                    <option value="">-- Pilih Desa / Kelurahan --</option>
-                    {villages.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name} ({v.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="admin-form-actions">
-                <button className="btn-primary" type="submit" disabled={submitting}>
-                  {submitting ? "Menyimpan Penugasan..." : "Tetapkan Wilayah Desa"}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <h4>Daftar Penugasan Wilayah Aktif ({assignments.length})</h4>
-          {assignments.length === 0 ? (
-            <p className="empty-notice">
-              {loadingData ? "Memuat penugasan..." : "Belum ada penugasan wilayah aktif."}
-            </p>
-          ) : (
-            <div className="table-responsive">
-              <table className="staff-table">
-                <thead>
-                  <tr>
-                    <th>Nama Petugas Bidan</th>
-                    <th>Username</th>
-                    <th>Tipe Cakupan</th>
-                    <th>Wilayah Penugasan</th>
-                    <th style={{ textAlign: "center" }}>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {assignments.map((a) => (
-                    <tr key={a.id}>
-                      <td>
-                        <strong>{a.staff_name}</strong>
-                      </td>
-                      <td>
-                        <span className="badge-code">@{a.staff_identifier}</span>
-                      </td>
-                      <td>
-                        <span className="badge-action">{a.scope_type}</span>
-                      </td>
-                      <td>{a.village_name ?? "Seluruh Wilayah"}</td>
-                      <td style={{ textAlign: "center" }}>
-                        <button
-                          className="btn-danger"
-                          type="button"
-                          style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}
-                          onClick={() => void handleRevokeAssignment(a.id)}
-                          disabled={submitting}
-                        >
-                          Cabut Penugasan
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+      {/* Sub-tab 3: Staff */}
+      {!loadingData && activeSubTab === "staff" && (
+        <AdminStaffTab
+          staffList={staffList}
+          staffIdentifier={staffIdentifier}
+          staffDisplayName={staffDisplayName}
+          staffRole={staffRole}
+          staffPassword={staffPassword}
+          submitting={submitting}
+          editingStaff={editingStaff}
+          editStaffDisplayName={editStaffDisplayName}
+          editStaffPassword={editStaffPassword}
+          onStaffIdentifierChange={setStaffIdentifier}
+          onStaffDisplayNameChange={setStaffDisplayName}
+          onStaffRoleChange={setStaffRole}
+          onStaffPasswordChange={setStaffPassword}
+          onEditStaffDisplayNameChange={setEditStaffDisplayName}
+          onEditStaffPasswordChange={setEditStaffPassword}
+          onCreateStaff={(e) => void handleCreateStaff(e)}
+          onUpdateStaff={(e) => void handleUpdateStaff(e)}
+          onToggleStaffStatus={(s) => void handleToggleStaffStatus(s)}
+          onDeleteStaff={(s) => void handleDeleteStaff(s)}
+          onStartEditStaff={startEditStaff}
+          onCancelEditStaff={() => setEditingStaff(null)}
+        />
       )}
 
-      {/* Versioned ANC Care Plan & Milestone Rules */}
-      {activeSubTab === "careplan" && (
-        <div className="queue-section">
-          <h3>Aturan Klinis ANC K1-K8</h3>
+      {/* Sub-tab 4: Assignments */}
+      {!loadingData && activeSubTab === "assignments" && (
+        <AdminAssignmentsTab
+          assignments={assignments}
+          bidanUsers={bidanUsers}
+          villages={villages}
+          assignStaffId={assignStaffId}
+          assignVillageId={assignVillageId}
+          submitting={submitting}
+          onAssignStaffIdChange={setAssignStaffId}
+          onAssignVillageIdChange={setAssignVillageId}
+          onAssignVillage={(e) => void handleAssignVillage(e)}
+          onRevokeAssignment={(id) => void handleRevokeAssignment(id)}
+        />
+      )}
 
-          <div className="staff-alert alert-warning" style={{ marginBottom: "1rem" }}>
-            <p>
-              <strong>Acuan jadwal pemeriksaan kehamilan</strong>
-              <br />
-              Aturan K1-K8 berikut digunakan sebagai referensi operasional Puskesmas. Setiap
-              perubahan jadwal, fasilitas, atau kebutuhan layanan harus ditinjau dan disetujui oleh
-              penanggung jawab klinis.
-            </p>
-          </div>
-
-          {loadingPlan ? (
-            <p className="empty-notice">Memuat aturan klinis yang sedang berlaku…</p>
-          ) : carePlan === null ? (
-            <p className="empty-notice">Aturan klinis belum dapat dimuat.</p>
-          ) : (
-            <div>
-              <div className="metrics-row" style={{ marginBottom: "1rem" }}>
-                <div className="metric-card">
-                  <span className="metric-label">Versi aturan</span>
-                  <strong className="metric-value">Versi {carePlan.version_no}</strong>
-                </div>
-                <div className="metric-card">
-                  <span className="metric-label">Status aturan</span>
-                  <strong className="metric-value text-due">
-                    {carePlan.status === "APPROVED"
-                      ? "Disetujui dan aktif"
-                      : carePlan.status === "DRAFT"
-                        ? "Draf untuk ditinjau"
-                        : "Diarsipkan"}
-                  </strong>
-                </div>
-                <div className="metric-card">
-                  <span className="metric-label">Peninjau klinis</span>
-                  <strong className="metric-value" style={{ fontSize: "0.95rem" }}>
-                    {staffList.find((s) => s.id === carePlan.approved_by_staff_id)?.display_name ??
-                      (carePlan.approved_by_staff_id
-                        ? "Penanggung jawab klinis Puskesmas"
-                        : "Belum ditetapkan")}
-                  </strong>
-                </div>
-              </div>
-
-              <h4>Jadwal dan kebutuhan layanan</h4>
-              <p className="section-help">
-                Gunakan tabel ini untuk melihat rentang usia kehamilan, fasilitas layanan, dan
-                kebutuhan pemeriksaan pada setiap kunjungan ANC.
-              </p>
-              <div className="table-responsive">
-                <table className="staff-table">
-                  <thead>
-                    <tr>
-                      <th>Kunjungan</th>
-                      <th>Trimester</th>
-                      <th>Rentang usia kehamilan</th>
-                      <th>Fasilitas yang diperlukan</th>
-                      <th>Jenis layanan</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {carePlan.rules.map((rule) => (
-                      <tr key={rule.id}>
-                        <td>
-                          <span className="badge-code" style={{ fontWeight: 800 }}>
-                            {rule.code}
-                          </span>
-                        </td>
-                        <td>
-                          <span style={{ fontWeight: 600 }}>{rule.trimester_label}</span>
-                        </td>
-                        <td>
-                          {rule.target_week_start !== null && rule.target_week_end !== null
-                            ? `Minggu ${rule.target_week_start}-${rule.target_week_end}`
-                            : "Mengikuti jadwal kehamilan"}
-                        </td>
-                        <td>
-                          <span
-                            className={
-                              rule.required_facility_policy === "PUSKESMAS_REQUIRED"
-                                ? "badge-action"
-                                : ""
-                            }
-                            style={{
-                              display: "inline-block",
-                              padding: "0.25rem 0.6rem",
-                              borderRadius: "4px",
-                              fontSize: "0.82rem",
-                            }}
-                          >
-                            {rule.required_facility_policy === "PUSKESMAS_REQUIRED"
-                              ? "Wajib di Puskesmas"
-                              : "Posyandu, Bidan, atau Puskesmas"}
-                          </span>
-                        </td>
-                        <td>
-                          <span
-                            className={`badge-status status-${
-                              ["K1", "K2", "K3", "K4", "K5", "K6"].includes(rule.code)
-                                ? "overdue"
-                                : "upcoming"
-                            }`}
-                            style={{ fontSize: "0.8rem" }}
-                          >
-                            {rule.required_facility_policy === "PUSKESMAS_REQUIRED"
-                              ? "USG dan skrining dokter"
-                              : "Pemeriksaan rutin oleh bidan"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
+      {/* Sub-tab 5: Care Plan */}
+      {!loadingData && activeSubTab === "careplan" && (
+        <AdminCarePlanTab carePlan={carePlan} loadingPlan={loadingPlan} staffList={staffList} />
       )}
     </div>
   );

@@ -8,6 +8,8 @@ export const facilityTypeSchema = z.enum([
   "PONED",
   "HOSPITAL",
   "MIDWIFE_PRACTICE",
+  "PUSTU",
+  "POLINDES",
   "OTHER",
 ]);
 export type FacilityType = z.infer<typeof facilityTypeSchema>;

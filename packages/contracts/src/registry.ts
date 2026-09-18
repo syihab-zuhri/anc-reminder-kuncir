@@ -24,6 +24,8 @@ export const motherRegistrationRequestSchema = z
     address: z.string().trim().min(5).max(500),
     phone_number: z.string().trim().min(5).max(32),
     pregnancy_start_date: isoDateSchema,
+    village_id: z.string().uuid().optional().nullable(),
+    registration_facility_id: z.string().uuid().optional().nullable(),
     consent: z
       .object({
         notification_allowed: z.boolean(),

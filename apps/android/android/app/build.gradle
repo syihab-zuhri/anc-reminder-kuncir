@@ -3,6 +3,16 @@ apply plugin: 'com.android.application'
 android {
     namespace = "id.my.kuncir.posyandu.anc"
     compileSdk = rootProject.ext.compileSdkVersion
+
+    signingConfigs {
+        release {
+            storeFile file('/mnt/d/pos jadi apk/posyandu-release2.jks')
+            storePassword 'posyandu2026key'
+            keyAlias 'posyandukuncir'
+            keyPassword 'posyandu2026key'
+        }
+    }
+
     defaultConfig {
         applicationId "id.my.kuncir.posyandu.anc"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -20,6 +30,8 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+            debuggable false
         }
     }
 }

@@ -17,7 +17,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   const input = motherAccessValidateRequestSchema.safeParse(body);
   if (!input.success) {
     return NextResponse.json(
-      { error: { code: "VALIDATION_ERROR", message: "Nama lengkap dan kode akses wajib diisi." } },
+      { error: { code: "VALIDATION_ERROR", message: "Kode akses wajib diisi dengan benar." } },
       { status: 400 },
     );
   }

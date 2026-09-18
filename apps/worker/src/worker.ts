@@ -73,6 +73,7 @@ export async function runWorkerOnce(options: RunWorkerOnceOptions = {}): Promise
     const anchorDate = localDateString(options.now ?? new Date(), config.primaryTimezone);
     const reminderResult = await processReminderCycles(pool, anchorDate, {
       intervalDays: config.reminderIntervalDays,
+      timezone: config.primaryTimezone,
     });
     const pushResult = await processPendingPushAttempts(
       pool,

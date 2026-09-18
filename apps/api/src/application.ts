@@ -1,6 +1,8 @@
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import type { INestApplication } from "@nestjs/common";
+import type { Express } from "express";
+import helmet from "helmet";
 import type { ApiConfig } from "@anc/config";
 import type { DatabasePool } from "@anc/database";
 import { AppModule } from "./app.module.js";
@@ -167,6 +169,9 @@ export async function createApiApplication(
     { logger },
   );
 
+  const express = app.getHttpAdapter().getInstance() as Express;
+  express.set("trust proxy", "loopback");
+  app.use(helmet());
   app.use(requestContextMiddleware);
   app.setGlobalPrefix(API_GLOBAL_PREFIX);
   app.enableCors({

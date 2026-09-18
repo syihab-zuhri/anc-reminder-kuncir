@@ -8,6 +8,7 @@ import type {
   Village,
 } from "@anc/contracts";
 import { useEffect, useState } from "react";
+import { useToast } from "../lib/toast-context";
 
 interface BidanVisitConfirmationPanelProps {
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
@@ -23,6 +24,7 @@ interface ConfirmationSuccessData {
 }
 
 export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmationPanelProps) {
+  const toast = useToast();
   // Loaded data states
   const [mothers, setMothers] = useState<readonly MotherSummary[]>([]);
   const [villages, setVillages] = useState<readonly Village[]>([]);
@@ -176,10 +178,12 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
       } | null;
 
       if (!res.ok || data?.error) {
+        const errMsg = data?.error?.message ?? "Gagal menyimpan konfirmasi pemeriksaan.";
         setFeedback({
           type: "error",
-          message: data?.error?.message ?? "Gagal menyimpan konfirmasi pemeriksaan.",
+          message: errMsg,
         });
+        toast.error(errMsg, "Konfirmasi Gagal");
         return;
       }
 
@@ -194,10 +198,12 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
         confirmedAt: confirmedTime,
       });
 
+      const successMsg = `Konfirmasi pemeriksaan ${activeMilestone?.code ?? "ANC"} untuk ${activeMother?.full_name ?? "Ibu Hamil"} berhasil disimpan!`;
       setFeedback({
         type: "success",
-        message: `Konfirmasi pemeriksaan ${activeMilestone?.code ?? "ANC"} berhasil disimpan!`,
+        message: successMsg,
       });
+      toast.success(successMsg, "Kunjungan Dikonfirmasi");
 
       // Refresh milestones list
       if (selectedMotherId && activeMother?.active_pregnancy) {
@@ -214,7 +220,9 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
         }
       }
     } catch {
-      setFeedback({ type: "error", message: "Koneksi terputus saat menghubungi server." });
+      const connErr = "Koneksi terputus saat menghubungi server.";
+      setFeedback({ type: "error", message: connErr });
+      toast.error(connErr, "Koneksi Terputus");
     } finally {
       setSubmitting(false);
     }

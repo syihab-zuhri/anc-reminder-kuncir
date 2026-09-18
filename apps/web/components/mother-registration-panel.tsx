@@ -1,10 +1,12 @@
 "use client";
 
 import type {
-  MotherRegistrationResponse,
   MotherAccessCredentialIssueResponse,
+  MotherRegistrationResponse,
 } from "@anc/contracts";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useFacilities, useVillages } from "../hooks/use-organization-data";
+import { useToast } from "../lib/toast-context";
 
 interface MotherRegistrationPanelProps {
   readonly healthCenterId: string | null;
@@ -25,15 +27,117 @@ interface MotherRegistrationPanelProps {
 
 type RegistrationStep = "FORM" | "REVIEW" | "SUCCESS";
 
+const indonesianMonths = [
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+];
+
+function formatIndonesianDate(d: Date): string {
+  return `${d.getUTCDate()} ${indonesianMonths[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
+function calculateDatingPreview(dateString: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(dateString.trim())) return null;
+  const hpht = new Date(`${dateString}T00:00:00.000Z`);
+  if (isNaN(hpht.getTime())) return null;
+
+  const now = new Date();
+  const todayUtc = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const diffTime = todayUtc.getTime() - hpht.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    return {
+      isFuture: true,
+      errorMessage:
+        "Tanggal HPHT berada di masa depan. Mohon periksa kembali tanggal yang dipilih.",
+    };
+  }
+
+  const completedWeeks = Math.floor(diffDays / 7);
+  const completedDays = diffDays % 7;
+
+  let trimester = "Trimester 1 (Minggu 1-12)";
+  if (completedWeeks >= 28) {
+    trimester = "Trimester 3 (Minggu 28-40+)";
+  } else if (completedWeeks >= 13) {
+    trimester = "Trimester 2 (Minggu 13-27)";
+  }
+
+  // Estimated Due Date (HPL): HPHT + 280 days
+  const eddDate = new Date(hpht.getTime() + 280 * 24 * 60 * 60 * 1000);
+  const eddFormatted = formatIndonesianDate(eddDate);
+
+  return {
+    isFuture: false,
+    gestationalAge: `${completedWeeks} Minggu ${completedDays} Hari`,
+    completedWeeks,
+    completedDays,
+    trimester,
+    eddFormatted,
+    isOverdue42Weeks: completedWeeks >= 42,
+  };
+}
+
 export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegistrationPanelProps) {
+  const toast = useToast();
   const [step, setStep] = useState<RegistrationStep>("FORM");
 
-  // Form State - 5 Required Fields
+  // Form State
   const [fullName, setFullName] = useState("");
   const [nik, setNik] = useState("");
+  const [villageId, setVillageId] = useState("");
+  const [facilityId, setFacilityId] = useState("");
   const [address, setAddress] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [pregnancyStartDate, setPregnancyStartDate] = useState("");
+
+  const { villages } = useVillages();
+  const { facilities } = useFacilities();
+
+  // Filter facilities by selected village if any
+  const availableFacilities = useMemo(() => {
+    if (!villageId) return facilities;
+    return facilities.filter((f) => f.village_id === villageId || !f.village_id);
+  }, [facilities, villageId]);
+
+  // Searchable Dropdown State for Facility
+  const [facilitySearchQuery, setFacilitySearchQuery] = useState("");
+  const [facilityDropdownOpen, setFacilityDropdownOpen] = useState(false);
+  const facilityDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (facilityDropdownRef.current && !facilityDropdownRef.current.contains(e.target as Node)) {
+        setFacilityDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedFacility = useMemo(
+    () => availableFacilities.find((f) => f.id === facilityId),
+    [availableFacilities, facilityId],
+  );
+
+  const filteredFacilities = useMemo(() => {
+    if (!facilitySearchQuery.trim()) return availableFacilities;
+    const q = facilitySearchQuery.toLowerCase();
+    return availableFacilities.filter(
+      (f) => f.name.toLowerCase().includes(q) || f.facility_type.toLowerCase().includes(q),
+    );
+  }, [availableFacilities, facilitySearchQuery]);
 
   // Consents
   const [consentReminder, setConsentReminder] = useState(true);
@@ -48,6 +152,7 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
     phoneNumber?: string;
     pregnancyStartDate?: string;
     consent?: string;
+    villageId?: string;
   }>({});
   const [submitting, setSubmitting] = useState(false);
   const [successResult, setSuccessResult] = useState<{
@@ -60,6 +165,12 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
   const [generatingCode, setGeneratingCode] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [codeError, setCodeError] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  const datingPreview = useMemo(
+    () => calculateDatingPreview(pregnancyStartDate),
+    [pregnancyStartDate],
+  );
 
   if (userRole === "SUPER_ADMIN") {
     return (
@@ -82,6 +193,7 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
       phoneNumber?: string;
       pregnancyStartDate?: string;
       consent?: string;
+      villageId?: string;
     } = {};
 
     if (!fullName.trim()) {
@@ -89,6 +201,10 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
     }
     if (!/^\d{16}$/u.test(nik.trim())) {
       errs.nik = "NIK harus terdiri tepat dari 16 digit angka.";
+    }
+    if (!villageId) {
+      errs.villageId =
+        "Desa/kelurahan wajib dipilih agar data bumil tersinkronisasi dengan bidan wilayah.";
     }
     if (!address.trim()) {
       errs.address = "Alamat domisili lengkap wajib diisi.";
@@ -108,6 +224,7 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
       setValidationError(
         "Terdapat isian data yang belum valid. Mohon periksa field bertanda merah di bawah.",
       );
+      toast.warning("Mohon lengkapi dan periksa kembali field bertanda merah.", "Validasi Form");
       return false;
     }
 
@@ -134,6 +251,8 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
           idempotency_key: crypto.randomUUID(),
           full_name: fullName.trim(),
           nik: nik.trim(),
+          village_id: villageId || null,
+          registration_facility_id: facilityId || null,
           address: address.trim(),
           phone_number: phoneNumber.trim(),
           pregnancy_start_date: pregnancyStartDate.trim(),
@@ -151,6 +270,7 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
           (data as { error?: { message?: string } } | null)?.error?.message ??
           "Gagal mendaftarkan ibu hamil ke database.";
         setValidationError(errorMsg);
+        toast.error(errorMsg, "Pendaftaran Gagal");
         setStep("FORM");
         return;
       }
@@ -160,9 +280,15 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
         pregnancy_id: data.pregnancy.id,
         registered_at: data.consent.recorded_at,
       });
+      toast.success(
+        `Ibu hamil "${fullName.trim()}" berhasil didaftarkan ke sistem.`,
+        "Pendaftaran Berhasil",
+      );
       setStep("SUCCESS");
     } catch {
-      setValidationError("Terjadi kesalahan koneksi saat menghubungi server.");
+      const connError = "Terjadi kesalahan koneksi saat menghubungi server.";
+      setValidationError(connError);
+      toast.error(connError, "Koneksi Terputus");
       setStep("FORM");
     } finally {
       setSubmitting(false);
@@ -191,24 +317,42 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
         MotherAccessCredentialIssueResponse | { error?: { message?: string } } | null;
 
       if (!res.ok || !data || "error" in data || !("one_time_code" in data)) {
-        setCodeError(
+        const err =
           (data as { error?: { message?: string } })?.error?.message ??
-            "Gagal menerbitkan kode akses ibu hamil.",
-        );
+          "Gagal menerbitkan kode akses ibu hamil.";
+        setCodeError(err);
+        toast.error(err, "Penerbitan Gagal");
         return;
       }
 
       setGeneratedCode(data.one_time_code);
+      toast.success(`Kode akses ${data.one_time_code} berhasil diterbitkan.`, "Kode Akses Siap");
     } catch {
-      setCodeError("Terjadi gangguan jaringan saat menerbitkan kode akses.");
+      const connErr = "Terjadi gangguan jaringan saat menerbitkan kode akses.";
+      setCodeError(connErr);
+      toast.error(connErr, "Koneksi Terputus");
     } finally {
       setGeneratingCode(false);
+    }
+  }
+
+  async function handleCopyCode(): Promise<void> {
+    if (!generatedCode) return;
+    try {
+      await navigator.clipboard.writeText(generatedCode);
+      setCopiedCode(true);
+      toast.success("Kode akses berhasil disalin ke clipboard.", "Tersalin");
+      setTimeout(() => setCopiedCode(false), 3000);
+    } catch {
+      toast.error("Gagal menyalin kode otomatis. Silakan salin secara manual.", "Salin Manual");
     }
   }
 
   function handleResetForm(): void {
     setFullName("");
     setNik("");
+    setVillageId("");
+    setFacilityId("");
     setAddress("");
     setPhoneNumber("");
     setPregnancyStartDate("");
@@ -226,27 +370,31 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
 
   return (
     <div className="staff-panel-card">
-      <header className="staff-panel-header">
+      <div className="staff-panel-header">
         <div>
-          <span className="staff-kicker">Pendaftaran Baru</span>
+          <span className="staff-panel-badge">PENDAFTARAN BARU</span>
           <h2>Pendaftaran Ibu Hamil</h2>
-          <p className="field-hint">
-            Registrasi profil ibu hamil &amp; persetujuan pemantauan ANC.
-          </p>
+          <p>Registrasi profil ibu hamil & persetujuan pemantauan ANC.</p>
         </div>
-      </header>
+      </div>
 
       {validationError && (
-        <div className="staff-alert alert-error" style={{ marginBottom: "1rem" }}>
+        <div
+          className="staff-alert staff-alert-error"
+          role="alert"
+          style={{ marginBottom: "1.5rem" }}
+        >
           <p>{validationError}</p>
         </div>
       )}
 
       {step === "FORM" && (
-        <form className="staff-form-grid" onSubmit={handleGoToReview}>
-          <div className="staff-section-subhead">
+        <form onSubmit={handleGoToReview}>
+          <div className="form-section-title" style={{ marginBottom: "1rem" }}>
             <h3>Field Wajib Pendaftaran (5 Komponen Wajib)</h3>
-            <p>Pastikan seluruh data pasien terverifikasi dari KTP/KK resmi.</p>
+            <p style={{ fontSize: "0.85rem", color: "var(--color-ink-muted)" }}>
+              Pastikan seluruh data pasien terverifikasi dari KTP/KK resmi.
+            </p>
           </div>
 
           <div className="form-group">
@@ -300,8 +448,271 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
             )}
           </div>
 
+          <div
+            className="form-row"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: "1.25rem",
+              alignItems: "start",
+            }}
+          >
+            {/* 3. Wilayah Desa / Dusun Binaan (Dropdown) */}
+            <div className="form-group">
+              <label
+                htmlFor="reg-village"
+                style={{
+                  display: "block",
+                  marginBottom: "0.35rem",
+                  fontSize: "0.86rem",
+                  fontWeight: 700,
+                }}
+              >
+                3. Wilayah Desa / Dusun Binaan *
+              </label>
+              <select
+                id="reg-village"
+                className="staff-input"
+                style={{
+                  minHeight: "34px",
+                  fontSize: "0.82rem",
+                  borderRadius: "6px",
+                }}
+                value={villageId}
+                onChange={(e) => {
+                  setVillageId(e.target.value);
+                  setFacilityId("");
+                  setFacilitySearchQuery("");
+                  if (fieldErrors.villageId)
+                    setFieldErrors((prev) => ({ ...prev, villageId: undefined }));
+                }}
+                aria-invalid={!!fieldErrors.villageId}
+                aria-describedby={fieldErrors.villageId ? "err-reg-village" : undefined}
+              >
+                <option value="">-- Pilih Wilayah Desa Binaan --</option>
+                {villages.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    Desa {v.name} ({v.code})
+                  </option>
+                ))}
+              </select>
+              {fieldErrors.villageId && (
+                <span
+                  id="err-reg-village"
+                  className="inline-field-error"
+                  role="alert"
+                  style={{ marginTop: "0.35rem" }}
+                >
+                  {fieldErrors.villageId}
+                </span>
+              )}
+            </div>
+
+            {/* 4. TPMB / Faskes Pendaftaran (Searchable Dropdown) */}
+            <div className="form-group">
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "0.35rem",
+                  fontSize: "0.86rem",
+                  fontWeight: 700,
+                }}
+              >
+                4. TPMB / Faskes Pendaftaran
+              </label>
+              <div ref={facilityDropdownRef} style={{ position: "relative" }}>
+                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                  <svg
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    width="14"
+                    height="14"
+                    style={{
+                      position: "absolute",
+                      left: "0.65rem",
+                      color: "var(--ink-faint, #777)",
+                      pointerEvents: "none",
+                    }}
+                    aria-hidden="true"
+                  >
+                    <circle cx="8.5" cy="8.5" r="5.5" />
+                    <line x1="12.5" y1="12.5" x2="17" y2="17" />
+                  </svg>
+
+                  <input
+                    type="text"
+                    className="staff-input"
+                    style={{
+                      minHeight: "34px",
+                      paddingLeft: "2rem",
+                      paddingRight: facilityId ? "2rem" : "0.75rem",
+                      fontSize: "0.82rem",
+                      borderRadius: "6px",
+                      width: "100%",
+                    }}
+                    placeholder={
+                      selectedFacility
+                        ? `${selectedFacility.name} (${selectedFacility.facility_type})`
+                        : "Ketik untuk cari TPMB / Posyandu…"
+                    }
+                    value={
+                      facilityDropdownOpen
+                        ? facilitySearchQuery
+                        : selectedFacility
+                          ? `${selectedFacility.name} (${selectedFacility.facility_type})`
+                          : ""
+                    }
+                    onFocus={() => {
+                      setFacilityDropdownOpen(true);
+                      if (selectedFacility && !facilitySearchQuery) {
+                        setFacilitySearchQuery("");
+                      }
+                    }}
+                    onChange={(e) => {
+                      setFacilitySearchQuery(e.target.value);
+                      if (!facilityDropdownOpen) setFacilityDropdownOpen(true);
+                    }}
+                  />
+
+                  {facilityId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFacilityId("");
+                        setFacilitySearchQuery("");
+                      }}
+                      style={{
+                        position: "absolute",
+                        right: "0.45rem",
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--ink-faint, #777)",
+                        cursor: "pointer",
+                        padding: "0.2rem",
+                        fontSize: "0.85rem",
+                        lineHeight: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                      title="Hapus pilihan faskes"
+                      aria-label="Hapus pilihan faskes"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {facilityDropdownOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 4px)",
+                      left: 0,
+                      right: 0,
+                      zIndex: 50,
+                      backgroundColor: "var(--paper-raised, #ffffff)",
+                      border: "1px solid var(--line, #ddd)",
+                      borderRadius: "6px",
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                      maxHeight: "220px",
+                      overflowY: "auto",
+                      padding: "0.3rem",
+                    }}
+                  >
+                    <div
+                      onClick={() => {
+                        setFacilityId("");
+                        setFacilitySearchQuery("");
+                        setFacilityDropdownOpen(false);
+                      }}
+                      style={{
+                        padding: "0.4rem 0.65rem",
+                        fontSize: "0.8rem",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        backgroundColor: !facilityId ? "rgba(22, 61, 55, 0.08)" : "transparent",
+                        fontWeight: !facilityId ? 650 : 400,
+                        color: "var(--ink)",
+                      }}
+                    >
+                      — Tanpa Faskes Khusus —
+                    </div>
+
+                    {filteredFacilities.length === 0 ? (
+                      <div
+                        style={{
+                          padding: "0.5rem 0.65rem",
+                          fontSize: "0.8rem",
+                          color: "var(--ink-muted, #666)",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        Tidak ada TPMB / Posyandu yang cocok
+                      </div>
+                    ) : (
+                      filteredFacilities.map((f) => {
+                        const isSelected = facilityId === f.id;
+                        return (
+                          <div
+                            key={f.id}
+                            onClick={() => {
+                              setFacilityId(f.id);
+                              setFacilitySearchQuery(f.name);
+                              setFacilityDropdownOpen(false);
+                            }}
+                            style={{
+                              padding: "0.4rem 0.65rem",
+                              fontSize: "0.8rem",
+                              borderRadius: "4px",
+                              cursor: "pointer",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              backgroundColor: isSelected
+                                ? "rgba(22, 61, 55, 0.08)"
+                                : "transparent",
+                              fontWeight: isSelected ? 650 : 400,
+                              color: "var(--ink)",
+                            }}
+                          >
+                            <span>{f.name}</span>
+                            <span
+                              style={{
+                                fontSize: "0.72rem",
+                                color: "var(--ink-muted, #777)",
+                                backgroundColor: "rgba(0,0,0,0.05)",
+                                padding: "0.1rem 0.35rem",
+                                borderRadius: "3px",
+                              }}
+                            >
+                              {f.facility_type}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+
+                <small
+                  className="field-help"
+                  style={{
+                    display: "block",
+                    marginTop: "0.25rem",
+                    color: "var(--color-ink-muted)",
+                  }}
+                >
+                  Ketik nama untuk mencari posyandu/faskes di wilayah desa yang dipilih.
+                </small>
+              </div>
+            </div>
+          </div>
+
           <div className="form-group">
-            <label htmlFor="reg-address">3. Alamat Domisili Lengkap *</label>
+            <label htmlFor="reg-address">5. Alamat Domisili Lengkap *</label>
             <input
               id="reg-address"
               className={`staff-input ${fieldErrors.address ? "input-has-error" : ""}`}
@@ -323,7 +734,7 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
           </div>
 
           <div className="form-group">
-            <label htmlFor="reg-phone">4. Nomor WhatsApp / Telepon *</label>
+            <label htmlFor="reg-phone">6. Nomor WhatsApp / Telepon *</label>
             <input
               id="reg-phone"
               className={`staff-input ${fieldErrors.phoneNumber ? "input-has-error" : ""}`}
@@ -345,7 +756,7 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
           </div>
 
           <div className="form-group">
-            <label htmlFor="reg-dating">5. Tanggal Awal Kehamilan (HPHT / Dating Date) *</label>
+            <label htmlFor="reg-dating">7. Tanggal Awal Kehamilan (HPHT / Dating Date) *</label>
             <input
               id="reg-dating"
               className={`staff-input ${fieldErrors.pregnancyStartDate ? "input-has-error" : ""}`}
@@ -369,6 +780,48 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
               >
                 Digunakan oleh server untuk menghitung usia kehamilan dan jadwal K1-K8 otomatis.
               </small>
+            )}
+
+            {datingPreview && (
+              <div
+                className="dating-live-preview-card"
+                role="region"
+                aria-label="Kalkulasi Usia Kehamilan dan Taksiran Persalinan"
+              >
+                {datingPreview.isFuture ? (
+                  <p className="dating-preview-note" style={{ color: "#b91c1c" }}>
+                    ⚠️ {datingPreview.errorMessage}
+                  </p>
+                ) : (
+                  <>
+                    <div className="preview-card-topline">
+                      <span className="preview-badge-auto">✨ Kalkulasi Otomatis</span>
+                      <span className="preview-badge-trimester">{datingPreview.trimester}</span>
+                    </div>
+                    <div className="dating-preview-grid">
+                      <div className="dating-preview-item">
+                        <span className="label">Usia Kehamilan Saat Ini</span>
+                        <strong className="value">{datingPreview.gestationalAge}</strong>
+                      </div>
+                      <div className="dating-preview-item">
+                        <span className="label">Taksiran Persalinan (HPL)</span>
+                        <strong className="value">{datingPreview.eddFormatted}</strong>
+                      </div>
+                    </div>
+                    {datingPreview.isOverdue42Weeks ? (
+                      <p className="dating-preview-note" style={{ color: "#b91c1c" }}>
+                        ⚠️ Usia kehamilan mencapai/melampaui 42 minggu. Pastikan tanggal HPHT telah
+                        sesuai.
+                      </p>
+                    ) : (
+                      <p className="dating-preview-note">
+                        💡 Verifikasi taksiran ini dengan Hari Pertama Haid Terakhir (HPHT) pada
+                        Buku KIA fisik ibu.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
             )}
           </div>
 
@@ -461,6 +914,22 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
                 <code>{maskedNikDisplay}</code>
               </dd>
             </div>
+            {villageId && (
+              <div>
+                <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>
+                  Wilayah Desa / Dusun
+                </dt>
+                <dd>{villages.find((v) => v.id === villageId)?.name ?? villageId}</dd>
+              </div>
+            )}
+            {facilityId && (
+              <div>
+                <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>
+                  TPMB / Faskes Pendaftaran
+                </dt>
+                <dd>{facilities.find((f) => f.id === facilityId)?.name ?? facilityId}</dd>
+              </div>
+            )}
             <div>
               <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>Alamat Domisili</dt>
               <dd>{address}</dd>
@@ -585,6 +1054,32 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
                   }}
                 >
                   {generatedCode}
+                </div>
+                <div style={{ marginBottom: "0.75rem" }}>
+                  <button
+                    className="btn-primary"
+                    type="button"
+                    onClick={() => void handleCopyCode()}
+                    style={{ fontSize: "0.85rem", padding: "0.45rem 0.85rem" }}
+                  >
+                    <span
+                      className="icon-label"
+                      style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+                    >
+                      <svg
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.75"
+                        width="15"
+                        height="15"
+                      >
+                        <rect x="7" y="7" width="10" height="10" rx="2" />
+                        <path d="M4 13V5a2 2 0 0 1 2-2h8" />
+                      </svg>
+                      <span>{copiedCode ? "Kode Tersalin!" : "Salin Kode Akses"}</span>
+                    </span>
+                  </button>
                 </div>
                 <small style={{ color: "#e11d48", fontWeight: 600 }}>
                   Perhatian: Kode hanya ditampilkan satu kali ini. Catat atau serahkan langsung ke

@@ -78,6 +78,8 @@ export class MotherRegistryService {
             address: input.address,
             phoneNormalized,
             pregnancyStartDate: input.pregnancy_start_date,
+            villageId: input.village_id ?? null,
+            registrationFacilityId: input.registration_facility_id ?? null,
             notificationAllowed: input.consent.notification_allowed,
             recordedAt: now,
           });

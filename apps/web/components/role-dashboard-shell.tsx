@@ -27,7 +27,7 @@ interface RoleDashboardShellProps {
   ) => void;
 }
 
-export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShellProps) {
+export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
   const [puskesmasData, setPuskesmasData] = useState<PuskesmasDashboardResponse | null>(null);
   const [bidanData, setBidanData] = useState<BidanDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,6 +44,13 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
   const [waActionMessage, setWaActionMessage] = useState<string | null>(null);
   const [reminderSummary, setReminderSummary] = useState<ReminderSummaryResponse | null>(null);
   const [reminderLoading, setReminderLoading] = useState(false);
+
+  // Re-confirmation modal state for WhatsApp Fallback Actions
+  const [waConfirmDialog, setWaConfirmDialog] = useState<{
+    type: "GENERATE_LINK" | "RESOLVE" | "UNREACHABLE";
+    item: WaFallbackItem;
+  } | null>(null);
+  const [waActionSubmitting, setWaActionSubmitting] = useState(false);
 
   // TASK-P5-004: Organization Summary Reports
   const [reportData, setReportData] = useState<OrganizationReportResponse | null>(null);
@@ -165,7 +172,7 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
       }
       const data = (await res.json()) as { wa_me_url: string; disclaimer: string };
       window.open(data.wa_me_url, "_blank");
-      setWaActionMessage(`[READY → LINK_GENERATED] ${data.disclaimer}`);
+      setWaActionMessage("Link WhatsApp berhasil dibuka di tab baru.");
       void fetchWaQueue();
       if (userRole === "PUSKESMAS") void fetchReminderSummary();
     } catch {
@@ -212,6 +219,24 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
       if (userRole === "PUSKESMAS") void fetchReminderSummary();
     } catch {
       setWaActionMessage("Gagal menghubungkan ke server.");
+    }
+  }
+
+  async function handleExecuteWaConfirm(): Promise<void> {
+    if (!waConfirmDialog) return;
+    const { type, item } = waConfirmDialog;
+    setWaActionSubmitting(true);
+    try {
+      if (type === "GENERATE_LINK") {
+        await handleGenerateWaLink(item.id);
+      } else if (type === "RESOLVE") {
+        await handleResolveWaFallback(item.id);
+      } else if (type === "UNREACHABLE") {
+        await handleUnreachableWaFallback(item.id);
+      }
+      setWaConfirmDialog(null);
+    } finally {
+      setWaActionSubmitting(false);
     }
   }
 
@@ -287,16 +312,13 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
                 {puskesmasData.summary.milestones_overdue_count}
               </strong>
             </div>
-            <div className="metric-card">
-              <span className="metric-label">Pending Validasi (K1-K6)</span>
-              <strong className="metric-value text-pending">
-                {puskesmasData.summary.pending_validations_count}
-              </strong>
-            </div>
+            {/* Fitur Tambahan: Detail Klinis K1-K6 (Disembunyikan sementara) */}
           </div>
           <div className="queue-section">
             <h3>Antrean Tindakan Prioritas (Priority Action Queue)</h3>
-            {puskesmasData.priority_action_queue.length === 0 ? (
+            {puskesmasData.priority_action_queue.filter(
+              (item) => item.action_type !== "VALIDATION_NEEDED",
+            ).length === 0 ? (
               <p className="empty-notice">Tidak ada antrean tindakan prioritas saat ini.</p>
             ) : (
               <div className="table-responsive" style={{ marginTop: "1rem" }}>
@@ -312,34 +334,36 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
                     </tr>
                   </thead>
                   <tbody>
-                    {puskesmasData.priority_action_queue.map((item, idx) => (
-                      <tr key={`${item.mother_id}-${item.milestone_code}-${idx}`}>
-                        <td>
-                          <strong>{item.mother_full_name}</strong>
-                        </td>
-                        <td>{item.village_name ?? "-"}</td>
-                        <td>
-                          <span className="badge-code">{item.milestone_code}</span>
-                        </td>
-                        <td>
-                          <span
-                            className={`badge-status status-${item.visit_status.toLowerCase()}`}
-                          >
-                            {item.visit_status}
-                          </span>
-                        </td>
-                        <td>{item.due_at ?? "-"}</td>
-                        <td>
-                          <span className="badge-action">
-                            {item.action_type === "VALIDATION_NEEDED"
-                              ? "Butuh Validasi Detail K1-K6"
-                              : item.action_type === "WA_FALLBACK_REQUIRED"
-                                ? "Tindak Lanjut Fallback WA"
-                                : "Konfirmasi Pemeriksaan"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {puskesmasData.priority_action_queue
+                      .filter((item) => item.action_type !== "VALIDATION_NEEDED")
+                      .map((item, idx) => (
+                        <tr key={`${item.mother_id}-${item.milestone_code}-${idx}`}>
+                          <td>
+                            <strong>{item.mother_full_name}</strong>
+                          </td>
+                          <td>{item.village_name ?? "-"}</td>
+                          <td>
+                            <span className="badge-code">{item.milestone_code}</span>
+                          </td>
+                          <td>
+                            <span
+                              className={`badge-status status-${item.visit_status.toLowerCase()}`}
+                            >
+                              {item.visit_status}
+                            </span>
+                          </td>
+                          <td>{item.due_at ?? "-"}</td>
+                          <td>
+                            <span className="badge-action">
+                              {item.action_type === "VALIDATION_NEEDED"
+                                ? "Butuh Validasi Detail K1-K6"
+                                : item.action_type === "WA_FALLBACK_REQUIRED"
+                                  ? "Tindak Lanjut Fallback WA"
+                                  : "Konfirmasi Pemeriksaan"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
@@ -479,76 +503,6 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
                   </strong>
                 </div>
               </div>
-
-              {reminderSummary.fallback_queue.length === 0 ? (
-                <p className="empty-notice">
-                  Tidak ada kegagalan reminder yang perlu ditindaklanjuti.
-                </p>
-              ) : (
-                <div className="table-responsive" style={{ marginTop: "1rem" }}>
-                  <table className="staff-table">
-                    <thead>
-                      <tr>
-                        <th>Ibu Hamil</th>
-                        <th>Milestone</th>
-                        <th>Ringkasan Push</th>
-                        <th>Usia Antrean</th>
-                        <th>Status Tindak Lanjut</th>
-                        <th>Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {reminderSummary.fallback_queue.map((item) => (
-                        <tr key={item.fallback_id}>
-                          <td>
-                            <strong>{item.mother_full_name}</strong>
-                            <br />
-                            <span className="field-hint">{item.phone_number_masked}</span>
-                          </td>
-                          <td>
-                            <span className="badge-code">{item.milestone_code}</span>
-                          </td>
-                          <td>{reminderFailureLabel(item.push_failure_summary)}</td>
-                          <td>
-                            {item.fallback_age_hours} jam
-                            {item.escalated && <span className="badge-action">Eskalasi</span>}
-                          </td>
-                          <td>{item.fallback_status}</td>
-                          <td>
-                            {item.fallback_status === "UNREACHABLE" ? (
-                              <span className="field-hint">Sudah dicatat</span>
-                            ) : (
-                              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                                <button
-                                  className="btn-primary"
-                                  type="button"
-                                  onClick={() => void handleGenerateWaLink(item.fallback_id)}
-                                >
-                                  Buka WA
-                                </button>
-                                <button
-                                  className="btn-secondary"
-                                  type="button"
-                                  onClick={() => void handleResolveWaFallback(item.fallback_id)}
-                                >
-                                  Tandai Ditindaklanjuti
-                                </button>
-                                <button
-                                  className="btn-secondary"
-                                  type="button"
-                                  onClick={() => void handleUnreachableWaFallback(item.fallback_id)}
-                                >
-                                  Tidak Dapat Dihubungi
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
             </>
           )}
         </div>
@@ -583,7 +537,6 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
                     <th>Total Ibu Hamil</th>
                     <th>Kehamilan Aktif</th>
                     <th>Pemeriksaan Dikonfirmasi (K1-K8)</th>
-                    <th>Rekam Klinis Tervalidasi</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -595,9 +548,6 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
                       <td>{row.total_mothers} orang</td>
                       <td>{row.active_pregnancies} bumil</td>
                       <td>{row.confirmed_visits} visit</td>
-                      <td>
-                        <span className="badge-code">{row.validated_records} rekam</span>
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -615,12 +565,6 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
             {waLoading ? "Memuat..." : "Refresh Queue"}
           </button>
         </header>
-
-        <p className="field-hint" style={{ marginBottom: "1rem" }}>
-          Link <code>wa.me</code> ini adalah aksi manual Bidan/Puskesmas. Sistem{" "}
-          <strong>tidak pernah</strong> mengklaim pengiriman otomatis (<code>SENT</code>/
-          <code>DELIVERED</code>).
-        </p>
 
         {waActionMessage && (
           <div className="staff-alert alert-info" style={{ marginBottom: "1rem" }}>
@@ -664,21 +608,21 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
                         <button
                           className="btn-primary"
                           type="button"
-                          onClick={() => void handleGenerateWaLink(item.id)}
+                          onClick={() => setWaConfirmDialog({ type: "GENERATE_LINK", item })}
                         >
                           Buka WhatsApp
                         </button>
                         <button
                           className="btn-secondary"
                           type="button"
-                          onClick={() => void handleResolveWaFallback(item.id)}
+                          onClick={() => setWaConfirmDialog({ type: "RESOLVE", item })}
                         >
                           Selesai
                         </button>
                         <button
                           className="btn-secondary"
                           type="button"
-                          onClick={() => void handleUnreachableWaFallback(item.id)}
+                          onClick={() => setWaConfirmDialog({ type: "UNREACHABLE", item })}
                         >
                           Tidak Dapat Dihubungi
                         </button>
@@ -692,6 +636,125 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
         )}
       </div>
 
+      {/* Re-confirmation Modal for WhatsApp Fallback Actions */}
+      {waConfirmDialog && (
+        <div
+          className="staff-modal-backdrop"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !waActionSubmitting) {
+              setWaConfirmDialog(null);
+            }
+          }}
+        >
+          <div
+            className="staff-modal-dialog modal-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="wa-confirm-modal-title"
+          >
+            <header className="staff-modal-header">
+              <div className="staff-modal-header-content">
+                <span className="staff-modal-kicker">Konfirmasi Tindak Lanjut</span>
+                <h3
+                  id="wa-confirm-modal-title"
+                  className="staff-modal-title"
+                  style={{ fontSize: "1.15rem" }}
+                >
+                  {waConfirmDialog.type === "GENERATE_LINK" && "Buka Pesan WhatsApp?"}
+                  {waConfirmDialog.type === "RESOLVE" && "Tandai Pengingat Selesai?"}
+                  {waConfirmDialog.type === "UNREACHABLE" && "Tandai Tidak Dapat Dihubungi?"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="staff-modal-close-btn"
+                aria-label="Tutup dialog konfirmasi"
+                disabled={waActionSubmitting}
+                onClick={() => setWaConfirmDialog(null)}
+              >
+                ✕
+              </button>
+            </header>
+
+            <div className="staff-modal-body" style={{ gap: "1rem", fontSize: "0.86rem" }}>
+              <div
+                style={{
+                  padding: "0.75rem 1rem",
+                  background: "var(--paper, #fdfbf7)",
+                  border: "1px solid var(--line)",
+                  borderRadius: "8px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.35rem",
+                }}
+              >
+                <div>
+                  <span style={{ color: "var(--ink-muted)", fontSize: "0.78rem" }}>
+                    Nama Pasien:{" "}
+                  </span>
+                  <strong>{waConfirmDialog.item.mother_full_name}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--ink-muted)", fontSize: "0.78rem" }}>Nomor HP: </span>
+                  <code>{waConfirmDialog.item.phone_number_masked}</code>
+                </div>
+                <div>
+                  <span style={{ color: "var(--ink-muted)", fontSize: "0.78rem" }}>
+                    Jadwal / Kode:{" "}
+                  </span>
+                  <span className="badge-code" style={{ marginLeft: "0.25rem" }}>
+                    {waConfirmDialog.item.milestone_code}
+                  </span>
+                </div>
+              </div>
+
+              <p style={{ margin: 0, color: "var(--ink-muted)", lineHeight: 1.55 }}>
+                {waConfirmDialog.type === "GENERATE_LINK" &&
+                  "Sistem akan membuat link chat resmi wa.me dan membukanya di tab baru. Pastikan nomor WhatsApp aktif untuk mengirim pesan pengingat ke ibu hamil."}
+                {waConfirmDialog.type === "RESOLVE" &&
+                  "Apakah Anda yakin pengingat pemeriksaan ini sudah berhasil disampaikan ke ibu hamil? Antrean tindak lanjut ini akan ditandai SELESAI dan dikeluarkan dari daftar."}
+                {waConfirmDialog.type === "UNREACHABLE" &&
+                  "Apakah Anda yakin nomor pasien tidak dapat dihubungi? Status antrean ini akan dicatat sebagai GAGAL / TIDAK DAPAT DIHUBUNGI."}
+              </p>
+            </div>
+
+            <div
+              className="staff-modal-footer"
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.75rem",
+                padding: "0.85rem 1.25rem",
+              }}
+            >
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={waActionSubmitting}
+                onClick={() => setWaConfirmDialog(null)}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                className={waConfirmDialog.type === "UNREACHABLE" ? "btn-danger" : "btn-primary"}
+                disabled={waActionSubmitting}
+                onClick={() => void handleExecuteWaConfirm()}
+              >
+                {waActionSubmitting
+                  ? "Memproses…"
+                  : waConfirmDialog.type === "GENERATE_LINK"
+                    ? "Ya, Buka WhatsApp"
+                    : waConfirmDialog.type === "RESOLVE"
+                      ? "Ya, Selesaikan"
+                      : "Ya, Catat Tidak Dapat Dihubungi"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Scoped Operational Search */}
       <div className="search-section" style={{ marginTop: "2rem" }}>
         <div
@@ -704,16 +767,6 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
           }}
         >
           <h3 style={{ margin: 0 }}>Cari Ibu Hamil Terdaftar</h3>
-          {onNavigateTab && (
-            <button
-              type="button"
-              className="btn-secondary"
-              style={{ fontSize: "0.8rem", padding: "0.4rem 0.8rem" }}
-              onClick={() => onNavigateTab("mothers")}
-            >
-              Buka Halaman Data Bumil Lengkap &rarr;
-            </button>
-          )}
         </div>
         <form onSubmit={(e) => void handleSearchMothers(e)} className="search-form">
           <input
@@ -771,17 +824,4 @@ export function RoleDashboardShell({ userRole, onNavigateTab }: RoleDashboardShe
       </div>
     </div>
   );
-}
-
-function reminderFailureLabel(
-  kind: ReminderSummaryResponse["fallback_queue"][number]["push_failure_summary"],
-): string {
-  const labels = {
-    NO_ACTIVE_DEVICE: "Tidak ada perangkat aktif",
-    PUSH_PENDING: "Push menunggu diproses",
-    RETRYABLE_FAILURE: "Push gagal, dapat dicoba ulang",
-    TERMINAL_FAILURE: "Push gagal terminal",
-    NO_PUSH_ATTEMPT: "Tidak ada kegagalan push aktif",
-  } as const;
-  return labels[kind];
 }

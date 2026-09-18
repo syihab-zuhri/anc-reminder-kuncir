@@ -44,18 +44,24 @@ interface TabDefinition {
   readonly description: string;
 }
 
+/**
+ * Feature Toggle: Detail Klinis K1–K6
+ * Ubah ke `true` jika fitur ini ingin diaktifkan kembali tanpa mengubah kode sumber.
+ */
+const ENABLE_CLINICAL_RECORDS_PANEL = false;
+
 const TAB_DEFINITIONS: readonly TabDefinition[] = [
   {
     id: "summary",
-    label: "Dashboard",
-    shortLabel: "Beranda",
-    allowedRoles: ["PUSKESMAS", "BIDAN", "SUPER_ADMIN"],
-    description: "Ringkasan metrik dan antrean prioritas operasional.",
+    label: "Ringkasan",
+    shortLabel: "Ringkasan",
+    allowedRoles: ["PUSKESMAS", "BIDAN"],
+    description: "Metrik agregat, status antrean pengingat, dan tindakan operasional faskes.",
   },
   {
     id: "confirm",
-    label: "Konfirmasi Periksa",
-    shortLabel: "Konfirmasi",
+    label: "Konfirmasi Kunjungan",
+    shortLabel: "Kunjungan",
     allowedRoles: ["PUSKESMAS", "BIDAN"],
     description: "Konfirmasi kehadiran dan kunjungan ANC oleh Bidan.",
   },
@@ -66,13 +72,17 @@ const TAB_DEFINITIONS: readonly TabDefinition[] = [
     allowedRoles: ["PUSKESMAS", "BIDAN"],
     description: "Daftar seluruh ibu hamil terdaftar dan status kehamilan.",
   },
-  {
-    id: "clinical",
-    label: "Detail K1–K6",
-    shortLabel: "K1–K6",
-    allowedRoles: ["PUSKESMAS"],
-    description: "Pencatatan dan validasi rekam medis pemeriksaan K1–K6.",
-  },
+  ...(ENABLE_CLINICAL_RECORDS_PANEL
+    ? [
+        {
+          id: "clinical" as const,
+          label: "Detail K1–K6",
+          shortLabel: "K1–K6",
+          allowedRoles: ["PUSKESMAS" as const],
+          description: "Pencatatan dan validasi rekam medis pemeriksaan K1–K6.",
+        },
+      ]
+    : []),
   {
     id: "register",
     label: "Register Bumil",
@@ -598,9 +608,9 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
           <MotherAccessPanel userRole={staff.role} />
         )}
 
-        {effectiveTab === "clinical" && staff.role === "PUSKESMAS" && (
-          <PuskesmasClinicalRecordPanel userRole={staff.role} />
-        )}
+        {ENABLE_CLINICAL_RECORDS_PANEL &&
+          effectiveTab === "clinical" &&
+          staff.role === "PUSKESMAS" && <PuskesmasClinicalRecordPanel userRole={staff.role} />}
 
         {effectiveTab === "confirm" && <BidanVisitConfirmationPanel userRole={staff.role} />}
 
