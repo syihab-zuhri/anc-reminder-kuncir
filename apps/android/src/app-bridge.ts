@@ -7,6 +7,7 @@ import {
   CapacitorNativePushBridge,
 } from "./push-registration.js";
 import { AndroidSecureStorage } from "./secure-storage.js";
+import { subscribeNtfyWebPush } from "./ntfy-webpush.js";
 
 export interface AppBridgeConfig {
   readonly serverUrl: string;
@@ -66,6 +67,9 @@ export class CapacitorAppBridge {
 
       this.pushCoordinator = new AndroidPushRegistrationCoordinator(nativePush, storage, transport);
       await this.pushCoordinator.synchronize();
+
+      // Subscribe Web Push ntfy untuk notifikasi saat app di-background
+      void subscribeNtfyWebPush(this.config.serverUrl);
     } catch {
       // Mother session check is best-effort; the portal handles its own auth.
     }
