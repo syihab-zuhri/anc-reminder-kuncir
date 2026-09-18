@@ -48,6 +48,7 @@ import {
   CONTENT_MANAGEMENT_REPOSITORY,
   DEVICE_REGISTRATION_REPOSITORY,
   ANNOUNCEMENT_REPOSITORY,
+  PUSH_DELIVERY_ADAPTER,
 } from "./infrastructure/tokens.js";
 import { DeviceRegistrationController } from "./device-registration/device-registration.controller.js";
 import { AnnouncementController } from "./announcements/announcement.controller.js";
@@ -460,16 +461,26 @@ export class AppModule {
           inject: [DATABASE_POOL],
         },
         {
+          provide: PUSH_DELIVERY_ADAPTER,
+          useFactory: (config: ApiConfig) =>
+            options.pushDeliveryAdapter ??
+            createFcmPushAdapter(config.fcmProjectId, config.fcmServiceAccountJson),
+          inject: [API_CONFIG],
+        },
+        {
           provide: AnnouncementService,
           useFactory: (
             repository: AnnouncementRepository,
             policy: AuthorizationPolicy,
             audit: AuditService,
+            pushAdapter: PushDeliveryAdapter,
             clock: Clock,
           ) =>
             new AnnouncementService(
               repository,
               policy,
+              new DeviceTokenCrypto(options.config.pushTokenEncryptionKey),
+              pushAdapter,
               audit,
               clock,
             ),
@@ -477,6 +488,7 @@ export class AppModule {
             ANNOUNCEMENT_REPOSITORY,
             AuthorizationPolicy,
             AUDIT_SERVICE,
+            PUSH_DELIVERY_ADAPTER,
             CLOCK,
           ],
         },
