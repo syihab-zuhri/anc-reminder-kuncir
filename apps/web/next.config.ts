@@ -10,7 +10,7 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  "connect-src 'self' https://ntfy.posyandukkn26.my.id",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
   "upgrade-insecure-requests",

@@ -11,6 +11,7 @@ import {
   InternalSchedulerService,
   type PushDeliveryAdapter,
 } from "./scheduler/scheduler.service.js";
+import { createFcmPushAdapter } from "./scheduler/push-adapter.js";
 import { HealthController } from "./health/health.controller.js";
 import { HealthService, type DatabaseReadinessCheck } from "./health/health.service.js";
 import {
@@ -46,8 +47,16 @@ import {
   REMINDER_OPERATIONS_REPOSITORY,
   CONTENT_MANAGEMENT_REPOSITORY,
   DEVICE_REGISTRATION_REPOSITORY,
+  ANNOUNCEMENT_REPOSITORY,
+  PUSH_DELIVERY_ADAPTER,
 } from "./infrastructure/tokens.js";
 import { DeviceRegistrationController } from "./device-registration/device-registration.controller.js";
+import { AnnouncementController } from "./announcements/announcement.controller.js";
+import { AnnouncementService } from "./announcements/announcement.service.js";
+import {
+  PostgresAnnouncementRepository,
+  type AnnouncementRepository,
+} from "./announcements/announcement.repository.js";
 import {
   PostgresDeviceRegistrationRepository,
   type DeviceRegistrationRepository,
@@ -197,6 +206,7 @@ export interface AppModuleOptions {
   readonly reminderOperationsRepository?: ReminderOperationsRepository;
   readonly contentManagementRepository?: ContentManagementRepository;
   readonly deviceRegistrationRepository?: DeviceRegistrationRepository;
+  readonly announcementRepository?: AnnouncementRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -231,6 +241,7 @@ export class AppModule {
         ReminderOperationsController,
         ContentManagementController,
         DeviceRegistrationController,
+        AnnouncementController,
       ],
       providers: [
         { provide: API_CONFIG, useValue: options.config },
@@ -442,6 +453,44 @@ export class AppModule {
           useFactory: (pool: DatabasePool) =>
             options.deviceRegistrationRepository ?? new PostgresDeviceRegistrationRepository(pool),
           inject: [DATABASE_POOL],
+        },
+        {
+          provide: ANNOUNCEMENT_REPOSITORY,
+          useFactory: (pool: DatabasePool) =>
+            options.announcementRepository ?? new PostgresAnnouncementRepository(pool),
+          inject: [DATABASE_POOL],
+        },
+        {
+          provide: PUSH_DELIVERY_ADAPTER,
+          useFactory: (config: ApiConfig) =>
+            options.pushDeliveryAdapter ??
+            createFcmPushAdapter(config.fcmProjectId, config.fcmServiceAccountJson),
+          inject: [API_CONFIG],
+        },
+        {
+          provide: AnnouncementService,
+          useFactory: (
+            repository: AnnouncementRepository,
+            policy: AuthorizationPolicy,
+            audit: AuditService,
+            pushAdapter: PushDeliveryAdapter,
+            clock: Clock,
+          ) =>
+            new AnnouncementService(
+              repository,
+              policy,
+              new DeviceTokenCrypto(options.config.pushTokenEncryptionKey),
+              pushAdapter,
+              audit,
+              clock,
+            ),
+          inject: [
+            ANNOUNCEMENT_REPOSITORY,
+            AuthorizationPolicy,
+            AUDIT_SERVICE,
+            PUSH_DELIVERY_ADAPTER,
+            CLOCK,
+          ],
         },
         {
           provide: DeviceRegistrationService,
