@@ -247,7 +247,7 @@
 .staff-panel-header .staff-kicker {
   font-size: 0.72rem;
   letter-spacing: 0.08em;
-  color: var(--ochre, #c29336);
+  color: #926010;
   text-transform: uppercase;
   font-weight: 800;
   display: block;
@@ -514,8 +514,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 34px;
-  padding: 0.38rem 0.85rem;
+  min-height: 36px;
+  padding: 0.42rem 0.85rem;
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--ink);
@@ -740,7 +740,7 @@
 }
 
 .staff-auth-statement .staff-kicker {
-  color: var(--ochre);
+  color: #c9a240;
 }
 
 .staff-auth-statement h1 {
@@ -909,7 +909,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.4rem;
+  width: 44px;
+  height: 44px;
+  padding: 0.5rem;
   background: transparent;
   border: none;
   color: var(--ink-faint);
@@ -1787,8 +1789,9 @@
 }
 
 .trimester-trimester-2 {
-  background: #d9aa52;
-  box-shadow: 0 4px 10px rgba(217, 170, 82, 0.3);
+  background: #7A6324;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(122, 99, 36, 0.3);
 }
 
 .trimester-trimester-3 {
@@ -1873,7 +1876,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--accent, #c96349);
+  color: #8B3A25;
 }
 
 .milestone-pill-badge {
@@ -1881,8 +1884,8 @@
   align-items: center;
   justify-content: center;
   padding: 0.2rem 0.65rem;
-  background: rgba(201, 99, 73, 0.1);
-  color: var(--accent, #c96349);
+  background: rgba(139, 58, 37, 0.1);
+  color: #8B3A25;
   border-radius: var(--radius-full, 9999px);
   font-size: 0.78rem;
   font-weight: 800;
@@ -2099,7 +2102,7 @@
 
 .content-studio-hero .staff-kicker {
   margin: 0 0 1rem;
-  color: #e1b45c;
+  color: #e8c56e;
 }
 
 .content-studio-hero h2 {
@@ -2250,7 +2253,7 @@
 .content-draft-editor > header span,
 .content-section-number {
   color: var(--accent);
-  font-size: 0.64rem;
+  font-size: 0.75rem;
   font-weight: 850;
   letter-spacing: 0.13em;
   text-transform: uppercase;
@@ -2485,7 +2488,7 @@
   grid-column: 2;
   width: fit-content;
   color: var(--ink-soft);
-  font-size: 0.58rem;
+  font-size: 0.68rem;
   font-weight: 850;
   letter-spacing: 0.06em;
 }
@@ -2857,8 +2860,8 @@
   display: flex;
   justify-content: space-between;
   padding: 0.15rem 0.3rem 1.15rem;
-  color: #62746f;
-  font-size: 0.56rem;
+  color: #3d524d;
+  font-size: 0.68rem;
   font-weight: 850;
 }
 
@@ -3623,7 +3626,7 @@
 
 /* Registered Mothers Panel & Modal Styles */
 .mothers-registry-panel {
-  animation: content-studio-enter 350ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+  animation: modalFadeIn 250ms ease-out;
 }
 
 /* Filter & Search Bar styling */
@@ -3719,6 +3722,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 36px;
+  height: 36px;
   padding: 0.45rem;
   background: transparent;
   border: none;
@@ -3892,6 +3897,41 @@
   flex: 1;
 }
 
+.detail-timeline-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.65rem;
+}
+
+.detail-timeline-card {
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-sm, 10px);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.detail-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.detail-card-meta {
+  font-size: 0.72rem;
+  color: var(--ink-muted);
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.detail-card-date {
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
 .staff-modal-footer {
   padding: 1rem 1.5rem;
   background: var(--paper, #fdfbf7);
@@ -3997,59 +4037,162 @@
   }
 
   .mothers-action-group .btn-secondary {
-    min-height: 2.7rem;
+    min-height: 44px;
     padding-inline: 0.5rem !important;
     white-space: normal;
   }
 
   .staff-modal-backdrop {
-    align-items: flex-end;
-    padding: 0;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0.75rem !important;
   }
 
   .staff-modal-dialog {
     width: 100% !important;
-    max-width: 100% !important;
-    max-height: 92vh;
-    border-radius: 20px 20px 0 0;
-    border-right: 0;
-    border-bottom: 0;
-    border-left: 0;
-    animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  @keyframes modalSlideUp {
-    from {
-      transform: translateY(100%);
-    }
-    to {
-      transform: translateY(0);
-    }
+    max-width: min(100%, 34rem) !important;
+    max-height: calc(100vh - 1.5rem) !important;
+    border-radius: 16px !important;
+    border: 1px solid var(--line-strong) !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35) !important;
+    animation: modalScaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
   }
 
   .staff-modal-header {
-    padding: 1.15rem 1.25rem;
+    padding: 0.8rem 1rem;
+    gap: 0.5rem;
   }
 
   .staff-modal-title {
-    font-size: 1.2rem;
+    font-size: 1.05rem;
+  }
+
+  .staff-modal-subtitle {
+    font-size: 0.72rem;
+    line-height: 1.35;
   }
 
   .staff-modal-body {
-    padding: 1.15rem 1.25rem;
-    gap: 1rem;
+    padding: 0.8rem 1rem;
+    gap: 0.65rem;
+    overflow-y: auto;
   }
 
   .staff-modal-footer {
-    padding: 1rem 1.25rem calc(1rem + var(--sab, 0px));
-    flex-direction: column;
-    align-items: stretch;
+    padding: 0.65rem 1rem calc(0.65rem + var(--sab, 0px));
+    display: flex;
+    flex-direction: row;
+    gap: 0.5rem;
   }
 
   .staff-modal-footer .btn-primary,
   .staff-modal-footer .btn-secondary {
-    width: 100%;
+    flex: 1 1 0;
+    width: auto;
+    min-height: 38px;
+    padding: 0.38rem 0.65rem;
+    font-size: 0.78rem;
     justify-content: center;
+    white-space: nowrap;
+  }
+
+  /* ── Compact Centered Detail Modal for Mobile (Zero-Scroll) ── */
+  .staff-modal-backdrop.detail-modal-backdrop {
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0.65rem !important;
+  }
+
+  .staff-modal-dialog.modal-detail-centered {
+    width: 100% !important;
+    max-width: min(100%, 34rem) !important;
+    max-height: calc(100vh - 1.5rem) !important;
+    border-radius: 16px !important;
+    border: 1px solid var(--line-strong) !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35) !important;
+    animation: modalScaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  .staff-modal-dialog.modal-detail-centered .staff-modal-header {
+    padding: 0.65rem 0.85rem;
+    gap: 0.5rem;
+  }
+
+  .staff-modal-dialog.modal-detail-centered .staff-modal-kicker {
+    font-size: 0.62rem;
+  }
+
+  .staff-modal-dialog.modal-detail-centered .staff-modal-title {
+    font-size: 1.05rem;
+  }
+
+  .staff-modal-dialog.modal-detail-centered .staff-modal-subtitle {
+    font-size: 0.72rem;
+    line-height: 1.3;
+  }
+
+  .staff-modal-dialog.modal-detail-centered .staff-modal-body {
+    padding: 0.65rem 0.85rem;
+    gap: 0.45rem;
+    overflow-y: auto;
+  }
+
+  .staff-modal-dialog.modal-detail-centered .detail-gestational-card {
+    padding: 0.5rem 0.75rem !important;
+    border-radius: 8px !important;
+  }
+
+  .staff-modal-dialog.modal-detail-centered .detail-timeline-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.35rem !important;
+  }
+
+  .staff-modal-dialog.modal-detail-centered .detail-timeline-card {
+    padding: 0.35rem 0.5rem !important;
+    border-radius: 6px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+  }
+
+  .staff-modal-dialog.modal-detail-centered .detail-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .staff-modal-dialog.modal-detail-centered .detail-card-meta {
+    font-size: 0.64rem;
+    color: var(--ink-muted);
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+  }
+
+  .staff-modal-dialog.modal-detail-centered .detail-card-date {
+    font-size: 0.68rem;
+    font-weight: 700;
+  }
+
+  .staff-modal-dialog.modal-detail-centered .staff-modal-footer {
+    padding: 0.55rem 0.85rem calc(0.55rem + var(--sab, 0px));
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+  }
+
+  .staff-modal-dialog.modal-detail-centered .staff-modal-footer .btn-primary,
+  .staff-modal-dialog.modal-detail-centered .staff-modal-footer .btn-secondary {
+    width: 100%;
+    min-height: 36px !important;
+    padding: 0.35rem 0.5rem !important;
+    font-size: 0.78rem !important;
+    white-space: nowrap;
+  }
+
+  .staff-modal-dialog.modal-detail-centered .staff-modal-footer .btn-access-code {
+    grid-column: 1 / -1;
   }
 
   .staff-modal-backdrop .staff-panel-card {
@@ -4097,4 +4240,280 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
+}
+
+/* ==========================================================================
+   Patient Record Print Layout (Cetak Rekam Pasien)
+   ========================================================================== */
+@media print {
+  .print-record-header {
+    margin-bottom: 12pt;
+    padding-bottom: 0;
+  }
+
+  .print-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12pt;
+  }
+
+  .print-header-logo-group {
+    display: flex;
+    align-items: center;
+    gap: 10pt;
+  }
+
+  .print-inst-sub {
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #444444;
+    margin: 0 0 2pt;
+    text-transform: uppercase;
+  }
+
+  .print-inst-name {
+    font-size: 15pt;
+    font-weight: 900;
+    color: #000000;
+    margin: 0 0 2pt;
+    letter-spacing: 0.02em;
+  }
+
+  .print-inst-address {
+    font-size: 8pt;
+    color: #444444;
+    margin: 0;
+    line-height: 1.3;
+  }
+
+  .print-header-right {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2pt;
+  }
+
+  .print-doc-badge {
+    display: inline-block;
+    padding: 2.5pt 6pt;
+    border: 1.5pt solid #000000;
+    font-size: 7.5pt;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .print-doc-code {
+    font-size: 7.5pt;
+    color: #333333;
+    font-weight: 700;
+  }
+
+  .print-header-line {
+    height: 2pt;
+    background: #000000;
+    margin-top: 6pt;
+    margin-bottom: 1.5pt;
+  }
+
+  .print-header-subline {
+    height: 0.75pt;
+    background: #000000;
+    margin-bottom: 8pt;
+  }
+
+  .print-doc-heading {
+    text-align: center;
+    margin-bottom: 10pt;
+  }
+
+  .print-doc-heading h1 {
+    font-size: 11pt;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    margin: 0 0 2pt;
+    text-transform: uppercase;
+    color: #000000;
+  }
+
+  .print-doc-heading p {
+    font-size: 8pt;
+    color: #555555;
+    margin: 0;
+  }
+
+  .print-section-heading {
+    font-size: 8.5pt;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    margin: 8pt 0 4pt;
+    padding-bottom: 2pt;
+    border-bottom: 1pt solid #000000;
+    color: #000000;
+  }
+
+  /* Form / Data Table */
+  .print-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 8pt;
+    font-size: 8pt;
+  }
+
+  .print-data-table th,
+  .print-data-table td {
+    border: 0.75pt solid #555555;
+    padding: 3.5pt 5pt;
+    vertical-align: top;
+  }
+
+  .print-data-table th {
+    background: #f2f2f2 !important;
+    color: #000000 !important;
+    font-weight: 700;
+    text-align: left;
+  }
+
+  /* Milestones Table */
+  .print-milestones-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 8pt;
+    font-size: 8pt;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-milestones-table th,
+  .print-milestones-table td {
+    border: 0.75pt solid #444444;
+    padding: 3.5pt 4.5pt;
+    vertical-align: middle;
+  }
+
+  .print-milestones-table th {
+    background: #e8e8e8 !important;
+    color: #000000 !important;
+    font-weight: 800;
+    text-align: left;
+    font-size: 7.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .print-milestones-table tr.row-confirmed {
+    background: #f9f9f9 !important;
+  }
+
+  .print-tag {
+    display: inline-block;
+    padding: 1.5pt 4pt;
+    border-radius: 2pt;
+    font-size: 7pt;
+    font-weight: 700;
+    border: 0.5pt solid #666666;
+  }
+
+  .print-tag-confirmed {
+    background: #e6f4ea !important;
+    border-color: #34a853 !important;
+    color: #137333 !important;
+  }
+
+  .print-tag-due {
+    background: #fef7e0 !important;
+    border-color: #fbbc04 !important;
+    color: #b06000 !important;
+  }
+
+  .print-tag-overdue {
+    background: #fce8e6 !important;
+    border-color: #ea4335 !important;
+    color: #c5221f !important;
+  }
+
+  .print-tag-pending {
+    background: #f1f3f4 !important;
+    border-color: #dadce0 !important;
+    color: #5f6368 !important;
+  }
+
+  /* Guidance Block */
+  .print-guidance-block {
+    margin-bottom: 8pt;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-guidance-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8pt;
+    border: 0.75pt solid #888888;
+    padding: 5pt 7pt;
+    background: #fafafa !important;
+    font-size: 7.5pt;
+    line-height: 1.35;
+  }
+
+  .print-guidance-content ol,
+  .print-guidance-content ul {
+    margin: 2pt 0 0;
+    padding-left: 11pt;
+  }
+
+  .print-guidance-content li {
+    margin-bottom: 2pt;
+  }
+
+  /* Sign-off / Signature */
+  .print-footer-block {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 10pt;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-disclaimer {
+    max-width: 55%;
+    font-size: 7pt;
+    color: #555555;
+    line-height: 1.35;
+  }
+
+  .print-disclaimer p {
+    margin: 0 0 2pt;
+  }
+
+  .print-signature-box {
+    text-align: center;
+    min-width: 38%;
+    font-size: 8pt;
+  }
+
+  .print-sig-date {
+    margin: 0 0 2pt;
+  }
+
+  .print-sig-title {
+    font-weight: 700;
+    margin: 0 0 32pt;
+  }
+
+  .print-sig-name {
+    font-weight: 800;
+    margin: 0 0 2pt;
+  }
+
+  .print-sig-id {
+    font-size: 7.5pt;
+    color: #444444;
+    margin: 0;
+  }
 }

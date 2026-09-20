@@ -21,6 +21,9 @@ export function MotherArchiveModal({
   onSubmit,
   onClose,
 }: MotherArchiveModalProps) {
+  const phoneRaw = mother.phone_number || mother.phone_masked || "-";
+  const phoneDisplay = phoneRaw.startsWith("62") ? "0" + phoneRaw.slice(2) : phoneRaw;
+
   return (
     <div
       className="staff-modal-backdrop"
@@ -36,7 +39,7 @@ export function MotherArchiveModal({
               Arsipkan Rekam Ibu {mother.full_name}?
             </h3>
             <p className="staff-modal-subtitle">
-              Kontak: {mother.phone_masked} · Alamat: {mother.address}
+              Kontak: {phoneDisplay} · Alamat: {mother.address}
             </p>
           </div>
           <button
@@ -91,7 +94,7 @@ export function MotherArchiveModal({
                 onChange={(e) => onReasonChange(e.target.value)}
                 minLength={3}
                 placeholder="Contoh: Pasien pindah domisili luar wilayah"
-                rows={3}
+                rows={2}
                 required
               />
             </div>

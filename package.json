@@ -2,7 +2,7 @@
   "name": "anc-reminder",
   "version": "0.1.0",
   "private": true,
-  "description": "Sistem Pengingat ANC Ibu Hamil \u2014 server-driven Web dan Android WebView.",
+  "description": "Sistem Pengingat ANC Ibu Hamil — server-driven Web dan Android WebView.",
   "license": "UNLICENSED",
   "packageManager": "npm@11.14.0",
   "engines": {
@@ -45,6 +45,8 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@swc-node/register": "1.12.1",
+    "@swc/core": "1.16.2",
     "@types/node": "24.13.3",
     "eslint": "10.8.1",
     "prettier": "3.9.6",

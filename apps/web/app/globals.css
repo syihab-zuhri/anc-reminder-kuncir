@@ -81,9 +81,16 @@ a {
   text-decoration: none;
 }
 
+/* ── Global focus ring (WCAG 2.4.7) ── */
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
 a:focus-visible {
-  outline: 3px solid var(--ochre);
-  outline-offset: 4px;
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+  border-radius: 3px;
 }
 
 svg {
@@ -244,8 +251,8 @@ svg {
 
 .header-action-mother {
   color: var(--paper-raised);
-  background: var(--accent);
-  border-color: var(--accent);
+  background: #9b3d28;
+  border-color: #9b3d28;
 }
 
 .header-action-mother:hover {
@@ -365,9 +372,9 @@ svg {
 
 .button-primary {
   color: var(--paper-raised);
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  box-shadow: 0 8px 20px rgba(201, 99, 73, 0.22);
+  background: #9b3d28;
+  border: 1px solid #9b3d28;
+  box-shadow: 0 8px 20px rgba(155, 61, 40, 0.22);
 }
 
 .button-primary:hover {
@@ -1168,11 +1175,21 @@ svg {
   vertical-align: middle;
 }
 
+/* Print Utilities */
+.print-only {
+  display: none !important;
+}
+
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm;
+  }
+
   body {
     background: #ffffff !important;
     color: #000000 !important;
-    font-size: 12pt !important;
+    font-size: 10pt !important;
   }
 
   body::before,
@@ -1192,7 +1209,70 @@ svg {
   .staff-tab-nav,
   .mothers-filter-card,
   .mothers-action-group,
-  .button-row {
+  .button-row,
+  .toast-container,
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  /* When a modal is open during print, hide all underlying page elements */
+  body:has(.staff-modal-backdrop) .staff-workspace-shell > *:not(.staff-workspace-main),
+  body:has(.staff-modal-backdrop) .staff-workspace-main > *:not(.staff-panel-card),
+  body:has(.staff-modal-backdrop) .staff-panel-card > *:not(.staff-modal-backdrop),
+  body:has(.staff-modal-backdrop) .staff-panel-header,
+  body:has(.staff-modal-backdrop) .mothers-table-toolbar,
+  body:has(.staff-modal-backdrop) .mothers-table-wrap,
+  body:has(.staff-modal-backdrop) .mothers-pagination {
+    display: none !important;
+  }
+
+  /* Reset modal backdrop so it behaves as a clean print document flow */
+  .staff-modal-backdrop {
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    animation: none !important;
+    z-index: auto !important;
+  }
+
+  /* Reset modal dialog container for printing */
+  .staff-modal-dialog {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    animation: none !important;
+  }
+
+  .staff-modal-body {
+    padding: 0 !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  .staff-modal-close-btn,
+  .staff-modal-footer,
+  .staff-modal-header {
     display: none !important;
   }
 
@@ -1480,4 +1560,13 @@ svg {
   display: flex;
   align-items: flex-start;
   gap: 0.4rem;
+}
+
+/* ── Mobile min-font (WCAG, readability) ── */
+@media (max-width: 600px) {
+  body { font-size: 15px; }
+  .eyebrow, .role-label, .access-number, .status-badge,
+  .staff-kicker, .coming-soon {
+    font-size: max(0.72rem, 11.5px) !important;
+  }
 }
