@@ -81,9 +81,16 @@ a {
   text-decoration: none;
 }
 
+/* ── Global focus ring (WCAG 2.4.7) ── */
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
 a:focus-visible {
-  outline: 3px solid var(--ochre);
-  outline-offset: 4px;
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+  border-radius: 3px;
 }
 
 svg {
@@ -244,8 +251,8 @@ svg {
 
 .header-action-mother {
   color: var(--paper-raised);
-  background: var(--accent);
-  border-color: var(--accent);
+  background: #9b3d28;
+  border-color: #9b3d28;
 }
 
 .header-action-mother:hover {
@@ -365,9 +372,9 @@ svg {
 
 .button-primary {
   color: var(--paper-raised);
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  box-shadow: 0 8px 20px rgba(201, 99, 73, 0.22);
+  background: #9b3d28;
+  border: 1px solid #9b3d28;
+  box-shadow: 0 8px 20px rgba(155, 61, 40, 0.22);
 }
 
 .button-primary:hover {
@@ -1480,4 +1487,13 @@ svg {
   display: flex;
   align-items: flex-start;
   gap: 0.4rem;
+}
+
+/* ── Mobile min-font (WCAG, readability) ── */
+@media (max-width: 600px) {
+  body { font-size: 15px; }
+  .eyebrow, .role-label, .access-number, .status-badge,
+  .staff-kicker, .coming-soon {
+    font-size: max(0.72rem, 11.5px) !important;
+  }
 }

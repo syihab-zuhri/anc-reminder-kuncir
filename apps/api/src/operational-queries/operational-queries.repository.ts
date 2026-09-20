@@ -451,6 +451,7 @@ function mapMotherRowToSummary(row: MotherQueryResultRow, asOfDate: string): Mot
     health_center_id: row.health_center_id,
     full_name: row.full_name,
     phone_masked: maskPhone(row.phone_normalized),
+    phone_number: row.phone_normalized,
     address: row.address,
     village_id: row.village_id,
     village_name: row.village_name,

@@ -157,9 +157,6 @@ export function MotherDashboard() {
     <div className="mother-dashboard">
       <header className="mother-dashboard-header">
         <div className="mother-user-greeting">
-          <span className="mother-avatar-chip" aria-hidden="true">
-            {session.identity.display_name.slice(0, 1).toUpperCase()}
-          </span>
           <div>
             <span className="mother-greeting">Halo Ibu,</span>
             <h2>{session.identity.display_name}</h2>
@@ -429,7 +426,7 @@ export function MotherDashboard() {
                         <span>
                           {m.milestone_code === "K1" || m.milestone_code === "K5"
                             ? "Puskesmas (Dokter)"
-                            : "Posyandu / Bidan Desa"}
+                            : "TPMB / Praktik Mandiri Bidan"}
                         </span>
                       </p>
                     </div>

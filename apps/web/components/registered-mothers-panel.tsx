@@ -8,6 +8,7 @@ import type {
 } from "@anc/contracts";
 import { useCallback, useEffect, useId, useState } from "react";
 import { useToast } from "../lib/toast-context";
+import * as XLSX from "xlsx";
 import { MotherAccessCodeModal } from "./mothers/mother-access-code-modal";
 import { MotherArchiveModal } from "./mothers/mother-archive-modal";
 import { MotherDetailModal } from "./mothers/mother-detail-modal";
@@ -259,19 +260,18 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
 
     const headers = [
       "No",
-      "ID Pasien",
       "Nama Lengkap",
       "Desa / Dusun",
       "Alamat Domisili",
-      "Nomor HP (Tersamar)",
+      "Nomor HP",
       "Status Kehamilan",
       "Tanggal HPHT",
-      "Usia Kehamilan (Minggu)",
+      "Usia Kehamilan",
       "Trimester",
       "Tanggal Terdaftar",
     ];
 
-    const rows = mothers.map((m, idx) => {
+    const data = mothers.map((m, idx) => {
       const villageName =
         m.village_name ?? villages.find((v) => v.id === m.village_id)?.name ?? "-";
       const pregnancy = m.active_pregnancy;
@@ -288,33 +288,44 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
       const trimester = pregnancy?.trimester_label ?? "-";
       const registeredAt = m.created_at ? new Date(m.created_at).toLocaleDateString("id-ID") : "-";
 
+      const phoneRaw = m.phone_number || m.phone_masked || "-";
+      const phoneDisplay = phoneRaw.startsWith("62")
+        ? "0" + phoneRaw.slice(2)
+        : phoneRaw;
+
       return [
         idx + 1,
-        `"${m.id}"`,
-        `"${(m.full_name || "").replace(/"/g, '""')}"`,
-        `"${villageName.replace(/"/g, '""')}"`,
-        `"${(m.address || "").replace(/"/g, '""')}"`,
-        `"${m.phone_masked || "-"}"`,
-        `"${statusLabel}"`,
-        `"${hpht}"`,
-        `"${gaDisplay}"`,
-        `"${trimester}"`,
-        `"${registeredAt}"`,
-      ].join(",");
+        m.full_name || "",
+        villageName,
+        m.address || "",
+        phoneDisplay,
+        statusLabel,
+        hpht,
+        gaDisplay,
+        trimester,
+        registeredAt,
+      ];
     });
 
-    const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\r\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+
+    /* --- column widths auto-fit --- */
+    const colWidths = headers.map((h, i) => {
+      let max = h.length;
+      for (const row of data) {
+        const len = String(row[i] ?? "").length;
+        if (len > max) max = len;
+      }
+      return { wch: Math.min(max + 2, 40) };
+    });
+    ws["!cols"] = colWidths;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Data Ibu Hamil ANC");
+
     const dateStr = new Date().toISOString().split("T")[0];
-    link.setAttribute("href", url);
-    link.setAttribute("download", `data-ibu-hamil-anc-${dateStr}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    toast.success("Data ibu hamil berhasil diekspor ke format CSV/Excel");
+    XLSX.writeFile(wb, `data-ibu-hamil-anc-${dateStr}.xlsx`);
+    toast.success("Data ibu hamil berhasil diekspor ke format Excel (.xlsx)");
   }
 
   // Handle Search Submission
@@ -802,7 +813,7 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            <span>Ekspor CSV / Excel</span>
+            <span>Ekspor Excel</span>
           </button>
         </div>
       )}
@@ -838,9 +849,6 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
                     {/* Column 1: Identity */}
                     <td data-label="Identitas">
                       <div className="mother-name-cell">
-                        <span className="mother-avatar-chip" aria-hidden="true">
-                          {mother.full_name.slice(0, 1).toUpperCase()}
-                        </span>
                         <div>
                           <strong className="mother-name-link">{mother.full_name}</strong>
                           <div className="mother-meta-nik">
