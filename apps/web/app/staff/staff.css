@@ -4103,3 +4103,279 @@
   align-items: center;
   gap: 0.4rem;
 }
+
+/* ==========================================================================
+   Patient Record Print Layout (Cetak Rekam Pasien)
+   ========================================================================== */
+@media print {
+  .print-record-header {
+    margin-bottom: 12pt;
+    padding-bottom: 0;
+  }
+
+  .print-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12pt;
+  }
+
+  .print-header-logo-group {
+    display: flex;
+    align-items: center;
+    gap: 10pt;
+  }
+
+  .print-inst-sub {
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #444444;
+    margin: 0 0 2pt;
+    text-transform: uppercase;
+  }
+
+  .print-inst-name {
+    font-size: 15pt;
+    font-weight: 900;
+    color: #000000;
+    margin: 0 0 2pt;
+    letter-spacing: 0.02em;
+  }
+
+  .print-inst-address {
+    font-size: 8pt;
+    color: #444444;
+    margin: 0;
+    line-height: 1.3;
+  }
+
+  .print-header-right {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2pt;
+  }
+
+  .print-doc-badge {
+    display: inline-block;
+    padding: 2.5pt 6pt;
+    border: 1.5pt solid #000000;
+    font-size: 7.5pt;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .print-doc-code {
+    font-size: 7.5pt;
+    color: #333333;
+    font-weight: 700;
+  }
+
+  .print-header-line {
+    height: 2pt;
+    background: #000000;
+    margin-top: 6pt;
+    margin-bottom: 1.5pt;
+  }
+
+  .print-header-subline {
+    height: 0.75pt;
+    background: #000000;
+    margin-bottom: 8pt;
+  }
+
+  .print-doc-heading {
+    text-align: center;
+    margin-bottom: 10pt;
+  }
+
+  .print-doc-heading h1 {
+    font-size: 11pt;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    margin: 0 0 2pt;
+    text-transform: uppercase;
+    color: #000000;
+  }
+
+  .print-doc-heading p {
+    font-size: 8pt;
+    color: #555555;
+    margin: 0;
+  }
+
+  .print-section-heading {
+    font-size: 8.5pt;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    margin: 8pt 0 4pt;
+    padding-bottom: 2pt;
+    border-bottom: 1pt solid #000000;
+    color: #000000;
+  }
+
+  /* Form / Data Table */
+  .print-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 8pt;
+    font-size: 8pt;
+  }
+
+  .print-data-table th,
+  .print-data-table td {
+    border: 0.75pt solid #555555;
+    padding: 3.5pt 5pt;
+    vertical-align: top;
+  }
+
+  .print-data-table th {
+    background: #f2f2f2 !important;
+    color: #000000 !important;
+    font-weight: 700;
+    text-align: left;
+  }
+
+  /* Milestones Table */
+  .print-milestones-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 8pt;
+    font-size: 8pt;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-milestones-table th,
+  .print-milestones-table td {
+    border: 0.75pt solid #444444;
+    padding: 3.5pt 4.5pt;
+    vertical-align: middle;
+  }
+
+  .print-milestones-table th {
+    background: #e8e8e8 !important;
+    color: #000000 !important;
+    font-weight: 800;
+    text-align: left;
+    font-size: 7.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .print-milestones-table tr.row-confirmed {
+    background: #f9f9f9 !important;
+  }
+
+  .print-tag {
+    display: inline-block;
+    padding: 1.5pt 4pt;
+    border-radius: 2pt;
+    font-size: 7pt;
+    font-weight: 700;
+    border: 0.5pt solid #666666;
+  }
+
+  .print-tag-confirmed {
+    background: #e6f4ea !important;
+    border-color: #34a853 !important;
+    color: #137333 !important;
+  }
+
+  .print-tag-due {
+    background: #fef7e0 !important;
+    border-color: #fbbc04 !important;
+    color: #b06000 !important;
+  }
+
+  .print-tag-overdue {
+    background: #fce8e6 !important;
+    border-color: #ea4335 !important;
+    color: #c5221f !important;
+  }
+
+  .print-tag-pending {
+    background: #f1f3f4 !important;
+    border-color: #dadce0 !important;
+    color: #5f6368 !important;
+  }
+
+  /* Guidance Block */
+  .print-guidance-block {
+    margin-bottom: 8pt;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-guidance-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8pt;
+    border: 0.75pt solid #888888;
+    padding: 5pt 7pt;
+    background: #fafafa !important;
+    font-size: 7.5pt;
+    line-height: 1.35;
+  }
+
+  .print-guidance-content ol,
+  .print-guidance-content ul {
+    margin: 2pt 0 0;
+    padding-left: 11pt;
+  }
+
+  .print-guidance-content li {
+    margin-bottom: 2pt;
+  }
+
+  /* Sign-off / Signature */
+  .print-footer-block {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 10pt;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-disclaimer {
+    max-width: 55%;
+    font-size: 7pt;
+    color: #555555;
+    line-height: 1.35;
+  }
+
+  .print-disclaimer p {
+    margin: 0 0 2pt;
+  }
+
+  .print-signature-box {
+    text-align: center;
+    min-width: 38%;
+    font-size: 8pt;
+  }
+
+  .print-sig-date {
+    margin: 0 0 2pt;
+  }
+
+  .print-sig-title {
+    font-weight: 700;
+    margin: 0 0 32pt;
+  }
+
+  .print-sig-name {
+    font-weight: 800;
+    margin: 0 0 2pt;
+  }
+
+  .print-sig-id {
+    font-size: 7.5pt;
+    color: #444444;
+    margin: 0;
+  }
+}
