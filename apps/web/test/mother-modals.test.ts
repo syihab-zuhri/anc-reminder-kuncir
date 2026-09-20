@@ -16,6 +16,7 @@ const dummyMother = {
   full_name: "Siti Fatimah",
   address: "Dusun Krajan RT 01",
   phone_masked: "+62812****7890",
+  phone_number: "+6281234567890",
   notification_allowed: true,
   created_at: "2026-01-15T00:00:00.000Z",
   registration_status: "APPROVED" as const,
