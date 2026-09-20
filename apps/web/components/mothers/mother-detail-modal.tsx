@@ -50,12 +50,12 @@ export function MotherDetailModal({
 
   return (
     <div
-      className="staff-modal-backdrop"
+      className="staff-modal-backdrop detail-modal-backdrop"
       role="dialog"
       aria-modal="true"
       aria-labelledby="detail-modal-title"
     >
-      <div className="staff-modal-dialog modal-lg printable-patient-record">
+      <div className="staff-modal-dialog modal-lg modal-detail-centered printable-patient-record">
         {/* ── Screen-only Modal Header ── */}
         <header className="staff-modal-header no-print">
           <div className="staff-modal-header-content">
@@ -171,8 +171,8 @@ export function MotherDetailModal({
           <div className="no-print">
             {mother.active_pregnancy ? (
               <div
-                className="mother-profile-card"
-                style={{ padding: "1.15rem 1.25rem", margin: 0 }}
+                className="mother-profile-card detail-gestational-card"
+                style={{ margin: 0 }}
               >
                 <div
                   style={{
@@ -180,13 +180,14 @@ export function MotherDetailModal({
                     justifyContent: "space-between",
                     alignItems: "center",
                     flexWrap: "wrap",
-                    gap: "0.75rem",
+                    gap: "0.5rem",
                   }}
                 >
                   <div>
                     <span
+                      className="ga-label"
                       style={{
-                        fontSize: "0.74rem",
+                        fontSize: "0.68rem",
                         fontWeight: 800,
                         color: "var(--ink-muted)",
                         textTransform: "uppercase",
@@ -196,31 +197,32 @@ export function MotherDetailModal({
                       Usia Kehamilan Saat Ini
                     </span>
                     <div
+                      className="ga-value"
                       style={{
-                        fontSize: "1.35rem",
+                        fontSize: "1.15rem",
                         fontWeight: 800,
                         color: "var(--ink)",
-                        marginTop: "0.15rem",
+                        marginTop: "0.1rem",
                       }}
                     >
                       {mother.active_pregnancy.completed_weeks} Minggu{" "}
                       {mother.active_pregnancy.completed_days} Hari
                     </div>
-                    <small style={{ color: "var(--ink-muted)", fontSize: "0.78rem" }}>
+                    <small style={{ color: "var(--ink-muted)", fontSize: "0.72rem" }}>
                       Tanggal HPHT: <strong>{mother.active_pregnancy.dating_date}</strong>
                     </small>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <span
                       className="badge-status status-confirmed"
-                      style={{ fontSize: "0.8rem", padding: "0.3rem 0.75rem", fontWeight: 800 }}
+                      style={{ fontSize: "0.75rem", padding: "0.2rem 0.6rem", fontWeight: 800 }}
                     >
                       {mother.active_pregnancy.trimester_label}
                     </span>
                     <div
                       style={{
-                        marginTop: "0.3rem",
-                        fontSize: "0.75rem",
+                        marginTop: "0.2rem",
+                        fontSize: "0.72rem",
                         color: "var(--ink-muted)",
                       }}
                     >
@@ -236,22 +238,22 @@ export function MotherDetailModal({
             )}
           </div>
 
-          {/* ── Screen Milestones K1-K8 Section (Card Grid) ── */}
-          <div className="no-print" style={{ marginTop: "1rem" }}>
+          {/* ── Screen Milestones K1-K8 Section ── */}
+          <div className="no-print" style={{ marginTop: "0.65rem" }}>
             <div
               style={{
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                marginBottom: "0.75rem",
+                marginBottom: "0.45rem",
                 flexWrap: "wrap",
-                gap: "0.5rem",
+                gap: "0.4rem",
               }}
             >
               <h4
                 style={{
                   margin: 0,
-                  fontSize: "1.05rem",
+                  fontSize: "0.95rem",
                   fontWeight: 800,
                   color: "var(--ink)",
                 }}
@@ -261,11 +263,11 @@ export function MotherDetailModal({
               {milestones?.next_milestone_code && (
                 <span
                   style={{
-                    fontSize: "0.78rem",
+                    fontSize: "0.72rem",
                     fontWeight: 800,
                     color: "var(--ochre)",
                     background: "rgba(225, 180, 92, 0.12)",
-                    padding: "0.2rem 0.55rem",
+                    padding: "0.15rem 0.5rem",
                     borderRadius: "9999px",
                   }}
                 >
@@ -275,9 +277,9 @@ export function MotherDetailModal({
             </div>
 
             {loading && (
-              <div style={{ padding: "2rem", textAlign: "center" }}>
+              <div style={{ padding: "1.5rem", textAlign: "center" }}>
                 <div className="loading-spinner" style={{ margin: "0 auto 0.5rem" }} />
-                <p style={{ fontSize: "0.85rem", color: "var(--ink-muted)" }}>
+                <p style={{ fontSize: "0.82rem", color: "var(--ink-muted)" }}>
                   Memuat jadwal pemeriksaan K1–K8…
                 </p>
               </div>
@@ -290,24 +292,27 @@ export function MotherDetailModal({
             )}
 
             {milestones && (
-              <div
-                className="timeline-grid"
-                style={{
-                  gridTemplateColumns: "repeat(auto-fill, minmax(11rem, 1fr))",
-                  gap: "0.65rem",
-                }}
-              >
+              <div className="timeline-grid detail-timeline-grid">
                 {milestones.milestones.map((m) => {
                   const isConfirmed = m.visit_status === "CONFIRMED";
                   const isDue = m.visit_status === "DUE";
                   const isOverdue = m.visit_status === "OVERDUE";
+                  const targetDate = m.due_at
+                    ? m.due_at.slice(0, 10)
+                    : m.target_date_start && m.target_date_end
+                      ? `${m.target_date_start.slice(5)} - ${m.target_date_end.slice(5)}`
+                      : "Sesuai Jadwal";
+
+                  const facility =
+                    m.required_facility_policy === "PUSKESMAS_REQUIRED"
+                      ? "Puskesmas"
+                      : "TPMB / Bidan";
 
                   return (
                     <div
                       key={m.code}
-                      className="timeline-card"
+                      className={`timeline-card detail-timeline-card status-${m.visit_status.toLowerCase()}`}
                       style={{
-                        padding: "0.75rem",
                         background: isConfirmed
                           ? "#f0fdf4"
                           : isOverdue
@@ -324,87 +329,45 @@ export function MotherDetailModal({
                               : "var(--line)",
                       }}
                     >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <span className="timeline-code">{m.code}</span>
+                      <div className="detail-card-top">
+                        <span
+                          className="timeline-code"
+                          style={{ fontSize: "0.82rem", fontWeight: 800 }}
+                        >
+                          {m.code}
+                        </span>
                         <span
                           className={`badge-status status-${m.visit_status.toLowerCase()}`}
-                          style={{ fontSize: "0.65rem", padding: "0.15rem 0.4rem" }}
+                          style={{ fontSize: "0.62rem", padding: "0.1rem 0.35rem" }}
                         >
                           {m.visit_status}
                         </span>
                       </div>
 
-                      <div
-                        style={{
-                          fontSize: "0.74rem",
-                          color: "var(--ink-muted)",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {m.trimester_label}
+                      <div className="detail-card-meta">
+                        <span>{m.trimester_label.replace("Trimester ", "T")}</span>
+                        <span>·</span>
+                        <span>{facility}</span>
                       </div>
 
-                      <div style={{ fontSize: "0.74rem", color: "var(--ink)" }}>
-                        {m.due_at ? (
-                          <span>
-                            Jatuh Tempo: <strong>{m.due_at.slice(0, 10)}</strong>
-                          </span>
-                        ) : m.target_date_start && m.target_date_end ? (
-                          <span>
-                            {m.target_date_start} s/d {m.target_date_end}
-                          </span>
+                      <div
+                        className="detail-card-date"
+                        style={{
+                          fontSize: "0.68rem",
+                          fontWeight: 700,
+                          color: isConfirmed
+                            ? "var(--success)"
+                            : isOverdue
+                              ? "var(--accent)"
+                              : "var(--ink)",
+                        }}
+                      >
+                        {isConfirmed ? (
+                          <span>✓ Selesai</span>
                         ) : (
-                          <span>Sesuai Rekomendasi</span>
+                          <span>{targetDate}</span>
                         )}
                       </div>
-
-                      <div
-                        style={{
-                          fontSize: "0.7rem",
-                          color: "var(--ink-muted)",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.3rem",
-                        }}
-                      >
-                        <svg
-                          viewBox="0 0 20 20"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          width="12"
-                          height="12"
-                          aria-hidden="true"
-                        >
-                          <path d="M10 2a5 5 0 0 0-5 5c0 3.75 5 9 5 9s5-5.25 5-9a5 5 0 0 0-5-5Z" />
-                          <circle cx="10" cy="7" r="1.5" />
-                        </svg>
-                        <span>
-                          {m.required_facility_policy === "PUSKESMAS_REQUIRED"
-                            ? "Puskesmas"
-                            : "TPMB / Praktik Mandiri Bidan"}
-                        </span>
-                      </div>
-
-                      {m.visit_status === "CONFIRMED" && (
-                        <div
-                          style={{
-                            fontSize: "0.7rem",
-                            background: "rgba(52, 112, 95, 0.12)",
-                            padding: "0.25rem 0.4rem",
-                            borderRadius: "4px",
-                            color: "var(--ink)",
-                          }}
-                        >
-                          Pemeriksaan Terkonfirmasi
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -544,7 +507,7 @@ export function MotherDetailModal({
             type="button"
             className="btn-secondary"
             onClick={handlePrint}
-            style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }}
             title="Cetak ringkasan profil pasien & riwayat K1–K8"
           >
             <svg
@@ -552,15 +515,15 @@ export function MotherDetailModal({
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
-              width="15"
-              height="15"
+              width="14"
+              height="14"
               aria-hidden="true"
             >
               <polyline points="6 9 6 2 18 2 18 9" />
               <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
               <rect x="6" y="14" width="12" height="8" />
             </svg>
-            <span>Cetak Rekam Pasien</span>
+            <span>Cetak Rekam</span>
           </button>
           <button type="button" className="btn-secondary" onClick={onClose}>
             Tutup
@@ -568,7 +531,7 @@ export function MotherDetailModal({
           {isPuskesmas && onOpenAccessCode && (
             <button
               type="button"
-              className="btn-primary"
+              className="btn-primary btn-access-code"
               onClick={() => {
                 onClose();
                 onOpenAccessCode(mother);
