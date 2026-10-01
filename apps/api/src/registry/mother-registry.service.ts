@@ -58,6 +58,7 @@ export class MotherRegistryService {
 
     const phoneNormalized = normalizeIndonesianPhone(input.phone_number);
     const nikCiphertext = this.nikCipher.encrypt(input.nik);
+    const nikFingerprint = this.nikCipher.fingerprint(input.nik);
 
     try {
       const outcome = await this.idempotency.runForStaff(
@@ -75,6 +76,7 @@ export class MotherRegistryService {
             healthCenterId,
             fullName: input.full_name,
             nikCiphertext,
+            nikFingerprint,
             address: input.address,
             phoneNormalized,
             pregnancyStartDate: input.pregnancy_start_date,
@@ -113,6 +115,17 @@ export class MotherRegistryService {
           status: HttpStatus.CONFLICT,
           code: "REGISTRATION_NOT_READY",
           message: "Registrasi belum siap karena rencana ANC aktif belum tersedia.",
+        });
+      }
+      if (
+        isDatabaseError(error, "23505") &&
+        constraintOf(error) === "mothers_active_nik_unique_idx"
+      ) {
+        throw new ApiException({
+          status: HttpStatus.CONFLICT,
+          code: "MOTHER_NIK_ALREADY_REGISTERED",
+          message:
+            "NIK ini sudah terdaftar di Puskesmas ini. Cari data ibu tersebut pada daftar Data Bumil.",
         });
       }
       if (isDatabaseError(error, "23505")) {
@@ -305,6 +318,15 @@ export function normalizeIndonesianPhone(value: string): string {
     });
   }
   return normalized;
+}
+
+function constraintOf(error: unknown): string | undefined {
+  return typeof error === "object" &&
+    error !== null &&
+    "constraint" in error &&
+    typeof (error as { readonly constraint?: unknown }).constraint === "string"
+    ? (error as { readonly constraint: string }).constraint
+    : undefined;
 }
 
 function isDatabaseError(error: unknown, code: string): boolean {

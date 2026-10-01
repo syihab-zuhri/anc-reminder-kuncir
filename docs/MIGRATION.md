@@ -38,6 +38,7 @@ Seluruh skema database dikelola melalui skrip migrasi berurutan di `packages/dat
 - `000018_add_registration_status.cjs`: Kolom `registration_status` dan jejak persetujuan pada tabel ibu hamil (belum dipakai aplikasi).
 - `000019_announcements.cjs`: Pengumuman siaran dan hasil pengiriman per perangkat.
 - `000020_staff_login_rate_limits.cjs`: Pembatasan percobaan login petugas per akun+alamat, per akun, dan per alamat (hanya HMAC yang disimpan).
+- `000021_mother_nik_fingerprint.cjs`: Kolom `mothers.nik_fingerprint` (HMAC-SHA256 hex dari NIK, kunci turunan HKDF dari `NIK_ENCRYPTION_KEY`) dan unique index parsial `mothers_active_nik_unique_idx` pada `(health_center_id, nik_fingerprint)` untuk data yang belum diarsip. Menjamin satu catatan aktif per NIK per Puskesmas tanpa menyimpan NIK polos. Kolom boleh NULL agar data lama tetap valid; isi dengan `scripts/backfill-nik-fingerprints.mjs` (lihat `deploy.md`).
 
 ---
 

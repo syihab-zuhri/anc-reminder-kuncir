@@ -28,6 +28,9 @@ const motherAccessCredentialMigration = loadModule(
 const staffLoginRateLimitMigration = loadModule(
   "../migrations/000020_staff_login_rate_limits.cjs",
 ) as BaselineMigration;
+const motherNikFingerprintMigration = loadModule(
+  "../migrations/000021_mother_nik_fingerprint.cjs",
+) as BaselineMigration;
 const motherPrivateAccessMigration = loadModule(
   "../migrations/000006_phase_2_mother_private_access.cjs",
 ) as BaselineMigration;
@@ -466,5 +469,29 @@ describe("staff login rate limit migration", () => {
 
     expect(statement).toContain("DROP TABLE IF EXISTS staff_login_rate_limits");
     expect(statement).toContain("DROP TYPE IF EXISTS staff_login_rate_limit_scope");
+  });
+});
+
+describe("mother NIK fingerprint migration", () => {
+  it("enforces one active record per NIK and health center without storing the NIK", () => {
+    const sql = vi.fn();
+    motherNikFingerprintMigration.up({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("ADD COLUMN nik_fingerprint text");
+    expect(statement).toContain("nik_fingerprint ~ '^[a-f0-9]{64}$'");
+    expect(statement).toContain("CREATE UNIQUE INDEX mothers_active_nik_unique_idx");
+    expect(statement).toContain("(health_center_id, nik_fingerprint)");
+    expect(statement).toContain("WHERE archived_at IS NULL AND nik_fingerprint IS NOT NULL");
+    expect(statement).not.toMatch(/\bnik\s+(text|varchar)|nik_plain/iu);
+  });
+
+  it("provides an explicit reverse migration", () => {
+    const sql = vi.fn();
+    motherNikFingerprintMigration.down({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("DROP INDEX IF EXISTS mothers_active_nik_unique_idx");
+    expect(statement).toContain("DROP COLUMN IF EXISTS nik_fingerprint");
   });
 });

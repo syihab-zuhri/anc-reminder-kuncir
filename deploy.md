@@ -436,6 +436,25 @@ npm run build --workspace=@anc/worker
 Jika ada migration baru, jalankan langkah 9 **setelah backup database**. Setelah itu restart di
 aaPanel dengan urutan: **worker**, **API**, lalu **web**. Terakhir, lakukan verifikasi langkah 11.
 
+#### Rilis dengan migration 000021 (satu catatan aktif per NIK)
+
+Migration `000021` menambah kolom `nik_fingerprint` yang boleh NULL, sehingga kode lama tetap
+berjalan. Data yang sudah ada baru ikut dijaga setelah kolom itu terisi:
+
+```bash
+cd /www/wwwroot/posyandukkn26.my.id        # atau folder staging yang sudah di-build
+node --env-file=.env scripts/backfill-nik-fingerprints.mjs          # uji coba, tidak menulis apa pun
+node --env-file=.env scripts/backfill-nik-fingerprints.mjs --apply  # simpan
+```
+
+Skrip hanya memproses baris yang `nik_fingerprint`-nya NULL, aman dijalankan ulang, dan memakai
+`NIK_ENCRYPTION_KEY` yang sama dengan API. Catatan paling lama mempertahankan slot NIK-nya. Jika
+ada ibu yang NIK-nya sama dengan catatan aktif lain, skrip **tidak mengubahnya**, melaporkan id
+(bukan NIK) dan keluar dengan kode 3: arsipkan salah satu catatan lewat aplikasi, lalu jalankan
+ulang. Id yang `undecryptable` berarti ciphertext NIK tidak bisa dibuka dengan kunci saat ini dan
+perlu diperiksa manual. Sebelum backfill selesai, pendaftaran baru tetap dijaga karena API sudah
+mengisi `nik_fingerprint` untuk setiap catatan baru.
+
 ### Rollback kode
 
 Jangan menjalankan `git reset --hard` di server produksi. Catat commit terakhir yang sehat, lalu
