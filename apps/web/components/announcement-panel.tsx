@@ -41,16 +41,11 @@ function AnnouncementWorkspace() {
   // retry of the same content is a replay on the server instead of a second broadcast.
   const attempt = useRef<{ key: string; title: string; body: string } | null>(null);
 
-  const refresh = useCallback(async (signal?: AbortSignal): Promise<void> => {
+  // Reloads the history after a send. The first load lives inside the effect below.
+  const refresh = useCallback(async (): Promise<void> => {
     try {
-      const data = await requestJson(
-        "/api/staff-proxy/announcements",
-        announcementListResponseSchema,
-        { cache: "no-store", ...(signal !== undefined ? { signal } : {}) },
-      );
-      setItems(data.announcements);
+      setItems(await fetchAnnouncements());
     } catch (error) {
-      if (isAbortError(error)) return;
       setFeedback({ type: "error", message: messageOf(error, "Gagal memuat riwayat.") });
     } finally {
       setLoading(false);
@@ -59,9 +54,20 @@ function AnnouncementWorkspace() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void refresh(controller.signal);
+    void loadHistory(controller.signal);
     return () => controller.abort();
-  }, [refresh]);
+
+    async function loadHistory(signal: AbortSignal): Promise<void> {
+      try {
+        setItems(await fetchAnnouncements(signal));
+      } catch (error) {
+        if (isAbortError(error)) return;
+        setFeedback({ type: "error", message: messageOf(error, "Gagal memuat riwayat.") });
+      } finally {
+        setLoading(false);
+      }
+    }
+  }, []);
 
   const validation = announcementContentSchema.safeParse({ title, body });
   const canSubmit = validation.success && !sending;
@@ -392,6 +398,14 @@ function AnnouncementWorkspace() {
       )}
     </div>
   );
+}
+
+async function fetchAnnouncements(signal?: AbortSignal): Promise<AnnouncementRow[]> {
+  const data = await requestJson("/api/staff-proxy/announcements", announcementListResponseSchema, {
+    cache: "no-store",
+    ...(signal !== undefined ? { signal } : {}),
+  });
+  return data.announcements;
 }
 
 async function requestJson<T>(

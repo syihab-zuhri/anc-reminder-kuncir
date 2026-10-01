@@ -1564,9 +1564,15 @@ svg {
 
 /* ── Mobile min-font (WCAG, readability) ── */
 @media (max-width: 600px) {
-  body { font-size: 15px; }
-  .eyebrow, .role-label, .access-number, .status-badge,
-  .staff-kicker, .coming-soon {
+  body {
+    font-size: 15px;
+  }
+  .eyebrow,
+  .role-label,
+  .access-number,
+  .status-badge,
+  .staff-kicker,
+  .coming-soon {
     font-size: max(0.72rem, 11.5px) !important;
   }
 }

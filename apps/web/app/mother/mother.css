@@ -302,7 +302,7 @@
 }
 
 .mother-login-links a:hover {
-  color: #8B3A25;
+  color: #8b3a25;
   background: rgba(201, 99, 73, 0.06);
 }
 
@@ -533,7 +533,7 @@
 }
 
 .trimester-trimester-2 {
-  background: #7A6324;
+  background: #7a6324;
   color: #ffffff;
   box-shadow: 0 4px 10px rgba(122, 99, 36, 0.3);
 }
@@ -564,7 +564,7 @@
 }
 
 .pregnancy-progress-header strong {
-  color: #8B3A25;
+  color: #8b3a25;
   font-weight: 800;
 }
 
@@ -628,7 +628,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #8B3A25;
+  color: #8b3a25;
 }
 
 .milestone-pill-badge {
@@ -637,7 +637,7 @@
   justify-content: center;
   padding: 0.2rem 0.65rem;
   background: rgba(201, 99, 73, 0.1);
-  color: #8B3A25;
+  color: #8b3a25;
   border-radius: var(--radius-full, 9999px);
   font-size: 0.78rem;
   font-weight: 800;
@@ -670,7 +670,7 @@
 
 .milestone-facility svg {
   flex: 0 0 auto;
-  color: #8B3A25;
+  color: #8b3a25;
 }
 
 .next-milestone-due {
@@ -695,7 +695,7 @@
 .next-milestone-due strong {
   font-size: 0.98rem;
   font-weight: 800;
-  color: #8B3A25;
+  color: #8b3a25;
 }
 
 /* =================================================== */

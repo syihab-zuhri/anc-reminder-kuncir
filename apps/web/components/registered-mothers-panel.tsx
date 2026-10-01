@@ -289,9 +289,7 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
       const registeredAt = m.created_at ? new Date(m.created_at).toLocaleDateString("id-ID") : "-";
 
       const phoneRaw = m.phone_number || m.phone_masked || "-";
-      const phoneDisplay = phoneRaw.startsWith("62")
-        ? "0" + phoneRaw.slice(2)
-        : phoneRaw;
+      const phoneDisplay = phoneRaw.startsWith("62") ? "0" + phoneRaw.slice(2) : phoneRaw;
 
       return [
         idx + 1,

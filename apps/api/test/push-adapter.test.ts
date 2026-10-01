@@ -87,7 +87,7 @@ describe("FCM push payloads", () => {
 describe("FCM adapter selection", () => {
   const serviceAccountJson = JSON.stringify({
     client_email: "svc@anc-test.iam.gserviceaccount.com",
-    private_key: "-----BEGIN PRIVATE KEY-----\nZmFrZQ==\n-----END PRIVATE KEY-----\n",
+    private_key: "not-a-real-key-the-adapter-never-parses-it-before-sending",
   });
 
   it.each([

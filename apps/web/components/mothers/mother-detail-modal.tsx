@@ -170,10 +170,7 @@ export function MotherDetailModal({
           {/* Screen Gestational Age Card */}
           <div className="no-print">
             {mother.active_pregnancy ? (
-              <div
-                className="mother-profile-card detail-gestational-card"
-                style={{ margin: 0 }}
-              >
+              <div className="mother-profile-card detail-gestational-card" style={{ margin: 0 }}>
                 <div
                   style={{
                     display: "flex",
@@ -362,11 +359,7 @@ export function MotherDetailModal({
                               : "var(--ink)",
                         }}
                       >
-                        {isConfirmed ? (
-                          <span>✓ Selesai</span>
-                        ) : (
-                          <span>{targetDate}</span>
-                        )}
+                        {isConfirmed ? <span>✓ Selesai</span> : <span>{targetDate}</span>}
                       </div>
                     </div>
                   );
@@ -507,7 +500,12 @@ export function MotherDetailModal({
             type="button"
             className="btn-secondary"
             onClick={handlePrint}
-            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "0.35rem",
+            }}
             title="Cetak ringkasan profil pasien & riwayat K1–K8"
           >
             <svg
