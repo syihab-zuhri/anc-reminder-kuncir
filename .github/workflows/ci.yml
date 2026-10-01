@@ -79,6 +79,7 @@ jobs:
         working-directory: apps/android/android
       - run: npm run test:smoke:api
       - run: npm run test:smoke:idempotency
+      - run: npm run test:smoke:pagination
       - run: npm run staff:provision:puskesmas
       - run: npm run test:smoke:auth
       - run: npm run test:smoke:registry
