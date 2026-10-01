@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/syihab-zuhri/anc-reminder-kuncir/actions/workflows/ci.yml/badge.svg)](https://github.com/syihab-zuhri/anc-reminder-kuncir/actions/workflows/ci.yml)
 
-Implementasi server-driven untuk memantau milestone K1–K8 melalui Web responsif dan Android WebView. Blueprint authoritative berada di [`ANC_Reminder_Blueprint_v1.1.0`](./ANC_Reminder_Blueprint_v1.1.0/agent.md).
+Implementasi server-driven untuk memantau milestone K1–K8 melalui Web responsif dan Android WebView. Blueprint `ANC_Reminder_Blueprint_v1.1.0` adalah dokumen privat yang tidak disertakan di repositori ini (diabaikan Git); panduan deploy ada di [`deploy.md`](./deploy.md).
 
 ## Workspace
 
@@ -56,7 +56,16 @@ bukan credential.
 
 Penanggung jawab program klinis adalah capability terpisah dan default-nya nonaktif. Setelah penunjukan formal,
 operator database dapat memberi atau mencabut capability melalui `npm run staff:set:clinical-owner` dengan
-input sementara `CLINICAL_OWNER_*` yang didokumentasikan di `ANC_Reminder_Blueprint_v1.1.0/ENVIRONMENT.md`.
+input sementara berikut (semuanya wajib):
+
+| Variabel                            | Nilai                                                   |
+| ----------------------------------- | ------------------------------------------------------- |
+| `CLINICAL_OWNER_CONFIRM`            | `CHANGE_CLINICAL_PROGRAM_OWNER`                         |
+| `CLINICAL_OWNER_HEALTH_CENTER_CODE` | kode Puskesmas, misalnya `PKM-KUNCIR`                   |
+| `CLINICAL_OWNER_LOGIN_IDENTIFIER`   | identitas login akun Puskesmas yang ditunjuk            |
+| `CLINICAL_OWNER_ENABLED`            | `true` untuk memberi, `false` untuk mencabut            |
+| `CLINICAL_OWNER_REASON`             | alasan perubahan (5–200 karakter), masuk ke audit trail |
+
 Jangan memakai identitas dummy untuk grant produksi.
 
 ## Pemeriksaan

@@ -31,6 +31,13 @@ Seluruh skema database dikelola melalui skrip migrasi berurutan di `packages/dat
 - `000011_phase_2_pregnancy_close_cancellation.cjs`: Pembatalan otomatis reminder aktif saat penutupan kehamilan.
 - `000012_phase_2_program_status.cjs`: Governance rule program, evaluasi versioned, dan riwayat assessment append-only.
 - `000013_audit_remediation.cjs`: Uniqueness requirement program per field dan perlindungan append-only untuk riwayat consent.
+- `000014_phase_4_content_lifecycle.cjs`: Template konten (push, wa.me, edukasi) dengan siklus DRAFT → REVIEW → APPROVED → PUBLISHED → ARCHIVED dan guard transisi.
+- `000015_phase_4_push_delivery.cjs`: Fingerprint token perangkat FCM, satu perangkat aktif per ibu, dan antrean percobaan push dengan lease.
+- `000016_phase-4-mother-record-archive.cjs`: Arsip data ibu hamil (`archived_at`, pelaku, dan alasan).
+- `000017_add_facility_types.cjs`: Menambah tipe fasilitas `PUSTU` dan `POLINDES` (enum tidak dapat dikurangi; `down` sengaja kosong).
+- `000018_add_registration_status.cjs`: Kolom `registration_status` dan jejak persetujuan pada tabel ibu hamil (belum dipakai aplikasi).
+- `000019_announcements.cjs`: Pengumuman siaran dan hasil pengiriman per perangkat.
+- `000020_staff_login_rate_limits.cjs`: Pembatasan percobaan login petugas per akun+alamat, per akun, dan per alamat (hanya HMAC yang disimpan).
 
 ---
 

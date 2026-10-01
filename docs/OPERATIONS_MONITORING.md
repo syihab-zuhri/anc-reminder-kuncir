@@ -38,10 +38,11 @@ Dokumen ini mendefinisikan arsitektur pemantauan (_monitoring_), batas indikator
 
 ### 3.1 API Server (`@anc/api`)
 
-- **Endpoints & Health Check**:
-  - Liveness Endpoint: `GET /health/liveness` (Harus mengembalikan HTTP 200 `{"status": "OK"}`)
-  - Readiness Endpoint: `GET /health/readiness` (Memeriksa koneksi DB & environment readiness)
-- **Monitoring Metrics**:
+- **Endpoints & Health Check** (prefix `/api/v1`):
+  - Liveness Endpoint: `GET /api/v1/health/live` (HTTP 200 `{"status": "ok"}`)
+  - Readiness Endpoint: `GET /api/v1/health/ready` (HTTP 200 `{"status": "ready", "checks": {"database": "up"}}`; HTTP 503 `DEPENDENCY_UNAVAILABLE` jika database tidak dapat dijangkau)
+- **Status implementasi**: yang sudah tersedia saat ini adalah kedua endpoint health di atas, log JSON terstruktur (event seperti `api_started`, `fcm_not_configured`, `scheduler_tick_completed`, `worker_loop_tick`), dan ringkasan antrean `GET /api/v1/reminders/summary`. Metrik bernama di bawah ini adalah **target**; endpoint metrik (misalnya Prometheus) belum diimplementasikan.
+- **Monitoring Metrics** (target):
   - `http_requests_total{status, method, route}`
   - `http_request_duration_seconds{route}`
   - `auth_failures_total{reason, ip}` (Terintegrasi dengan audit log & rate-limiting)
