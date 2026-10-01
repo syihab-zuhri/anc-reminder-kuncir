@@ -40,7 +40,9 @@ export function LoginForm({ notice }: LoginFormProps) {
       setError(
         response.status === 503
           ? "Layanan petugas sedang tidak tersedia. Coba beberapa saat lagi."
-          : "Identitas atau kata sandi tidak dapat diverifikasi.",
+          : response.status === 429
+            ? "Terlalu banyak percobaan masuk. Tunggu beberapa menit lalu coba lagi."
+            : "Identitas atau kata sandi tidak dapat diverifikasi.",
       );
     } catch {
       setError("Koneksi ke layanan petugas terputus. Periksa jaringan lalu coba lagi.");

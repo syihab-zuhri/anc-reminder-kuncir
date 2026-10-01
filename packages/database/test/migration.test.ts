@@ -25,6 +25,9 @@ const pregnancyLifecycleMigration = loadModule(
 const motherAccessCredentialMigration = loadModule(
   "../migrations/000005_phase_2_mother_access_credentials.cjs",
 ) as BaselineMigration;
+const staffLoginRateLimitMigration = loadModule(
+  "../migrations/000020_staff_login_rate_limits.cjs",
+) as BaselineMigration;
 const motherPrivateAccessMigration = loadModule(
   "../migrations/000006_phase_2_mother_private_access.cjs",
 ) as BaselineMigration;
@@ -436,5 +439,32 @@ describe("phase 4 push delivery migration", () => {
     expect(statement).toContain("DROP INDEX IF EXISTS push_attempts_due_idx");
     expect(statement).toContain("DROP COLUMN IF EXISTS push_token_fingerprint");
     expect(statement).toContain("DROP COLUMN IF EXISTS scheduled_for");
+  });
+});
+
+describe("staff login rate limit migration", () => {
+  it("adds hashed per-account, per-address, and per-pair throttle buckets", () => {
+    const sql = vi.fn();
+    staffLoginRateLimitMigration.up({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("CREATE TYPE staff_login_rate_limit_scope");
+    expect(statement).toContain("'ACCOUNT_IP', 'ACCOUNT', 'IP'");
+    expect(statement).toContain("CREATE TABLE staff_login_rate_limits");
+    expect(statement).toContain(
+      "bucket_hash text PRIMARY KEY CHECK (bucket_hash ~ '^[a-f0-9]{64}$')",
+    );
+    expect(statement).toContain("staff_login_rate_limits_blocked_idx");
+    expect(statement).toContain("staff_login_rate_limits_updated_idx");
+    expect(statement).not.toMatch(/raw_ip|ip_address|login_identifier/iu);
+  });
+
+  it("provides an explicit reverse migration", () => {
+    const sql = vi.fn();
+    staffLoginRateLimitMigration.down({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("DROP TABLE IF EXISTS staff_login_rate_limits");
+    expect(statement).toContain("DROP TYPE IF EXISTS staff_login_rate_limit_scope");
   });
 });
