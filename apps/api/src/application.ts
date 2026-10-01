@@ -32,6 +32,7 @@ import type { ProgramStatusRepository } from "./program-status/program-status.re
 import type { ReminderOperationsRepository } from "./reminder-operations/reminder-operations.repository.js";
 import type { ContentManagementRepository } from "./content-management/content-management.repository.js";
 import type { DeviceRegistrationRepository } from "./device-registration/device-registration.repository.js";
+import type { AnnouncementRepository } from "./announcements/announcement.repository.js";
 import type {
   InternalSchedulerService,
   PushDeliveryAdapter,
@@ -70,6 +71,7 @@ export interface CreateApiApplicationOptions {
   readonly reminderOperationsRepository?: ReminderOperationsRepository;
   readonly contentManagementRepository?: ContentManagementRepository;
   readonly deviceRegistrationRepository?: DeviceRegistrationRepository;
+  readonly announcementRepository?: AnnouncementRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
@@ -152,6 +154,9 @@ export async function createApiApplication(
       ...(options.deviceRegistrationRepository === undefined
         ? {}
         : { deviceRegistrationRepository: options.deviceRegistrationRepository }),
+      ...(options.announcementRepository === undefined
+        ? {}
+        : { announcementRepository: options.announcementRepository }),
       ...(options.auditRepository === undefined
         ? {}
         : { auditRepository: options.auditRepository }),

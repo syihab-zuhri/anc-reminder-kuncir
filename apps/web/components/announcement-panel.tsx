@@ -1,13 +1,13 @@
 "use client";
 
 import {
-  announcementCreateRequestSchema,
+  announcementContentSchema,
   announcementCreateResponseSchema,
   announcementListResponseSchema,
   type AnnouncementCreateResponse,
   type AnnouncementRow,
 } from "@anc/contracts";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface AnnouncementPanelProps {
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
@@ -37,6 +37,9 @@ function AnnouncementWorkspace() {
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [title, setTitle] = useState("Pengumuman");
   const [body, setBody] = useState("");
+  // One key per distinct broadcast. It survives a failed or timed-out attempt so that a
+  // retry of the same content is a replay on the server instead of a second broadcast.
+  const attempt = useRef<{ key: string; title: string; body: string } | null>(null);
 
   const refresh = useCallback(async (signal?: AbortSignal): Promise<void> => {
     try {
@@ -60,10 +63,21 @@ function AnnouncementWorkspace() {
     return () => controller.abort();
   }, [refresh]);
 
-  const validation = announcementCreateRequestSchema.safeParse({ title, body });
+  const validation = announcementContentSchema.safeParse({ title, body });
   const canSubmit = validation.success && !sending;
 
+  function idempotencyKeyFor(content: { title: string; body: string }): string {
+    const current = attempt.current;
+    if (current !== null && current.title === content.title && current.body === content.body) {
+      return current.key;
+    }
+    const key = crypto.randomUUID();
+    attempt.current = { key, ...content };
+    return key;
+  }
+
   async function handleSend(): Promise<void> {
+    if (!validation.success) return;
     setShowConfirm(false);
     setSending(true);
     setFeedback(null);
@@ -74,18 +88,34 @@ function AnnouncementWorkspace() {
         {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ title, body }),
+          body: JSON.stringify({
+            idempotency_key: idempotencyKeyFor(validation.data),
+            ...validation.data,
+          }),
         },
       );
-      setFeedback({
-        type: "success",
-        message: `Terkirim ke ${sent.success_count.toString()} perangkat${sent.failed_count > 0 ? `, ${sent.failed_count.toString()} gagal` : ""}.`,
-      });
+      attempt.current = null;
+      setFeedback(
+        sent.sent_at === null
+          ? {
+              type: "success",
+              message:
+                "Pengumuman sudah tercatat dan pengirimannya masih berjalan. Periksa riwayat di bawah; jangan kirim ulang.",
+            }
+          : {
+              type: "success",
+              message: `Terkirim ke ${sent.success_count.toString()} perangkat${sent.failed_count > 0 ? `, ${sent.failed_count.toString()} gagal` : ""}.`,
+            },
+      );
       setTitle("Pengumuman");
       setBody("");
       await refresh();
     } catch (error) {
-      setFeedback({ type: "error", message: messageOf(error, "Pengumuman gagal dikirim.") });
+      setFeedback({
+        type: "error",
+        message: `${messageOf(error, "Pengumuman gagal dikirim.")} Periksa riwayat di bawah sebelum mencoba lagi.`,
+      });
+      void refresh();
     } finally {
       setSending(false);
     }
@@ -99,8 +129,7 @@ function AnnouncementWorkspace() {
           <span className="staff-kicker">Notifikasi Push</span>
           <h2>Pengumuman Siaran</h2>
           <p className="field-hint">
-            Kirim pesan langsung sebagai notifikasi ke seluruh perangkat ibu hamil yang
-            terdaftar.
+            Kirim pesan langsung sebagai notifikasi ke seluruh perangkat ibu hamil yang terdaftar.
           </p>
         </div>
       </header>
@@ -120,8 +149,8 @@ function AnnouncementWorkspace() {
       <div className="admin-form-card">
         <h3 className="admin-form-card-title">Tulis Pengumuman</h3>
         <p className="admin-form-card-desc">
-          Isi judul dan isi pengumuman, lalu klik <strong>Kirim via Notifikasi</strong>. Pesan
-          akan dikirim ke semua perangkat ibu hamil yang aktif.
+          Isi judul dan isi pengumuman, lalu klik <strong>Kirim via Notifikasi</strong>. Pesan akan
+          dikirim ke semua perangkat ibu hamil yang aktif.
         </p>
 
         <form
@@ -253,10 +282,7 @@ function AnnouncementWorkspace() {
                     </td>
                     <td style={{ fontSize: "0.82rem" }}>{item.staff_username ?? "-"}</td>
                     <td style={{ textAlign: "center" }}>
-                      <span
-                        className="badge-status status-completed"
-                        style={{ fontWeight: 700 }}
-                      >
+                      <span className="badge-status status-completed" style={{ fontWeight: 700 }}>
                         {item.success_count}/{item.total_devices}
                       </span>
                     </td>
@@ -292,7 +318,12 @@ function AnnouncementWorkspace() {
             if (e.target === e.currentTarget) setShowConfirm(false);
           }}
         >
-          <div className="staff-modal-dialog modal-sm" role="dialog" aria-modal="true" aria-labelledby="ann-confirm-title">
+          <div
+            className="staff-modal-dialog modal-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ann-confirm-title"
+          >
             <div className="staff-modal-header">
               <div className="staff-modal-header-content">
                 <span className="staff-modal-kicker">Konfirmasi Tindakan</span>
@@ -310,14 +341,25 @@ function AnnouncementWorkspace() {
                 aria-label="Tutup"
                 onClick={() => setShowConfirm(false)}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true" style={{ width: "1rem", height: "1rem" }}>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                  style={{ width: "1rem", height: "1rem" }}
+                >
                   <path d="M18 6 6 18M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
             <div className="staff-modal-body">
-              <div className="staff-alert" style={{ background: "var(--paper,#fdfbf7)", border: "1px solid var(--line)" }}>
+              <div
+                className="staff-alert"
+                style={{ background: "var(--paper,#fdfbf7)", border: "1px solid var(--line)" }}
+              >
                 <p style={{ fontWeight: 700, marginBottom: "0.35rem" }}>{title}</p>
                 <p style={{ fontSize: "0.88rem", color: "var(--ink-muted)", margin: 0 }}>
                   {body.length > 220 ? body.slice(0, 220) + "…" : body}
@@ -337,7 +379,9 @@ function AnnouncementWorkspace() {
               <button
                 type="button"
                 className="btn-primary"
-                onClick={() => { void handleSend(); }}
+                onClick={() => {
+                  void handleSend();
+                }}
                 disabled={sending}
               >
                 {sending ? "Mengirim…" : "Ya, Kirim Sekarang"}

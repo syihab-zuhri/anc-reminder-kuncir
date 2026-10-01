@@ -475,6 +475,7 @@ export class AppModule {
             audit: AuditService,
             pushAdapter: PushDeliveryAdapter,
             clock: Clock,
+            idempotency: IdempotencyService,
           ) =>
             new AnnouncementService(
               repository,
@@ -483,6 +484,7 @@ export class AppModule {
               pushAdapter,
               audit,
               clock,
+              idempotency,
             ),
           inject: [
             ANNOUNCEMENT_REPOSITORY,
@@ -490,6 +492,7 @@ export class AppModule {
             AUDIT_SERVICE,
             PUSH_DELIVERY_ADAPTER,
             CLOCK,
+            IDEMPOTENCY_SERVICE,
           ],
         },
         {

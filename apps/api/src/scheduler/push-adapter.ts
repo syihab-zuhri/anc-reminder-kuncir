@@ -4,12 +4,42 @@ const firebaseMessagingScope = "https://www.googleapis.com/auth/firebase.messagi
 const retryableHttpStatuses = new Set([429, 500, 503]);
 const retryableFcmStatuses = new Set(["RESOURCE_EXHAUSTED", "UNAVAILABLE", "INTERNAL"]);
 
-export interface PushMessage {
+interface PushMessageBase {
   readonly token: string;
   readonly title: string;
   readonly body: string;
+}
+
+export interface ReminderPushMessage extends PushMessageBase {
   readonly reminderCycleId: string;
   readonly milestoneCode: string;
+}
+
+export interface AnnouncementPushMessage extends PushMessageBase {
+  readonly announcementId: string;
+}
+
+export type PushMessage = ReminderPushMessage | AnnouncementPushMessage;
+
+function isAnnouncementMessage(message: PushMessage): message is AnnouncementPushMessage {
+  return "announcementId" in message;
+}
+
+/** Stable per-source key so FCM collapses repeats of the same reminder or announcement. */
+function collapseKeyFor(message: PushMessage): string {
+  return isAnnouncementMessage(message)
+    ? `announcement-${message.announcementId}`
+    : message.reminderCycleId;
+}
+
+function fcmDataFor(message: PushMessage): Record<string, string> {
+  return isAnnouncementMessage(message)
+    ? { announcement_id: message.announcementId, destination: "/mother" }
+    : {
+        reminder_cycle_id: message.reminderCycleId,
+        milestone_code: message.milestoneCode,
+        destination: "/mother",
+      };
 }
 
 export type PushDeliveryResult =
@@ -74,15 +104,11 @@ export class FcmHttpV1PushAdapter implements PushDeliveryAdapter {
             message: {
               token: message.token,
               notification: { title: message.title, body: message.body },
-              data: {
-                reminder_cycle_id: message.reminderCycleId,
-                milestone_code: message.milestoneCode,
-                destination: "/mother",
-              },
+              data: fcmDataFor(message),
               android: {
-                collapse_key: message.reminderCycleId,
+                collapse_key: collapseKeyFor(message),
                 priority: "high",
-                notification: { channel_id: "anc_reminders", tag: message.reminderCycleId },
+                notification: { channel_id: "anc_reminders", tag: collapseKeyFor(message) },
               },
             },
           }),
@@ -157,7 +183,11 @@ export class NtfyPushAdapter implements PushDeliveryAdapter {
           title: message.title,
           message: message.body,
           priority: 4,
-          tags: ["maternity", "calendar", message.milestoneCode.toLowerCase()],
+          tags: [
+            "maternity",
+            "calendar",
+            isAnnouncementMessage(message) ? "announcement" : message.milestoneCode.toLowerCase(),
+          ],
           click: "https://posyandukkn26.my.id/mother",
           actions: [
             {

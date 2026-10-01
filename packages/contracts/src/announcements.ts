@@ -1,13 +1,23 @@
 import { z } from "zod";
 
+import { idempotencyKeySchema } from "./idempotency.js";
+
+const announcementContentShape = {
+  title: z.string().trim().min(1, "Judul wajib diisi").max(120, "Judul maksimal 120 karakter"),
+  body: z
+    .string()
+    .trim()
+    .min(1, "Isi pengumuman wajib diisi")
+    .max(2000, "Isi pengumuman maksimal 2000 karakter"),
+} as const;
+
+/** Judul dan isi saja; dipakai untuk validasi form sebelum kunci idempotensi dibuat. */
+export const announcementContentSchema = z.object(announcementContentShape).strict();
+
 export const announcementCreateRequestSchema = z
   .object({
-    title: z.string().trim().min(1, "Judul wajib diisi").max(120, "Judul maksimal 120 karakter"),
-    body: z
-      .string()
-      .trim()
-      .min(1, "Isi pengumuman wajib diisi")
-      .max(2000, "Isi pengumuman maksimal 2000 karakter"),
+    idempotency_key: idempotencyKeySchema,
+    ...announcementContentShape,
   })
   .strict();
 
@@ -49,7 +59,9 @@ export const announcementCreateResponseSchema = z
     title: z.string(),
     body: z.string(),
     created_at: z.string().datetime({ offset: true }),
-    sent_at: z.string().datetime({ offset: true }),
+    // null: pengumuman tercatat tetapi pengirimannya belum selesai (atau terhenti). Terjadi
+    // ketika permintaan yang sama diulang saat pengiriman awal masih berjalan.
+    sent_at: z.string().datetime({ offset: true }).nullable(),
     total_devices: z.number().int().nonnegative(),
     success_count: z.number().int().nonnegative(),
     failed_count: z.number().int().nonnegative(),

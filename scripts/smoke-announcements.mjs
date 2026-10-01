@@ -46,23 +46,25 @@ try {
   }
 
   // Valid create (may deliver to 0 devices locally; that is fine).
-  const createResponse = await fetch(`${baseUrl}/announcements`, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${token}`,
-      "content-type": "application/json",
-      "x-idempotency-key": crypto.randomUUID(),
-    },
-    body: JSON.stringify({
-      title: "Pengumuman Uji",
-      body: "Ini pengumuman smoke test.",
-    }),
+  const idempotencyKey = crypto.randomUUID();
+  const payload = JSON.stringify({
+    idempotency_key: idempotencyKey,
+    title: "Pengumuman Uji",
+    body: "Ini pengumuman smoke test.",
   });
+  const post = () =>
+    fetch(`${baseUrl}/announcements`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: payload,
+    });
+  const createResponse = await post();
   if (!createResponse.ok) {
     const body = await createResponse.json().catch(() => null);
-    throw new Error(
-      `Create announcement failed: ${createResponse.status} ${JSON.stringify(body)}`,
-    );
+    throw new Error(`Create announcement failed: ${createResponse.status} ${JSON.stringify(body)}`);
   }
   const created = await createResponse.json();
   if (
@@ -72,6 +74,16 @@ try {
     typeof created.total_devices !== "number"
   ) {
     throw new Error(`Create announcement contract mismatch: ${JSON.stringify(created)}`);
+  }
+
+  // Replaying the same key must return the same announcement without a second broadcast.
+  const replayResponse = await post();
+  if (!replayResponse.ok) {
+    throw new Error(`Replay announcement failed: ${replayResponse.status}`);
+  }
+  const replayed = await replayResponse.json();
+  if (replayed.id !== created.id) {
+    throw new Error("Idempotent replay created a second announcement");
   }
 
   // List must contain the new announcement.
