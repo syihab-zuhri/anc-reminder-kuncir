@@ -2,8 +2,22 @@ import { createDatabasePool } from "../packages/database/dist/index.js";
 import { PasswordHasher } from "../apps/api/dist/auth/password-hasher.js";
 import { NikCipher } from "../apps/api/dist/registry/nik-cipher.js";
 import crypto from "node:crypto";
+import { assertDemoSeedAllowed } from "./lib/demo-seed-guard.mjs";
+
+// Local development only; requires SEED_DEMO_CONFIRM=SEED_DEMO_DATA (see lib/demo-seed-guard.mjs).
+// A fresh random access code is issued on every run and printed once at the end.
+const ACCESS_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+
+function generateAccessCode() {
+  const symbols = Array.from(
+    crypto.randomBytes(16),
+    (byte) => ACCESS_CODE_ALPHABET[byte & 31],
+  ).join("");
+  return `ANC-${symbols.match(/.{4}/gu).join("-")}`;
+}
 
 async function seedMother() {
+  assertDemoSeedAllowed("seed-mother");
   const databaseUrl =
     process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/anc_posyandu_kuncir";
   const pool = createDatabasePool(databaseUrl);
@@ -83,8 +97,8 @@ async function seedMother() {
       console.log("Mother & active pregnancy created: Siti Aminah");
     }
 
-    // Mother access credential (Crockford Base32 format: ANC-2345-6789-ABCD-EFGH)
-    const accessCodePlaintext = "ANC-2345-6789-ABCD-EFGH";
+    // Mother access credential (same alphabet and format as the API's MotherAccessCodeService)
+    const accessCodePlaintext = generateAccessCode();
     const motherSecret =
       process.env.MOTHER_SESSION_SECRET || "dev_mother_session_secret_key_at_least_32_chars";
 
@@ -129,4 +143,7 @@ async function seedMother() {
   }
 }
 
-seedMother();
+seedMother().catch((err) => {
+  console.error(err instanceof Error ? err.message : err);
+  process.exitCode = 1;
+});

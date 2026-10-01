@@ -4,6 +4,12 @@ const host = process.env.API_HOST ?? "127.0.0.1";
 const port = process.env.API_PORT ?? "3001";
 const baseUrl = `http://${host}:${port}/api/v1`;
 
+const loginIdentifier = process.env.SMOKE_STAFF_LOGIN_IDENTIFIER;
+const loginPassword = process.env.SMOKE_STAFF_PASSWORD;
+if (loginIdentifier === undefined || loginPassword === undefined) {
+  throw new Error("SMOKE_STAFF_LOGIN_IDENTIFIER and SMOKE_STAFF_PASSWORD are required");
+}
+
 const app = await bootstrapApi();
 
 async function loginStaff(username, password) {
@@ -24,7 +30,7 @@ async function loginStaff(username, password) {
 }
 
 try {
-  const token = await loginStaff("puskesmas.kuncir", "PosyanduKuncir2026!");
+  const token = await loginStaff(loginIdentifier, loginPassword);
 
   // Unauth must be rejected.
   const unauth = await fetch(`${baseUrl}/announcements`);
@@ -98,7 +104,7 @@ try {
   if (found === undefined) {
     throw new Error("Announcement not present in list response");
   }
-  if (found.staff_username !== "puskesmas.kuncir") {
+  if (found.staff_username !== loginIdentifier.toLowerCase()) {
     throw new Error(`Unexpected staff_username in list: ${found.staff_username}`);
   }
 
