@@ -94,7 +94,7 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
     const parsedCursor = decodeMotherCursor(query.cursor);
     const asOfDate = dateOnlyInTimezone(now, timezone);
 
-    const searchPattern = query.search ? `%${query.search}%` : null;
+    const searchPattern = query.search ? `%${escapeLikePattern(query.search)}%` : null;
 
     const result = await this.pool.query<MotherQueryResultRow>(
       `SELECT
@@ -132,7 +132,7 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
              )
            )
          )
-         AND ($4::text IS NULL OR (m.full_name ILIKE $4 OR m.phone_normalized ILIKE $4))
+         AND ($4::text IS NULL OR (m.full_name ILIKE $4 ESCAPE '\\' OR m.phone_normalized ILIKE $4 ESCAPE '\\'))
          AND ($5::uuid IS NULL OR m.village_id = $5)
          AND ($6::pregnancy_status IS NULL OR (
            CASE
@@ -536,6 +536,11 @@ function trimesterLabelSql(asOfParameter: "$5" | "$10"): string {
 
 function dateOnlyToEpoch(date: string): number {
   return Date.parse(`${date}T00:00:00.000Z`);
+}
+
+/** Makes user input match literally inside LIKE/ILIKE: `%`, `_` and the escape character itself. */
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/gu, (character) => `\\${character}`);
 }
 
 /**

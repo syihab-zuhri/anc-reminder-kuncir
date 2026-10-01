@@ -133,3 +133,24 @@ describe("mother list keyset cursor", () => {
     },
   );
 });
+
+describe("mother list search", () => {
+  it("matches user input literally instead of treating % and _ as wildcards", async () => {
+    const { repository, query } = repositoryReturning([]);
+
+    await repository.findMothers(actor, { limit: 5, search: "50%_a\\b" }, now, "Asia/Jakarta");
+
+    const [sql, params] = query.mock.calls[0] as unknown as [string, unknown[]];
+    expect(params[3]).toBe("%50\\%\\_a\\\\b%");
+    expect(sql).toContain("ILIKE $4 ESCAPE '\\'");
+    expect(sql.match(/ESCAPE/gu)).toHaveLength(2);
+  });
+
+  it("sends no pattern when there is no search term", async () => {
+    const { repository, query } = repositoryReturning([]);
+
+    await repository.findMothers(actor, { limit: 5 }, now, "Asia/Jakarta");
+
+    expect((query.mock.calls[0] as unknown as [string, unknown[]])[1][3]).toBeNull();
+  });
+});
