@@ -6,9 +6,12 @@ import type {
   PregnancyMilestoneResponse,
 } from "@anc/contracts";
 import { useEffect, useState } from "react";
+import { fetchAllMothers } from "../lib/mothers-api";
+import { MotherListNotice } from "./mother-list-notice";
 
 export function BumilPatientPortal() {
   const [mothers, setMothers] = useState<readonly MotherSummary[]>([]);
+  const [mothersTruncated, setMothersTruncated] = useState(false);
   const [selectedMotherId, setSelectedMotherId] = useState<string>("");
   const [loadingMothers, setLoadingMothers] = useState(true);
 
@@ -25,16 +28,13 @@ export function BumilPatientPortal() {
     async function loadMothers(signal: AbortSignal): Promise<void> {
       setLoadingMothers(true);
       try {
-        const res = await fetch("/api/staff-proxy/mothers", { signal });
-        if (res.ok) {
-          const data = (await res.json()) as { items: readonly MotherSummary[] };
-          const items = data.items ?? [];
-          setMothers(items);
-          if (items.length > 0) {
-            const firstWithPregnancy = items.find((m) => m.active_pregnancy) ?? items[0];
-            if (firstWithPregnancy) {
-              setSelectedMotherId(firstWithPregnancy.id);
-            }
+        const { items, truncated } = await fetchAllMothers({ signal });
+        setMothers(items);
+        setMothersTruncated(truncated);
+        if (items.length > 0) {
+          const firstWithPregnancy = items.find((m) => m.active_pregnancy) ?? items[0];
+          if (firstWithPregnancy) {
+            setSelectedMotherId(firstWithPregnancy.id);
           }
         }
       } catch (err) {
@@ -162,6 +162,7 @@ export function BumilPatientPortal() {
             </svg>
           </a>
         </div>
+        <MotherListNotice truncated={mothersTruncated} />
       </div>
 
       {error && (

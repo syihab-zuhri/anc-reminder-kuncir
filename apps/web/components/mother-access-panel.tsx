@@ -2,7 +2,9 @@
 
 import type { MotherAccessCredentialIssueResponse, MotherSummary, Village } from "@anc/contracts";
 import { useEffect, useState } from "react";
+import { fetchAllMothers } from "../lib/mothers-api";
 import { useToast } from "../lib/toast-context";
+import { MotherListNotice } from "./mother-list-notice";
 
 interface MotherAccessPanelProps {
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
@@ -14,6 +16,7 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
 
   // Loaded mothers and villages from Supabase
   const [mothers, setMothers] = useState<readonly MotherSummary[]>([]);
+  const [mothersTruncated, setMothersTruncated] = useState(false);
   const [villages, setVillages] = useState<readonly Village[]>([]);
   const [loadingMothers, setLoadingMothers] = useState(false);
 
@@ -45,14 +48,17 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
     async function loadMothers(signal: AbortSignal): Promise<void> {
       setLoadingMothers(true);
       try {
-        const [mRes, vRes] = await Promise.all([
-          fetch("/api/staff-proxy/mothers", { signal }),
+        const [allMothers, vRes] = await Promise.all([
+          fetchAllMothers({ signal }).catch((err: unknown) => {
+            if (err instanceof DOMException && err.name === "AbortError") throw err;
+            return null;
+          }),
           fetch("/api/staff-proxy/staff/organization/villages", { signal }).catch(() => null),
         ]);
 
-        if (mRes.ok) {
-          const data = (await mRes.json()) as { items: readonly MotherSummary[] };
-          setMothers(data.items ?? []);
+        if (allMothers !== null) {
+          setMothers(allMothers.items);
+          setMothersTruncated(allMothers.truncated);
         }
         if (vRes && vRes.ok) {
           const vData = (await vRes.json()) as readonly Village[];
@@ -466,6 +472,7 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
                 <small className="field-hint">
                   Saring daftar ibu hamil berdasarkan domisili desa.
                 </small>
+                <MotherListNotice truncated={mothersTruncated} />
               </div>
 
               <div className="form-group">
@@ -547,6 +554,7 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
                 <small className="field-hint">
                   Saring daftar ibu hamil berdasarkan domisili desa.
                 </small>
+                <MotherListNotice truncated={mothersTruncated} />
               </div>
 
               <div className="form-group">
@@ -641,6 +649,7 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
                 <small className="field-hint">
                   Saring daftar ibu hamil berdasarkan domisili desa.
                 </small>
+                <MotherListNotice truncated={mothersTruncated} />
               </div>
 
               <div className="form-group">
