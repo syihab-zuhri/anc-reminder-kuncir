@@ -56,11 +56,15 @@ dan mengirim pengingat), serta `FCM_PROJECT_ID` dan `FCM_SERVICE_ACCOUNT_JSON`. 
    `postgres`) dan arsip folder aplikasi tanpa `node_modules` dan `.next`.
 2. **Staging**: ekstrak commit yang akan dirilis ke `/www/wwwroot/posyandukkn26.my.id.next`
    (`git archive <commit> | ssh <server> "tar -x -C ..."`), salin `.env`, lalu `npm ci` dan build:
-   `npm run build:packages`, lalu build `@anc/api`, `@anc/worker`, dan `@anc/web`. Server berbagi host
-   dengan situs lain dan disknya terbatas; jalankan dengan `nice` dan hindari saat host sedang sibuk.
+   `npm run build:packages`, lalu build `@anc/api`, `@anc/worker`, dan `@anc/web`. Bila
+   `package-lock.json` identik dengan yang sedang berjalan (`cmp`), `npm ci` boleh diganti
+   `cp -al <folder-live>/node_modules <folder-staging>/node_modules` (hard link, tautan workspace
+   berupa symlink relatif sehingga tetap menunjuk ke folder staging). Server berbagi host dengan
+   situs lain dan disknya terbatas; jalankan dengan `nice` dan hindari saat host sedang sibuk.
 3. **Migration** (hanya menambah, aman untuk kode lama): `node --env-file=.env
 packages/database/scripts/migrate-production.mjs` dari folder staging. Latih dulu di salinan hasil
-   restore backup bila migration mengubah tabel yang sudah ada.
+   restore backup bila migration mengubah tabel yang sudah ada. Rilis dengan migration `000021` juga
+   memerlukan `scripts/backfill-nik-fingerprints.mjs` (uji coba, lalu `--apply`; lihat bagian 13).
 4. **Cutover**: jalankan `scripts/ops/anc-cutover.sh` di server (terlepas dari SSH). Skrip ini
    mencoba API staging di port 3101, menukar direktori (yang lama menjadi `*.prev-<waktu>`), menjalankan
    ulang worker, API, lalu web, memeriksa kesehatan, dan **mengembalikan versi lama otomatis** bila gagal.

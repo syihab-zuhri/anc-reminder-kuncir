@@ -8,8 +8,8 @@
 #   ssh vps-claude 'tail -f /root/anc-cutover-*.log'
 #
 # Preconditions (already prepared on the server):
-#   /www/wwwroot/posyandukkn26.my.id.next   built tree (npm ci + builds done) with its own .env
-#   database migrated to 000020 (additive; the old code ignores the new table)
+#   /www/wwwroot/posyandukkn26.my.id.next   built tree (node_modules + builds done) with its own .env
+#   database already migrated to the staged release (additive; the old code ignores new objects)
 #   backups in /root/backups/anc-pre-deploy-*
 #
 # What it does: trial-starts the staged API on :3101 -> stops the three services -> swaps the
