@@ -52,13 +52,12 @@
     "prettier": "3.9.6",
     "typescript": "6.0.3",
     "typescript-eslint": "8.67.0",
-    "vitest": "4.1.10"
+    "vitest": "4.1.11"
   },
   "overrides": {
     "@xmldom/xmldom": "0.9.12",
     "qs": "6.16.0",
-    "multer": "2.3.0",
-    "next": "16.3.5",
+    "next": "16.3.8",
     "sharp": "0.35.4",
     "js-yaml": "4.3.2"
   }

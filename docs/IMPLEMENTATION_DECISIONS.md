@@ -74,3 +74,10 @@ Phase 0 menyediakan workspace Capacitor, validasi trusted origin, dan halaman fa
 - `trimester_label` dipilih dari window rule terkonfigurasi; tidak ada cut-off trimester global. Dating basis lain tidak boleh memakai kalkulator sampai offset semantics-nya disetujui dan dikontrakkan.
 - Existing explicit `due_at` mengalahkan rule window. Terminal visit state tidak ditimpa; closed pregnancy selalu tidak memiliki next/reminder eligibility dan usia historis berhenti pada tanggal lokal `closed_at`.
 - Derived UPCOMING/DUE/OVERDUE dihitung saat read agar tidak menjadi row state yang basi. `TASK-P2-006` tetap pemilik mutasi schedule/reschedule dan worker task tetap pemilik persistence/query scheduler bila diperlukan.
+
+## 2026-10-01 - Dependency audit and the `xlsx` source
+
+- `npm audit --audit-level=high` adalah gate CI. Patch yang dipakai: `next` 16.3.8 (RCE `next/og`), `@nestjs/platform-express` 11.2.7 (membawa `multer` 2.4.0, sehingga override `multer` dihapus), `vitest` 4.1.11, dan `brace-expansion` transitif lewat `npm audit fix`.
+- `xlsx` di registry npm berhenti di 0.18.5 dan memiliki advisory prototype pollution serta ReDoS tanpa perbaikan. SheetJS hanya merilis versi terbaru lewat CDN-nya, jadi `apps/web` memakai tarball `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz` (Apache-2.0, tanpa dependency; lockfile menyimpan hash integritasnya). Web hanya menulis berkas (ekspor Data Ibu Hamil), tidak pernah mem-parse berkas dari pengguna.
+- Dependabot tidak memperbarui tarball CDN. Periksa https://cdn.sheetjs.com/ secara berkala dan perbarui URL serta lockfile secara manual; `npm ci` di CI dan server membutuhkan akses ke `cdn.sheetjs.com`.
+- Override `sharp` di root tidak lagi berlaku untuk dependency opsional `next`; `sharp` ter-resolve ke 0.35.5 (patch di atas versi yang sebelumnya dikunci), tidak ada advisory.
