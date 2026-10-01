@@ -5,10 +5,18 @@ import { closeDatabasePool, createDatabasePool, type DatabasePool } from "@anc/d
 import type { INestApplication } from "@nestjs/common";
 import { createApiApplication } from "./application.js";
 import { JsonLogger } from "./observability/json-logger.js";
+import { resolveFcmCredentials } from "./scheduler/push-adapter.js";
 
 export async function bootstrapApi(): Promise<INestApplication> {
   const config = loadApiConfig(process.env);
   const logger = new JsonLogger({ service: "anc-api", level: config.logLevel });
+  if (resolveFcmCredentials(config.fcmProjectId, config.fcmServiceAccountJson) === null) {
+    logger.write(
+      "warn",
+      "FCM credentials are not configured; push notifications and announcements will fail",
+      { event: "fcm_not_configured" },
+    );
+  }
   const databasePool = createDatabasePool({
     connectionString: config.databaseUrl,
     applicationName: "anc-api",

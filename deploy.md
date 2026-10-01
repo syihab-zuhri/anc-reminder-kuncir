@@ -179,8 +179,8 @@ Nilai rahasia minimal yang harus tersedia adalah:
 | `IDEMPOTENCY_SECRET`        | API          | Minimal 32 karakter, berbeda.                                          |
 | `NIK_ENCRYPTION_KEY`        | API          | Base64 dari tepat 32 byte.                                             |
 | `PUSH_TOKEN_ENCRYPTION_KEY` | API, worker  | Base64 dari tepat 32 byte dan berbeda.                                 |
-| `FCM_PROJECT_ID`            | worker       | ID proyek Firebase.                                                    |
-| `FCM_SERVICE_ACCOUNT_JSON`  | worker       | JSON service account Firebase utuh, disimpan sebagai secret.           |
+| `FCM_PROJECT_ID`            | API, worker  | ID proyek Firebase.                                                    |
+| `FCM_SERVICE_ACCOUNT_JSON`  | API, worker  | JSON service account Firebase utuh, disimpan sebagai secret.           |
 
 ## 6. Environment setiap proses
 
@@ -212,6 +212,12 @@ sekadar `NEXT_PUBLIC_API_URL`.
 | `SCHEDULER_ENABLED`                   | `false`                               |
 | `DATABASE_URL` dan seluruh secret API | sesuai tabel langkah 5                |
 
+FCM adalah satu-satunya kanal notifikasi. API memakainya untuk pengumuman siaran, jadi
+`FCM_PROJECT_ID` dan `FCM_SERVICE_ACCOUNT_JSON` harus diisi juga pada proses `anc-api`, bukan hanya
+worker. Jika salah satunya kosong, API tetap berjalan tetapi mencatat peringatan `fcm_not_configured`
+saat start, dan setiap pengumuman gagal dengan kode `FCM_NOT_CONFIGURED` pada riwayat pengumuman.
+Tidak ada kanal cadangan: token perangkat tidak pernah dikirim ke layanan lain.
+
 `SCHEDULER_ENABLED=false` diperlukan karena worker pada langkah berikut menjadi satu-satunya
 proses yang membuat/mengirim siklus pengingat. Jangan menjalankan scheduler API dan worker loop
 bersamaan.
@@ -242,8 +248,8 @@ Jika versi aaPanel Anda hanya menerima startup file, gunakan mode **PM2 Project*
 `apps/api/dist/main.js` untuk API serta `apps/worker/dist/main.js` untuk worker; untuk web gunakan
 custom run command di atas.
 
-Setelah start, cek log tiap proses. API harus mencatat `api_started`; worker harus mencatat
-`worker_loop_started`. Tidak boleh ada secret, NIK, kode akses, token, atau nomor telepon mentah di
+Setelah start, cek log tiap proses. API harus mencatat `api_started` (tanpa `fcm_not_configured`);
+worker harus mencatat `worker_loop_started`. Tidak boleh ada secret, NIK, kode akses, token, atau nomor telepon mentah di
 log.
 
 ## 8. Atur reverse proxy Nginx

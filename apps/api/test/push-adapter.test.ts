@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { FcmHttpV1PushAdapter, NtfyPushAdapter } from "../src/scheduler/push-adapter.js";
+import {
+  FcmHttpV1PushAdapter,
+  NoopPushAdapter,
+  createFcmPushAdapter,
+  resolveFcmCredentials,
+} from "../src/scheduler/push-adapter.js";
 
 const accessTokens = { getAccessToken: () => Promise.resolve("test-access-token") };
 
@@ -79,23 +84,56 @@ describe("FCM push payloads", () => {
   });
 });
 
-describe("ntfy push payloads", () => {
-  it("tags announcements instead of reading a milestone code", async () => {
-    const { fetchImpl, bodies } = fetchStub({ id: "ntfy-1" });
-    const adapter = new NtfyPushAdapter("https://ntfy.invalid", fetchImpl);
+describe("FCM adapter selection", () => {
+  const serviceAccountJson = JSON.stringify({
+    client_email: "svc@anc-test.iam.gserviceaccount.com",
+    private_key: "-----BEGIN PRIVATE KEY-----\nZmFrZQ==\n-----END PRIVATE KEY-----\n",
+  });
 
+  it.each([
+    ["no credentials", undefined, undefined],
+    ["only a project id", "anc-test", undefined],
+    ["only a service account", undefined, serviceAccountJson],
+    ["a blank project id", "   ", serviceAccountJson],
+    ["a blank service account", "anc-test", "  "],
+  ])("fails closed without sending anything when given %s", async (_label, projectId, json) => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    const adapter = createFcmPushAdapter(projectId, json);
     const result = await adapter.send({
-      token: "topic",
-      title: "Pengumuman",
+      token: "device-token",
+      title: "Judul",
       body: "Isi",
       announcementId: "ann-1",
     });
 
-    expect(result.status).toBe("SUCCESS");
-    expect((JSON.parse(bodies[0] ?? "{}") as { tags: string[] }).tags).toEqual([
-      "maternity",
-      "calendar",
-      "announcement",
-    ]);
+    expect(adapter).toBeInstanceOf(NoopPushAdapter);
+    expect(result).toEqual({
+      status: "TERMINAL_FAILURE",
+      errorCode: "FCM_NOT_CONFIGURED",
+      invalidateDevice: false,
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("uses FCM when both the project id and service account are present", () => {
+    expect(createFcmPushAdapter("anc-test", serviceAccountJson)).toBeInstanceOf(
+      FcmHttpV1PushAdapter,
+    );
+  });
+
+  it("treats any project id as real instead of special-casing placeholders", () => {
+    expect(createFcmPushAdapter("test-project-123", serviceAccountJson)).toBeInstanceOf(
+      FcmHttpV1PushAdapter,
+    );
+  });
+
+  it("trims the project id and reports missing credentials as null", () => {
+    expect(resolveFcmCredentials(" anc-test ", serviceAccountJson)).toEqual({
+      projectId: "anc-test",
+      serviceAccountJson,
+    });
+    expect(resolveFcmCredentials("anc-test", "")).toBeNull();
+    expect(resolveFcmCredentials(undefined, undefined)).toBeNull();
   });
 });

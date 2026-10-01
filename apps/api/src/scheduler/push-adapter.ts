@@ -164,96 +164,36 @@ export class NoopPushAdapter implements PushDeliveryAdapter {
   }
 }
 
-export class NtfyPushAdapter implements PushDeliveryAdapter {
-  public constructor(
-    private readonly baseUrl: string = "https://ntfy.posyandukkn26.my.id",
-    private readonly fetchImplementation: typeof fetch = fetch,
-  ) {}
-
-  public async send(message: PushMessage): Promise<PushDeliveryResult> {
-    try {
-      const targetUrl = this.baseUrl.replace(/\/+$/u, "");
-      const response = await this.fetchImplementation(targetUrl, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json; charset=utf-8",
-        },
-        body: JSON.stringify({
-          topic: message.token,
-          title: message.title,
-          message: message.body,
-          priority: 4,
-          tags: [
-            "maternity",
-            "calendar",
-            isAnnouncementMessage(message) ? "announcement" : message.milestoneCode.toLowerCase(),
-          ],
-          click: "https://posyandukkn26.my.id/mother",
-          actions: [
-            {
-              action: "view",
-              label: "Buka Portal Ibu",
-              url: "https://posyandukkn26.my.id/mother",
-              clear: true,
-            },
-          ],
-        }),
-      });
-
-      const payload = await readJsonResponse(response);
-      if (response.ok) {
-        const providerMessageId = stringProperty(payload, "id") ?? "ntfy-" + Date.now().toString();
-        return { status: "SUCCESS", providerMessageId };
-      }
-
-      const retryAfterSeconds = parseRetryAfter(response.headers.get("retry-after"));
-      if (retryableHttpStatuses.has(response.status)) {
-        return {
-          status: "RETRYABLE_FAILURE",
-          errorCode: `HTTP_${response.status}`,
-          invalidateDevice: false,
-          ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
-        };
-      }
-
-      return {
-        status: "TERMINAL_FAILURE",
-        errorCode: `HTTP_${response.status}`,
-        invalidateDevice: response.status === 404,
-      };
-    } catch {
-      return {
-        status: "RETRYABLE_FAILURE",
-        errorCode: "NETWORK_UNAVAILABLE",
-        invalidateDevice: false,
-      };
-    }
-  }
+export interface FcmCredentials {
+  readonly projectId: string;
+  readonly serviceAccountJson: string;
 }
 
-export function createNtfyPushAdapter(
-  baseUrl?: string,
-  fetchImplementation?: typeof fetch,
-): PushDeliveryAdapter {
-  return new NtfyPushAdapter(baseUrl, fetchImplementation);
+/** Both the Firebase project id and the service-account JSON must be present and non-blank. */
+export function resolveFcmCredentials(
+  projectId: string | undefined,
+  rawServiceAccountJson: string | undefined,
+): FcmCredentials | null {
+  if (projectId === undefined || rawServiceAccountJson === undefined) return null;
+  const trimmedProjectId = projectId.trim();
+  if (trimmedProjectId === "" || rawServiceAccountJson.trim() === "") return null;
+  return { projectId: trimmedProjectId, serviceAccountJson: rawServiceAccountJson };
 }
 
+/**
+ * FCM is the only push channel. Without credentials every send fails terminally with
+ * FCM_NOT_CONFIGURED and never leaves the process, so device tokens cannot reach another
+ * service and the failure stays visible in delivery history.
+ */
 export function createFcmPushAdapter(
   projectId?: string,
   rawServiceAccountJson?: string,
 ): PushDeliveryAdapter {
-  if (
-    projectId === undefined ||
-    projectId.trim() === "" ||
-    projectId === "test-project-123" ||
-    rawServiceAccountJson === undefined ||
-    rawServiceAccountJson.trim() === ""
-  ) {
-    return new NtfyPushAdapter();
-  }
+  const credentials = resolveFcmCredentials(projectId, rawServiceAccountJson);
+  if (credentials === null) return new NoopPushAdapter();
   return new FcmHttpV1PushAdapter(
-    projectId,
-    new GoogleServiceAccountAccessTokenProvider(rawServiceAccountJson),
+    credentials.projectId,
+    new GoogleServiceAccountAccessTokenProvider(credentials.serviceAccountJson),
   );
 }
 
