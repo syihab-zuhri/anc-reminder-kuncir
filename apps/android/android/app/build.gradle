@@ -1,15 +1,38 @@
 apply plugin: 'com.android.application'
 
+// Release signing credentials never live in the repository. Supply them either
+// through environment variables (CI / one-off builds) or a local, git-ignored
+// `keystore.properties` next to the root build.gradle (see
+// `keystore.properties.example`). Without them `assembleRelease` produces an
+// unsigned APK and `assembleDebug` is unaffected.
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
+def signingValue = { String envName, String propertyName ->
+    System.getenv(envName) ?: keystoreProperties.getProperty(propertyName)
+}
+
+def releaseStoreFile = signingValue('ANC_ANDROID_KEYSTORE_FILE', 'storeFile')
+def releaseStorePassword = signingValue('ANC_ANDROID_KEYSTORE_PASSWORD', 'storePassword')
+def releaseKeyAlias = signingValue('ANC_ANDROID_KEY_ALIAS', 'keyAlias')
+def releaseKeyPassword = signingValue('ANC_ANDROID_KEY_PASSWORD', 'keyPassword')
+def hasReleaseSigning = [releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword].every { it }
+
 android {
     namespace = "id.my.kuncir.posyandu.anc"
     compileSdk = rootProject.ext.compileSdkVersion
 
-    signingConfigs {
-        release {
-            storeFile file('/mnt/d/pos jadi apk/posyandu-release2.jks')
-            storePassword 'posyandu2026key'
-            keyAlias 'posyandukuncir'
-            keyPassword 'posyandu2026key'
+    if (hasReleaseSigning) {
+        signingConfigs {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
         }
     }
 
@@ -30,7 +53,9 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
             debuggable false
         }
     }

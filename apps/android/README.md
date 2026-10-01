@@ -24,6 +24,15 @@ Set-Location apps/android/android
 .\gradlew.bat assembleRelease
 ```
 
+## Penandatanganan build release
+
+Kredensial keystore tidak disimpan di repositori. Salin
+`apps/android/android/keystore.properties.example` menjadi `keystore.properties` (diabaikan Git) lalu
+isi nilainya, atau berikan lewat variabel lingkungan `ANC_ANDROID_KEYSTORE_FILE`,
+`ANC_ANDROID_KEYSTORE_PASSWORD`, `ANC_ANDROID_KEY_ALIAS`, dan `ANC_ANDROID_KEY_PASSWORD`.
+Tanpa kredensial tersebut `assembleRelease` menghasilkan APK yang belum ditandatangani, sedangkan
+`assembleDebug` tidak terpengaruh.
+
 ## Push notification Firebase
 
 Untuk mengaktifkan push notification pada build produksi, simpan file Firebase yang asli sebagai
