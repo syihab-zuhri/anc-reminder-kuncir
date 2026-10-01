@@ -21,10 +21,10 @@ dibuka ke internet.
 | ---------------------- | --------------------------------------------------------- |
 | Repository             | `https://github.com/syihab-zuhri/anc-reminder-kuncir.git` |
 | Branch rilis           | `main`                                                    |
-| Domain web             | `https://posyandu.zuhri.my.id`                            |
-| Domain API             | `https://posyandu.zuhri.my.id/api/v1`                     |
-| Root site aaPanel      | `/www/wwwroot/posyandu.zuhri.my.id`                       |
-| Folder source aplikasi | `/www/wwwroot/posyandu.zuhri.my.id/app`                   |
+| Domain web             | `https://posyandukkn26.my.id`                             |
+| Domain API             | `https://posyandukkn26.my.id/api/v1`                      |
+| Root site aaPanel      | `/www/wwwroot/posyandukkn26.my.id`                        |
+| Folder source aplikasi | `/www/wwwroot/posyandukkn26.my.id/app`                    |
 | Tunnel origin          | `http://127.0.0.1:80`                                     |
 
 Karena repository bersifat public, `git clone` tidak memerlukan password GitHub atau personal access
@@ -48,20 +48,21 @@ Worker Node.js ─────────────────────�
 
 Satu domain digunakan untuk web dan API. Ini menyederhanakan cookie, CORS, dan Android:
 
-- Web: `https://posyandu.zuhri.my.id`
-- API: `https://posyandu.zuhri.my.id/api/v1`
+- Web: `https://posyandukkn26.my.id`
+- API: `https://posyandukkn26.my.id/api/v1`
 
 ## 1. Yang perlu disiapkan sebelum menyentuh aaPanel
 
 ### WAJIB! Domain, Cloudflare Tunnel, dan DNS
 
-1. Gunakan domain `posyandu.zuhri.my.id`.
-2. Pada Cloudflare DNS, pastikan CNAME `posyandu` mengarah ke
-   `3865ffdc-d9d4-4eb6-87bb-cacd9a537256.cfargotunnel.com` dengan status **Proxied**.
+1. Gunakan domain `posyandukkn26.my.id`.
+2. Pada Cloudflare DNS, pastikan CNAME `@` (domain root `posyandukkn26.my.id`) mengarah ke
+   `3865ffdc-d9d4-4eb6-87bb-cacd9a537256.cfargotunnel.com` dengan status **Proxied**. Ganti ID tunnel
+   di atas dengan ID tunnel Anda jika berbeda.
 3. Pada `/etc/cloudflared/config.yml`, tambahkan sebelum catch-all `service: http_status:404`:
 
    ```yaml
-   - hostname: posyandu.zuhri.my.id
+   - hostname: posyandukkn26.my.id
      service: http://127.0.0.1:80
    ```
 
@@ -94,7 +95,7 @@ Pada produksi untuk database non-local, `DATABASE_URL` wajib menggunakan TLS, mi
 1. Di **App Store**, instal Nginx, Node.js Version Manager, dan Node Project/PM2.
 2. Melalui Node Version Manager, instal Node `24.x` dan jadikan versi tersebut tersedia untuk
    proyek.
-3. Di **Website**, buat site untuk `posyandu.zuhri.my.id` dengan Nginx. Jangan menggunakan PHP untuk site
+3. Di **Website**, buat site untuk `posyandukkn26.my.id` dengan Nginx. Jangan menggunakan PHP untuk site
    ini.
 4. Jangan membuka `3000`, `3001`, `5432`, atau port worker ke publik. Cloudflared cukup mencapai
    Nginx lokal pada `127.0.0.1:80`.
@@ -110,7 +111,7 @@ aaPanel mendukung Node Project/PM2, domain binding, reverse proxy, dan SSL dari 
 Masuk ke **Terminal** aaPanel atau SSH. Jalankan perintah ini di server:
 
 ```bash
-SITE_ROOT=/www/wwwroot/posyandu.zuhri.my.id
+SITE_ROOT=/www/wwwroot/posyandukkn26.my.id
 APP_DIR="$SITE_ROOT/app"
 sudo install -d -o www -g www "$APP_DIR"
 sudo git clone --branch main --single-branch \
@@ -131,7 +132,7 @@ service account Firebase, dan credential Cloudflare tidak ada di repository.
 Jika proses Node aaPanel menggunakan user `www`, berikan hak baca folder proyek kepadanya:
 
 ```bash
-sudo chown -R www:www /www/wwwroot/posyandu.zuhri.my.id/app
+sudo chown -R www:www /www/wwwroot/posyandukkn26.my.id/app
 ```
 
 ## 4. Install dependency dan build di server
@@ -139,7 +140,7 @@ sudo chown -R www:www /www/wwwroot/posyandu.zuhri.my.id/app
 Masuk ke **Terminal** aaPanel atau SSH, lalu:
 
 ```bash
-cd /www/wwwroot/posyandu.zuhri.my.id/app
+cd /www/wwwroot/posyandukkn26.my.id/app
 node --version    # harus 24.x
 npm --version     # harus 11.x
 npm ci
@@ -209,16 +210,16 @@ Nginx situs tidak membuangnya (perilaku bawaan Nginx meneruskan semua header).
 
 ### 6.2 API (`anc-api`)
 
-| Variabel                              | Nilai contoh                          |
-| ------------------------------------- | ------------------------------------- |
-| `NODE_ENV`                            | `production`                          |
-| `API_HOST`                            | `127.0.0.1`                           |
-| `API_PORT`                            | `3001`                                |
-| `APP_BASE_URL`                        | `https://posyandu.zuhri.my.id`        |
-| `API_BASE_URL`                        | `https://posyandu.zuhri.my.id/api/v1` |
-| `PRIMARY_TIMEZONE`                    | `Asia/Jakarta`                        |
-| `SCHEDULER_ENABLED`                   | `false`                               |
-| `DATABASE_URL` dan seluruh secret API | sesuai tabel langkah 5                |
+| Variabel                              | Nilai contoh                         |
+| ------------------------------------- | ------------------------------------ |
+| `NODE_ENV`                            | `production`                         |
+| `API_HOST`                            | `127.0.0.1`                          |
+| `API_PORT`                            | `3001`                               |
+| `APP_BASE_URL`                        | `https://posyandukkn26.my.id`        |
+| `API_BASE_URL`                        | `https://posyandukkn26.my.id/api/v1` |
+| `PRIMARY_TIMEZONE`                    | `Asia/Jakarta`                       |
+| `SCHEDULER_ENABLED`                   | `false`                              |
+| `DATABASE_URL` dan seluruh secret API | sesuai tabel langkah 5               |
 
 FCM adalah satu-satunya kanal notifikasi. API memakainya untuk pengumuman siaran, jadi
 `FCM_PROJECT_ID` dan `FCM_SERVICE_ACCOUNT_JSON` harus diisi juga pada proses `anc-api`, bukan hanya
@@ -243,7 +244,7 @@ bersamaan.
 ## 7. Menjalankan tiga Node Project
 
 Di **Website → Node Project**, buat tiga proses menggunakan Node `24.x`, user `www`, direktori kerja
-`/www/wwwroot/posyandu.zuhri.my.id/app`, dan satu instance/cluster untuk masing-masing proses.
+`/www/wwwroot/posyandukkn26.my.id/app`, dan satu instance/cluster untuk masing-masing proses.
 
 | Nama         | Perintah start kustom                | Port      |
 | ------------ | ------------------------------------ | --------- |
@@ -262,7 +263,7 @@ log.
 
 ## 8. Atur reverse proxy Nginx
 
-Biarkan domain utama `posyandu.zuhri.my.id` diteruskan oleh Node Project `anc-web` ke `127.0.0.1:3000`.
+Biarkan domain utama `posyandukkn26.my.id` diteruskan oleh Node Project `anc-web` ke `127.0.0.1:3000`.
 Lalu tambahkan proxy khusus **hanya** untuk `/api/v1/` ke API.
 
 Di konfigurasi Nginx site aaPanel, tambahkan location berikut (sesuaikan melalui menu URL Proxy atau
@@ -303,7 +304,7 @@ Lalu jalankan:
 
 ```bash
 chmod 600 /root/anc-migrate.env
-cd /www/wwwroot/posyandu.zuhri.my.id/app
+cd /www/wwwroot/posyandukkn26.my.id/app
 set -a
 . /root/anc-migrate.env
 set +a
@@ -321,7 +322,7 @@ Setelah API, database, dan migrasi sehat, buat akun pertama dengan identitas yan
 terminal dengan environment API yang sama. Jangan gunakan data dummy untuk produksi.
 
 ```bash
-cd /www/wwwroot/posyandu.zuhri.my.id/app
+cd /www/wwwroot/posyandukkn26.my.id/app
 export PROVISION_CONFIRM='CREATE_INITIAL_PUSKESMAS'
 export PROVISION_HEALTH_CENTER_CODE='KODE-PUSKESMAS-ASLI'
 export PROVISION_HEALTH_CENTER_NAME='Nama Puskesmas Asli'
@@ -337,14 +338,14 @@ unset PROVISION_PASSWORD
 
 Lakukan berurutan:
 
-1. Buka `https://posyandu.zuhri.my.id` dan `https://posyandu.zuhri.my.id/staff/login` dari jaringan luar.
+1. Buka `https://posyandukkn26.my.id` dan `https://posyandukkn26.my.id/staff/login` dari jaringan luar.
 2. Login menggunakan akun Puskesmas yang baru dibuat.
 3. Pastikan halaman Data Bumil, pendaftaran, dan portal Bumil dapat dibuka.
 4. Cek status tiga proses di aaPanel/PM2: web, API, dan worker harus `running`.
 5. Cek log API dan worker untuk error koneksi database atau Firebase.
 6. Uji dengan data sintetis: daftar Bumil dummy, terbitkan kode akses, lalu hapus data dummy sesuai
    prosedur arsip. Jangan uji dengan data pasien asli pada tahap ini.
-7. Cek bahwa `https://posyandu.zuhri.my.id/api/v1/...` berfungsi melalui domain, sedangkan port `3001`
+7. Cek bahwa `https://posyandukkn26.my.id/api/v1/...` berfungsi melalui domain, sedangkan port `3001`
    tidak dapat diakses langsung dari perangkat luar.
 8. Cek pembatasan login per IP: lakukan dua login ibu hamil yang salah dari dua jaringan berbeda
    (misalnya Wi-Fi dan data seluler), lalu jalankan
@@ -358,7 +359,7 @@ Di komputer pengembang (bukan server aaPanel), jalankan dari PowerShell:
 
 ```powershell
 Set-Location "D:\posyandu kuncir"
-$env:CAPACITOR_SERVER_URL = "https://posyandu.zuhri.my.id"
+$env:CAPACITOR_SERVER_URL = "https://posyandukkn26.my.id"
 npm.cmd run cap:sync --workspace=@anc/android
 ```
 
@@ -375,7 +376,7 @@ Lalu build ulang Android di Android Studio. Gunakan domain HTTPS yang sama denga
 Di Terminal aaPanel atau SSH, jalankan:
 
 ```bash
-cd /www/wwwroot/posyandu.zuhri.my.id/app
+cd /www/wwwroot/posyandukkn26.my.id/app
 git status --short               # harus kosong; source server tidak boleh diedit manual
 git fetch origin
 git pull --ff-only origin main   # berhenti aman jika riwayat tidak sesuai
@@ -397,7 +398,7 @@ checkout commit itu saat maintenance window, install dependency dan build ulang,
 tiga proses:
 
 ```bash
-cd /www/wwwroot/posyandu.zuhri.my.id/app
+cd /www/wwwroot/posyandukkn26.my.id/app
 git checkout <commit-rilis-sehat>
 npm ci
 # jalankan kembali tiga perintah build dari blok update di atas
@@ -409,7 +410,7 @@ backup/restore yang telah diuji dan jangan rollback schema secara terburu-buru.
 ## 14. Checklist selesai
 
 - [ ] CNAME `posyandu` mengarah ke Cloudflare Tunnel dan Tunnel sehat.
-- [ ] `posyandu.zuhri.my.id` terbuka melalui HTTPS Cloudflare.
+- [ ] `posyandukkn26.my.id` terbuka melalui HTTPS Cloudflare.
 - [ ] Node 24/npm 11 dipakai oleh ketiga proses.
 - [ ] Web, API, worker berjalan sebagai proses berbeda.
 - [ ] Hanya Nginx menerima trafik publik; port 3000/3001/database privat.
