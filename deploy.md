@@ -30,6 +30,51 @@ dibuka ke internet.
 Karena repository bersifat public, `git clone` tidak memerlukan password GitHub atau personal access
 token. Secret produksi tetap diisi melalui environment aaPanel dan tidak ada di repository.
 
+## Kondisi server produksi saat ini (rujukan utama)
+
+Server produksi **tidak** memakai aaPanel/PM2. Bagian lain dokumen ini adalah panduan umum untuk
+instalasi baru; untuk server yang berjalan sekarang, pakai bagian ini.
+
+| Komponen        | Kenyataan di server                                                                                                                          |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Host            | Container LXC di VPS, Ubuntu 24.04, Node 24.10, PostgreSQL 16 lokal (database `anc_reminder`)                                                |
+| Folder aplikasi | `/www/wwwroot/posyandukkn26.my.id` (bukan repositori git; di-deploy dengan menukar direktori, lihat bawah)                                   |
+| Proses          | systemd: `anc-api` (127.0.0.1:3001), `anc-web` (127.0.0.1:3000), `anc-worker`; API dan worker berjalan sebagai `www`                         |
+| Konfigurasi     | API dan worker membaca `/www/wwwroot/posyandukkn26.my.id/.env` lewat `--env-file`; `anc-web` memakai `Environment=` di unit-nya              |
+| Nginx           | `/etc/nginx/sites-available/posyandukkn26.my.id`: `/api/v1` ke 3001, selain itu ke 3000; header klien diteruskan                             |
+| Tunnel          | `cloudflared` (`/etc/cloudflared/config.yml`): `posyandukkn26.my.id` ke `https://localhost:443`; tunnel dipakai bersama situs lain di server |
+| Port ke luar    | Hanya 80/443 (nginx) dan SSH; 3000, 3001, dan 5432 terikat ke 127.0.0.1                                                                      |
+
+Nilai penting di `.env` produksi: `NODE_ENV=production`, `APP_BASE_URL=https://posyandukkn26.my.id`,
+`API_BASE_URL=https://posyandukkn26.my.id/api/v1`, `SCHEDULER_ENABLED=false` (hanya worker yang membuat
+dan mengirim pengingat), serta `FCM_PROJECT_ID` dan `FCM_SERVICE_ACCOUNT_JSON`. `anc-web` memakai
+`API_BASE_URL=http://127.0.0.1:3001/api/v1` agar API mempercayai alamat pengunjung yang diteruskan web.
+
+### Prosedur update (tanpa downtime panjang, dengan jalan kembali)
+
+1. **Backup** sebelum menyentuh apa pun, di `/root/backups/`: `pg_dump -Fc anc_reminder` (sebagai
+   `postgres`) dan arsip folder aplikasi tanpa `node_modules` dan `.next`.
+2. **Staging**: ekstrak commit yang akan dirilis ke `/www/wwwroot/posyandukkn26.my.id.next`
+   (`git archive <commit> | ssh <server> "tar -x -C ..."`), salin `.env`, lalu `npm ci` dan build:
+   `npm run build:packages`, lalu build `@anc/api`, `@anc/worker`, dan `@anc/web`. Server berbagi host
+   dengan situs lain dan disknya terbatas; jalankan dengan `nice` dan hindari saat host sedang sibuk.
+3. **Migration** (hanya menambah, aman untuk kode lama): `node --env-file=.env
+packages/database/scripts/migrate-production.mjs` dari folder staging. Latih dulu di salinan hasil
+   restore backup bila migration mengubah tabel yang sudah ada.
+4. **Cutover**: jalankan `scripts/ops/anc-cutover.sh` di server (terlepas dari SSH). Skrip ini
+   mencoba API staging di port 3101, menukar direktori (yang lama menjadi `*.prev-<waktu>`), menjalankan
+   ulang worker, API, lalu web, memeriksa kesehatan, dan **mengembalikan versi lama otomatis** bila gagal.
+5. **Verifikasi**: `/api/v1/health/ready`, halaman `/staff/login`, log `journalctl -u anc-api -u anc-worker`
+   (tanpa `fcm_not_configured`, `scheduler_disabled` pada API).
+
+Rollback manual setelah cutover berhasil: `systemctl stop anc-web anc-api anc-worker`, pindahkan folder
+`*.prev-<waktu>` kembali menjadi `/www/wwwroot/posyandukkn26.my.id`, hapus drop-in
+`/etc/systemd/system/anc-{api,worker}.service.d/zz-hardening.conf` bila perlu, `systemctl daemon-reload`,
+lalu start worker, API, web. Migration yang sudah diterapkan tidak perlu dibatalkan.
+
+Berkas kredensial (`login-info.txt` dan sejenisnya) tidak boleh berada di bawah folder web; simpan di
+direktori root-only seperti `/root/anc-moved-secrets-*`.
+
 ## 0. Gambaran arsitektur
 
 ```text
