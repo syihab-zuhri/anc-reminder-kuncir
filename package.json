@@ -31,6 +31,7 @@
     "test:smoke:auth": "node scripts/smoke-auth.mjs",
     "test:smoke:idempotency": "node scripts/smoke-idempotency.mjs",
     "test:smoke:registry": "node scripts/smoke-registry.mjs",
+    "test:smoke:pagination": "node scripts/smoke-mother-pagination.mjs",
     "test:smoke:web-session": "node scripts/smoke-web-session.mjs",
     "db:migrate": "npm run migrate:up --workspace=@anc/database",
     "db:migrate:prod": "node packages/database/scripts/migrate-production.mjs",
