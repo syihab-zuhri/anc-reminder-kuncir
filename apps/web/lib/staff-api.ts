@@ -15,12 +15,18 @@ export type StaffApiResult<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly status: number; readonly error: CanonicalErrorEnvelope };
 
+/**
+ * `clientIp` is the browser's address as seen by this BFF, forwarded so the API can throttle failed
+ * logins per source address instead of seeing every attempt as coming from the BFF itself.
+ */
 export function staffApiLogin(
   input: StaffLoginRequest,
+  clientIp?: string,
 ): Promise<StaffApiResult<StaffTokenResponse>> {
   return staffApiRequest("/staff/auth/login", staffTokenResponseSchema, {
     method: "POST",
     body: JSON.stringify(input),
+    ...(clientIp === undefined ? {} : { headers: { "x-forwarded-for": clientIp } }),
   });
 }
 

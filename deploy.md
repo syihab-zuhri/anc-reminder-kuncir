@@ -189,15 +189,23 @@ menaruh secret dalam `package.json`, konfigurasi Nginx, atau source code.
 
 ### 6.1 Web (`anc-web`)
 
-| Variabel       | Nilai contoh                          |
-| -------------- | ------------------------------------- |
-| `NODE_ENV`     | `production`                          |
-| `HOSTNAME`     | `127.0.0.1`                           |
-| `PORT`         | `3000`                                |
-| `API_BASE_URL` | `https://posyandu.zuhri.my.id/api/v1` |
+| Variabel       | Nilai contoh                   |
+| -------------- | ------------------------------ |
+| `NODE_ENV`     | `production`                   |
+| `HOSTNAME`     | `127.0.0.1`                    |
+| `PORT`         | `3000`                         |
+| `API_BASE_URL` | `http://127.0.0.1:3001/api/v1` |
 
 `API_BASE_URL` adalah variabel server-side untuk route proxy Next.js. Gunakan nama ini, bukan
 sekadar `NEXT_PUBLIC_API_URL`.
+
+**Harus alamat loopback, bukan domain publik.** Web dan API berjalan di server yang sama, jadi web
+memanggil API langsung di `127.0.0.1:3001`. Dengan begitu API melihat web sebagai proxy tepercaya
+(`trust proxy: loopback`) dan memakai alamat IP pengunjung yang diteruskan web untuk membatasi
+percobaan login yang gagal. Jika diisi domain publik, request memutar lewat Cloudflare dan seluruh
+pengunjung terlihat berasal dari satu IP, sehingga batas percobaan login dipakai bersama oleh semua
+orang. Web membaca IP pengunjung dari header `CF-Connecting-IP` (diisi Cloudflare); pastikan proxy
+Nginx situs tidak membuangnya (perilaku bawaan Nginx meneruskan semua header).
 
 ### 6.2 API (`anc-api`)
 
@@ -338,6 +346,11 @@ Lakukan berurutan:
    prosedur arsip. Jangan uji dengan data pasien asli pada tahap ini.
 7. Cek bahwa `https://posyandu.zuhri.my.id/api/v1/...` berfungsi melalui domain, sedangkan port `3001`
    tidak dapat diakses langsung dari perangkat luar.
+8. Cek pembatasan login per IP: lakukan dua login ibu hamil yang salah dari dua jaringan berbeda
+   (misalnya Wi-Fi dan data seluler), lalu jalankan
+   `SELECT scope, failure_count FROM mother_access_rate_limits WHERE scope = 'IP';`.
+   Harus ada **dua baris** dengan `failure_count = 1`. Satu baris dengan `failure_count = 2` berarti
+   API masih melihat satu IP untuk semua pengunjung; periksa `API_BASE_URL` web (langkah 6.1).
 
 ## 12. Sinkronkan Android setelah domain aktif
 

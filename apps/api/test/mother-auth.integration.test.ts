@@ -198,6 +198,29 @@ describe("mother private access API", () => {
     expect(motherSessionResponseSchema.parse(recovered.body).token_type).toBe("Bearer");
   });
 
+  it("throttles per forwarded client address, not per reverse-proxy peer", async () => {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await validateFrom("203.0.113.9", "Nama Salah", unknownCode(attempt), 401);
+    }
+
+    await validateFrom("203.0.113.9", "Siti Aminah", oldCode, 429);
+    const otherVisitor = await validateFrom("198.51.100.7", "Siti Aminah", oldCode, 200);
+    expect(motherSessionResponseSchema.parse(otherVisitor.body).token_type).toBe("Bearer");
+  });
+
+  it("cannot be evaded by rotating spoofed left-most X-Forwarded-For entries", async () => {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await validateFrom(
+        `${attempt.toString()}.66.66.66, 203.0.113.9`,
+        "Nama Salah",
+        unknownCode(attempt),
+        401,
+      );
+    }
+
+    await validateFrom("77.66.66.66, 203.0.113.9", "Siti Aminah", oldCode, 429);
+  });
+
   it("invalidates an old session/code after reissue and accepts only the replacement", async () => {
     const initial = motherSessionResponseSchema.parse(
       (await validate("Siti Aminah", oldCode, 200)).body,
@@ -229,6 +252,19 @@ describe("mother private access API", () => {
   ): Promise<request.Response> {
     return request(server())
       .post("/api/v1/mother-access/validate")
+      .send({ full_name: fullName, access_code: accessCode })
+      .expect(status);
+  }
+
+  async function validateFrom(
+    forwardedFor: string,
+    fullName: string,
+    accessCode: string,
+    status: number,
+  ): Promise<request.Response> {
+    return request(server())
+      .post("/api/v1/mother-access/validate")
+      .set("X-Forwarded-For", forwardedFor)
       .send({ full_name: fullName, access_code: accessCode })
       .expect(status);
   }
@@ -402,6 +438,12 @@ class FakeMotherAccessCodeService extends MotherAccessCodeService {
   ): Promise<boolean> {
     return encodedHash === fakeCodeHash(code);
   }
+}
+
+/** Well-formed but unissued codes, so only the per-address bucket (not the per-code one) fills. */
+function unknownCode(index: number): string {
+  const alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+  return `ANC-2222-2222-2222-222${alphabet.charAt(index)}`;
 }
 
 function fakeCodeHash(code: string): string {

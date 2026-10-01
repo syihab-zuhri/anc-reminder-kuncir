@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { motherAccessValidateRequestSchema } from "@anc/contracts";
 
+import { clientIpFromHeaders } from "../../../../lib/client-ip";
 import { motherApiMe, motherApiLogout, motherApiValidate } from "../../../../lib/mother-api";
 import {
   rejectUntrustedMotherMutation,
@@ -22,7 +23,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  const validate = await motherApiValidate(input.data);
+  const validate = await motherApiValidate(input.data, clientIpFromHeaders(request.headers));
   if (!validate.ok) return NextResponse.json(validate.error, { status: validate.status });
 
   const identity = await motherApiMe(validate.value.access_token);
