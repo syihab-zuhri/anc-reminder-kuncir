@@ -108,3 +108,9 @@ Phase 0 menyediakan workspace Capacitor, validasi trusted origin, dan halaman fa
   - Panel Detail K1–K6 tetap dimatikan di UI (`ENABLE_CLINICAL_RECORDS_PANEL = false`, keputusan pemilik saat rilis dari VPS), sedangkan API-nya dipertahankan agar bisa diaktifkan lagi dan tetap dipakai laporan.
   - Dropdown ibu memuat hingga 2.000 data (dengan pemberitahuan bila terpotong); cukup untuk satu Puskesmas.
 - `apps/web/next-env.d.ts` tidak lagi dilacak git, sesuai dokumentasi Next.js. `npm run typecheck` di web menjalankan `next typegen` lebih dulu. PostgreSQL di CI dan `compose.yaml` disamakan dengan produksi (16).
+
+## 2026-10-03 - Kunjungan sebelum ibu terdaftar
+
+- Status turunan `BEFORE_REGISTRATION` ("Sebelum terdaftar") dipakai untuk kunjungan yang belum dikonfirmasi dan jendelanya sudah ditutup sebelum kehamilan didaftarkan (`pregnancies.created_at` pada zona `PRIMARY_TIMEZONE`). Status ini hanya dihitung saat dibaca (`anc-derived-state.ts` dan SQL daftar operasional) dan tidak pernah disimpan, sehingga enum `visit_status` di database tidak berubah.
+- Kunjungan seperti ini tidak dihitung "Terlewat" di dashboard, tidak masuk antrean prioritas, dan tidak pernah dijadikan kunjungan berikutnya. Kunjungan yang jendelanya baru habis setelah ibu terdaftar tetap "Terlewat".
+- Konfirmasi tetap boleh: bila Buku KIA menunjukkan ibu sudah periksa sebelum terdaftar, petugas bisa mencatatnya seperti biasa.

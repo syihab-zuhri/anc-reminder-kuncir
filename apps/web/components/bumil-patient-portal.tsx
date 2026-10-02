@@ -13,6 +13,7 @@ import {
   formatDate,
   formatDateRange,
   villageLabel,
+  visitStatusLabel,
 } from "../lib/display-format";
 
 import { fetchAllMothers } from "../lib/mothers-api";
@@ -370,15 +371,7 @@ export function BumilPatientPortal() {
                             <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM7.25 5a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0V5Zm.75 6.5a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
                           </svg>
                         )}
-                        <span>
-                          {isConfirmed
-                            ? "Sudah Periksa"
-                            : isDue
-                              ? "Waktunya Periksa"
-                              : isOverdue
-                                ? "Terlewat"
-                                : "Akan Datang"}
-                        </span>
+                        <span>{visitStatusLabel(m.visit_status)}</span>
                       </span>
                     </div>
 

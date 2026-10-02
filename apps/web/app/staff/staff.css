@@ -1443,6 +1443,11 @@
   background: #dbeafe;
 }
 
+.status-before_registration {
+  color: #4b5563;
+  background: #f3f4f6;
+}
+
 .status-active {
   color: #065f46;
   background: #d1fae5;
@@ -2058,6 +2063,17 @@
 .timeline-card.status-scheduled,
 .timeline-card.status-upcoming {
   border-color: rgba(22, 61, 55, 0.08);
+}
+
+/* Visits whose window closed before registration: neutral, not an overdue warning. */
+.timeline-card.status-before_registration .badge-status {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.timeline-card.status-before_registration {
+  border-color: rgba(22, 61, 55, 0.08);
+  background: #fafafa;
 }
 
 .thin-client-footer {

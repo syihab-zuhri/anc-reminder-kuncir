@@ -16,6 +16,12 @@ import type {
 import { dateOnlyInTimezone } from "../registry/registry-validation.js";
 
 const terminalVisitStatuses = new Set<VisitStatus>(["CONFIRMED", "CANCELLED", "NOT_APPLICABLE"]);
+// Visits nobody can act on any more: finished ones, and those whose window closed before the
+// pregnancy was registered.
+const settledVisitStatuses = new Set<VisitStatus>([
+  ...terminalVisitStatuses,
+  "BEFORE_REGISTRATION",
+]);
 
 export interface PregnancyMilestoneSnapshotItem {
   readonly id: string;
@@ -44,6 +50,8 @@ export interface PregnancyMilestoneSnapshot {
   readonly datingBasis: DatingBasis;
   readonly datingDate: string;
   readonly pregnancyStatus: PregnancyStatus;
+  /** When the pregnancy was registered in the system (pregnancies.created_at). */
+  readonly registeredAt: Date;
   readonly closedAt: Date | null;
   readonly milestones: readonly PregnancyMilestoneSnapshotItem[];
 }
@@ -106,8 +114,16 @@ export function derivePregnancyMilestoneState(
     throw new InvalidPregnancyDatingStateError();
   }
 
+  const registeredDate = dateOnlyInTimezone(snapshot.registeredAt, timezone);
   const milestones = snapshot.milestones.map((milestone) =>
-    deriveMilestone(milestone, snapshot.datingDate, snapshot.pregnancyStatus, asOfDate, timezone),
+    deriveMilestone(
+      milestone,
+      snapshot.datingDate,
+      snapshot.pregnancyStatus,
+      asOfDate,
+      registeredDate,
+      timezone,
+    ),
   );
   const nextMilestone =
     snapshot.pregnancyStatus === "ACTIVE" ? selectNextMilestone(milestones) : undefined;
@@ -138,6 +154,7 @@ function deriveMilestone(
   datingDate: string,
   pregnancyStatus: PregnancyStatus,
   asOfDate: string,
+  registeredDate: string,
   timezone: string,
 ): PregnancyMilestoneResponse {
   const explicitDueDate =
@@ -163,6 +180,7 @@ function deriveMilestone(
     targetDateStart,
     targetDateEnd,
     asOfDate,
+    registeredDate,
   );
 
   return {
@@ -193,15 +211,15 @@ function deriveMilestone(
 
 /**
  * The visit to point the mother and staff at: the one whose window is open now, otherwise the
- * next one still to come. Visits whose window already passed (for example because the mother
- * was registered mid-pregnancy) are skipped; only when nothing is open or upcoming any more is
- * the most recent overdue visit returned.
+ * next one still to come. Overdue visits are skipped and visits from before registration are never
+ * returned; only when nothing is open or upcoming any more is the most recent overdue visit
+ * returned.
  */
 function selectNextMilestone(
   milestones: readonly PregnancyMilestoneResponse[],
 ): PregnancyMilestoneResponse | undefined {
   const unfinished = milestones.filter(
-    (milestone) => !terminalVisitStatuses.has(milestone.visit_status),
+    (milestone) => !settledVisitStatuses.has(milestone.visit_status),
   );
   return (
     unfinished.find((milestone) => milestone.visit_status === "DUE") ??
@@ -215,11 +233,14 @@ function deriveVisitStatus(
   targetDateStart: string | null,
   targetDateEnd: string | null,
   asOfDate: string,
+  registeredDate: string,
 ): VisitStatus {
   if (terminalVisitStatuses.has(storedStatus)) return storedStatus;
   if (targetDateStart === null || targetDateEnd === null) return "UPCOMING";
   if (asOfDate < targetDateStart) return "UPCOMING";
   if (asOfDate <= targetDateEnd) return "DUE";
+  // A mother registered mid-pregnancy cannot have missed visits whose window had already closed.
+  if (targetDateEnd < registeredDate) return "BEFORE_REGISTRATION";
   return "OVERDUE";
 }
 

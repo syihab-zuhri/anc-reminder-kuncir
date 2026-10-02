@@ -30,6 +30,26 @@ interface ConfirmationSuccessData {
 // Puskesmas staff (doctor screening, referral facilities).
 const BIDAN_CONFIRMABLE_CODES = new Set<string>(["K2", "K3", "K6", "K7"]);
 
+const SELECTION_ORDER = ["DUE", "OVERDUE", "UPCOMING", "BEFORE_REGISTRATION"] as const;
+
+/**
+ * The visit to preselect: the one due now, else an overdue or upcoming one, and only then a visit
+ * from before registration; never one this role cannot confirm.
+ */
+function defaultMilestoneToConfirm(
+  milestones: readonly PregnancyMilestoneResponse[],
+  userRole: string,
+): PregnancyMilestoneResponse | undefined {
+  const selectable = milestones.filter(
+    (m) => userRole !== "BIDAN" || BIDAN_CONFIRMABLE_CODES.has(m.code),
+  );
+  for (const status of SELECTION_ORDER) {
+    const match = selectable.find((m) => m.visit_status === status);
+    if (match !== undefined) return match;
+  }
+  return undefined;
+}
+
 export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmationPanelProps) {
   const toast = useToast();
   // Loaded data states
@@ -155,7 +175,7 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
         const data = (await res.json()) as PregnancyMilestoneListResponse;
         setMilestones(data.milestones ?? []);
         // Auto select first unconfirmed milestone
-        const firstUnconfirmed = data.milestones?.find((m) => m.visit_status !== "CONFIRMED");
+        const firstUnconfirmed = defaultMilestoneToConfirm(data.milestones ?? [], userRole);
         if (firstUnconfirmed) {
           setSelectedMilestoneId(firstUnconfirmed.id);
         }
@@ -246,9 +266,7 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
         if (refreshRes.ok) {
           const refreshData = (await refreshRes.json()) as PregnancyMilestoneListResponse;
           setMilestones(refreshData.milestones ?? []);
-          const nextUnconfirmed = refreshData.milestones?.find(
-            (m) => m.visit_status !== "CONFIRMED",
-          );
+          const nextUnconfirmed = defaultMilestoneToConfirm(refreshData.milestones ?? [], userRole);
           setSelectedMilestoneId(nextUnconfirmed ? nextUnconfirmed.id : "");
         }
       }

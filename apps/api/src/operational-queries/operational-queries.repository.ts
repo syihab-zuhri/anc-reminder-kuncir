@@ -270,16 +270,20 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
         ELSE NULL
       END
     )`;
+    // Same rules as deriveVisitStatus in anc-derived-state.ts. The result is text because
+    // BEFORE_REGISTRATION is derived only and is not a stored visit_status value.
     const derivedVisitStatusSql = String.raw`CASE
       WHEN pm.visit_status IN ('CONFIRMED', 'CANCELLED', 'NOT_APPLICABLE')
-        THEN pm.visit_status
+        THEN pm.visit_status::text
       WHEN ${targetStartSql} IS NULL OR ${targetEndSql} IS NULL
-        THEN 'UPCOMING'::visit_status
+        THEN 'UPCOMING'
       WHEN $15::date < ${targetStartSql}
-        THEN 'UPCOMING'::visit_status
+        THEN 'UPCOMING'
       WHEN $15::date <= ${targetEndSql}
-        THEN 'DUE'::visit_status
-      ELSE 'OVERDUE'::visit_status
+        THEN 'DUE'
+      WHEN ${targetEndSql} < (p.created_at AT TIME ZONE $12)::date
+        THEN 'BEFORE_REGISTRATION'
+      ELSE 'OVERDUE'
     END`;
 
     // expected_due_date = explicit due_at (localized) when scheduled, else the
@@ -357,7 +361,7 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
                )
              )
            )
-           AND ($4::visit_status IS NULL OR (${derivedVisitStatusSql}) = $4)
+           AND ($4::text IS NULL OR (${derivedVisitStatusSql}) = $4::text)
            AND ($5::milestone_code IS NULL OR pm.code = $5)
            AND ($6::uuid IS NULL OR m.village_id = $6)
        ) items

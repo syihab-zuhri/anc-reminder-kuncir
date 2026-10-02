@@ -842,6 +842,18 @@
   border-color: rgba(22, 61, 55, 0.08);
 }
 
+/* Visits whose window closed before registration: neutral, not an overdue warning. */
+.mother-dashboard .badge-status.status-before_registration,
+.timeline-card.status-before_registration .badge-status {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.timeline-card.status-before_registration {
+  border-color: rgba(22, 61, 55, 0.08);
+  background: #fafafa;
+}
+
 .mother-dashboard-footer {
   margin-top: 1rem;
   padding: 1.15rem;
