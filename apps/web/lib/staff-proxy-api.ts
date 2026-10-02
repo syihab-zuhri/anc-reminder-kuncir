@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { staffApiRefresh } from "./staff-api";
+import { refreshStaffSession } from "./staff-api";
 import { STAFF_ACCESS_COOKIE, STAFF_REFRESH_COOKIE } from "./staff-session-policy";
 import { rejectUntrustedMutation, setStaffSessionCookies } from "./staff-session-response";
 
@@ -19,7 +19,7 @@ export async function handleStaffProxyRequest(
   const refreshToken = request.cookies.get(STAFF_REFRESH_COOKIE)?.value;
 
   if (accessToken === undefined && refreshToken !== undefined) {
-    const refresh = await staffApiRefresh(refreshToken);
+    const refresh = await refreshStaffSession(refreshToken);
     if (refresh.ok) {
       accessToken = refresh.value.access_token;
       const proxyRes = await executeProxyCall(request, apiPath, accessToken);
@@ -38,7 +38,7 @@ export async function handleStaffProxyRequest(
   let proxyRes = await executeProxyCall(request, apiPath, accessToken);
 
   if (proxyRes.status === 401 && refreshToken !== undefined) {
-    const refresh = await staffApiRefresh(refreshToken);
+    const refresh = await refreshStaffSession(refreshToken);
     if (refresh.ok) {
       accessToken = refresh.value.access_token;
       proxyRes = await executeProxyCall(request, apiPath, accessToken);

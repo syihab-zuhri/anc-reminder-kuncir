@@ -14,7 +14,7 @@ jobs:
     timeout-minutes: 25
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:16-alpine
         env:
           POSTGRES_DB: anc_reminder_test
           POSTGRES_PASSWORD: anc_test

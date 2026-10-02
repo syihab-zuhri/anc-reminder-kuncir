@@ -169,12 +169,16 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
         method: "POST",
       });
       if (!res.ok) {
-        setWaActionMessage("Gagal membuat link wa.me server-side.");
+        setWaActionMessage("Gagal membuat link WhatsApp.");
         return;
       }
       const data = (await res.json()) as { wa_me_url: string; disclaimer: string };
       window.open(data.wa_me_url, "_blank");
-      setWaActionMessage("Link WhatsApp berhasil dibuka di tab baru.");
+      // Record that the Bidan opened WhatsApp; the message itself is still sent by hand.
+      await fetch(`/api/staff-proxy/wa-fallback/${id}/mark-opened`, { method: "POST" }).catch(
+        () => undefined,
+      );
+      setWaActionMessage("WhatsApp dibuka di tab baru. Kirim pesannya, lalu tandai Selesai.");
       void fetchWaQueue();
       if (userRole === "PUSKESMAS") void fetchReminderSummary();
     } catch {
@@ -205,7 +209,7 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
   async function handleUnreachableWaFallback(id: string): Promise<void> {
     setWaActionMessage(null);
     try {
-      const res = await fetch(`/api/staff-proxy/reminders/fallback-actions/${id}/unreachable`, {
+      const res = await fetch(`/api/staff-proxy/wa-fallback/${id}/unreachable`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

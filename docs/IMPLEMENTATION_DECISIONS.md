@@ -95,3 +95,16 @@ Phase 0 menyediakan workspace Capacitor, validasi trusted origin, dan halaman fa
 - Status, tanggal, dan nama desa ditampilkan lewat `apps/web/lib/display-format.ts`: label status dalam bahasa Indonesia, tanggal `16 Apr 2026` pada zona Asia/Jakarta, dan awalan "Desa" yang tidak pernah ganda.
 - Tab ruang kerja petugas disimpan di alamat halaman (`/staff?tab=...`), sehingga refresh mempertahankan tab dan tombol Back kembali ke tab sebelumnya.
 - Aplikasi Android menampilkan `www/error.html` bawaan APK (Capacitor `server.errorPath`) saat portal tidak bisa dimuat, termasuk galat 502 dari Cloudflare.
+
+## 2026-10-02 - Kebersihan kode dan keputusan yang dibiarkan
+
+- Halaman web memakai CSP per request dari `apps/web/proxy.ts`: `script-src 'self' 'nonce-…' 'strict-dynamic'` tanpa `'unsafe-inline'`. Karena nonce hanya bisa disisipkan saat render, root layout memanggil `connection()` sehingga semua halaman dirender dinamis. `style-src` tetap `'unsafe-inline'` karena komponen memakai atribut `style`, yang tidak bisa dicakup nonce.
+- Login ibu tidak lagi menjalankan scrypt. Kode akses dicari lewat HMAC-SHA256 berkunci rahasia server atas kode acak 80-bit, sehingga menemukan kredensial aktif sudah membuktikan kodenya. Hash scrypt tetap dibuat saat kode diterbitkan (oleh petugas, jarang), hanya untuk penyimpanan.
+- BFF petugas menggabungkan rotasi refresh token yang memakai token sama, termasuk yang tiba hingga 10 detik setelahnya. Panel yang menembak beberapa request sekaligus setelah access token kedaluwarsa tidak lagi gagal sebagian. Logout tanpa access token yang masih hidup merotasi refresh token dulu agar sesi tetap dicabut di server.
+- Semua aksi tindak lanjut WhatsApp ada di `/api/v1/wa-fallback/...`; rute ganda `/reminders/fallback-actions/:id/unreachable` dihapus. Web memanggil `mark-opened` setelah membuka WhatsApp sehingga status "WhatsApp dibuka" tercatat.
+- Perangkat hanya dinonaktifkan untuk galat FCM yang menunjuk token (`UNREGISTERED`, `SENDER_ID_MISMATCH`, `NOT_FOUND`, atau `INVALID_ARGUMENT` pada field `message.token`). Galat isi pesan tetap gagal permanen tanpa mematikan perangkat.
+- Dibiarkan dengan sengaja:
+  - Perangkat ibu tetap menerima pengingat setelah ibu keluar dari portal, karena pengingat adalah fungsi utama dan keluar dari portal tidak boleh diam-diam menghentikannya. Isi notifikasi tidak memuat data klinis.
+  - Panel Detail K1–K6 tetap dimatikan di UI (`ENABLE_CLINICAL_RECORDS_PANEL = false`, keputusan pemilik saat rilis dari VPS), sedangkan API-nya dipertahankan agar bisa diaktifkan lagi dan tetap dipakai laporan.
+  - Dropdown ibu memuat hingga 2.000 data (dengan pemberitahuan bila terpotong); cukup untuk satu Puskesmas.
+- `apps/web/next-env.d.ts` tidak lagi dilacak git, sesuai dokumentasi Next.js. `npm run typecheck` di web menjalankan `next typegen` lebih dulu. PostgreSQL di CI dan `compose.yaml` disamakan dengan produksi (16).

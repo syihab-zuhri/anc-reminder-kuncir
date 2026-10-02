@@ -101,10 +101,13 @@ export class FcmHttpV1PushAdapter implements PushDeliveryAdapter {
       const fcmStatus = stringProperty(error, "status");
       const fcmErrorCode = extractFcmErrorCode(error);
       const errorCode = fcmErrorCode ?? fcmStatus ?? `HTTP_${response.status}`;
+      // Only errors about the token itself retire the device. INVALID_ARGUMENT also covers a bad
+      // message payload, which must not switch off a working phone.
       const invalidateDevice =
         fcmErrorCode === "UNREGISTERED" ||
-        fcmErrorCode === "INVALID_ARGUMENT" ||
-        fcmStatus === "NOT_FOUND";
+        fcmErrorCode === "SENDER_ID_MISMATCH" ||
+        fcmStatus === "NOT_FOUND" ||
+        (fcmErrorCode === "INVALID_ARGUMENT" && hasTokenFieldViolation(error));
       if (
         retryableHttpStatuses.has(response.status) ||
         (fcmStatus !== null && retryableFcmStatuses.has(fcmStatus))
@@ -193,6 +196,20 @@ function extractFcmErrorCode(error: Readonly<Record<string, unknown>> | null): s
     if (errorCode !== null) return errorCode;
   }
   return null;
+}
+
+/** True when FCM's BadRequest details blame `message.token` (a malformed registration token). */
+function hasTokenFieldViolation(error: Readonly<Record<string, unknown>> | null): boolean {
+  const details = error?.["details"];
+  if (!Array.isArray(details)) return false;
+  return details.some((detail: unknown) => {
+    if (detail === null || typeof detail !== "object") return false;
+    const violations = (detail as Readonly<Record<string, unknown>>)["fieldViolations"];
+    return (
+      Array.isArray(violations) &&
+      violations.some((violation) => stringProperty(violation, "field") === "message.token")
+    );
+  });
 }
 
 function parseRetryAfter(value: string | null): number | undefined {

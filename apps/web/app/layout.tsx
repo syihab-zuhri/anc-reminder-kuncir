@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { connection } from "next/server";
 import type { ReactNode } from "react";
 
 import { ToastProvider } from "../lib/toast-context";
@@ -28,7 +29,9 @@ type RootLayoutProps = Readonly<{
   children: ReactNode;
 }>;
 
-export default function RootLayout({ children }: RootLayoutProps) {
+export default async function RootLayout({ children }: RootLayoutProps) {
+  // Render every page per request: the CSP nonce from proxy.ts only reaches dynamic pages.
+  await connection();
   return (
     <html lang="id">
       <body>

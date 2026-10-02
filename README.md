@@ -20,7 +20,7 @@ Status verifikasi dicatat di [`docs/FOUNDATION_STATUS.md`](./docs/FOUNDATION_STA
 ## Prasyarat
 
 - Node.js 24 dan npm 11.
-- PostgreSQL 17, atau Docker/Compose untuk database lokal.
+- PostgreSQL 16 (sama dengan produksi), atau Docker/Compose untuk database lokal.
 
 ## Mulai lokal
 

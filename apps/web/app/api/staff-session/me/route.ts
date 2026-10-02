@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { staffApiMe, staffApiRefresh } from "../../../../lib/staff-api";
+import { refreshStaffSession, staffApiMe } from "../../../../lib/staff-api";
 import {
   clearStaffSessionCookies,
   setStaffSessionCookies,
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const refreshToken = request.cookies.get(STAFF_REFRESH_COOKIE)?.value;
   if (refreshToken !== undefined) {
-    const refresh = await staffApiRefresh(refreshToken);
+    const refresh = await refreshStaffSession(refreshToken);
     if (refresh.ok) {
       const identity = await staffApiMe(refresh.value.access_token);
       if (identity.ok) {
