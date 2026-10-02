@@ -87,32 +87,42 @@ describe("FcmHttpV1PushAdapter", () => {
     });
   });
 
-  it("invalidates a malformed registration token reported in FCM error details", async () => {
-    const fetchMock: typeof fetch = () =>
-      Promise.resolve(
-        new Response(
-          JSON.stringify({
-            error: {
-              status: "INVALID_ARGUMENT",
-              details: [
-                {
-                  "@type": "type.googleapis.com/google.firebase.fcm.v1.FcmError",
-                  errorCode: "INVALID_ARGUMENT",
-                },
-              ],
-            },
-          }),
-          { status: 400 },
-        ),
-      );
-    const adapter = new FcmHttpV1PushAdapter("anc-test", accessTokens, fetchMock);
+  it.each([
+    ["a malformed registration token", "message.token", true],
+    ["an invalid message payload", "message.notification.body", false],
+  ] as const)(
+    "on INVALID_ARGUMENT for %s, invalidates the device: %s",
+    async (_, field, invalidate) => {
+      const fetchMock: typeof fetch = () =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              error: {
+                status: "INVALID_ARGUMENT",
+                details: [
+                  {
+                    "@type": "type.googleapis.com/google.firebase.fcm.v1.FcmError",
+                    errorCode: "INVALID_ARGUMENT",
+                  },
+                  {
+                    "@type": "type.googleapis.com/google.rpc.BadRequest",
+                    fieldViolations: [{ field, description: "synthetic violation" }],
+                  },
+                ],
+              },
+            }),
+            { status: 400 },
+          ),
+        );
+      const adapter = new FcmHttpV1PushAdapter("anc-test", accessTokens, fetchMock);
 
-    await expect(adapter.send(message)).resolves.toEqual({
-      status: "TERMINAL_FAILURE",
-      errorCode: "INVALID_ARGUMENT",
-      invalidateDevice: true,
-    });
-  });
+      await expect(adapter.send(message)).resolves.toEqual({
+        status: "TERMINAL_FAILURE",
+        errorCode: "INVALID_ARGUMENT",
+        invalidateDevice: invalidate,
+      });
+    },
+  );
 
   it("treats transport/auth acquisition failures as retryable", async () => {
     const adapter = new FcmHttpV1PushAdapter(

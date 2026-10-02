@@ -294,11 +294,18 @@ describe("wa-fallback integration (API-WA-001..003)", () => {
     expect(queueRes.status).toBe(403);
   });
 
-  it("records an unreachable outcome through both operational and canonical reminder routes", async () => {
+  it("records an unreachable outcome once, on the WhatsApp follow-up route only", async () => {
     const server = app.getHttpServer() as Parameters<typeof request>[0];
 
-    const result = await request(server)
+    // The old duplicate under /reminders is gone.
+    await request(server)
       .post(`/api/v1/reminders/fallback-actions/${fallbackId}/unreachable`)
+      .set("Authorization", `Bearer ${bidanToken}`)
+      .send({ manual_note: "Rute lama." })
+      .expect(404);
+
+    const result = await request(server)
+      .post(`/api/v1/wa-fallback/${fallbackId}/unreachable`)
       .set("Authorization", `Bearer ${bidanToken}`)
       .send({ manual_note: "Nomor tidak aktif setelah percobaan tindak lanjut." });
 

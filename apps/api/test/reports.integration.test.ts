@@ -150,5 +150,7 @@ describe("API-REPORT-001 Organization Summary Report Integration Tests", () => {
     expect(res.status).toBe(403);
     const body = res.body as CanonicalErrorEnvelope;
     expect(body.error.code).toBe("FORBIDDEN");
+    // Same envelope as every other endpoint, so the support trail has a request id.
+    expect(typeof body.error.request_id).toBe("string");
   });
 });

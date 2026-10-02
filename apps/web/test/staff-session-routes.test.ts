@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as login } from "../app/api/staff-session/login/route";
 import { POST as logout } from "../app/api/staff-session/logout/route";
 import { GET as me } from "../app/api/staff-session/me/route";
+import { resetStaffRefreshCache } from "../lib/staff-api";
+import { handleStaffProxyRequest } from "../lib/staff-proxy-api";
 import { STAFF_ACCESS_COOKIE, STAFF_REFRESH_COOKIE } from "../lib/staff-session-policy";
 
 const accessToken = `anc_at_${"a".repeat(43)}`;
@@ -28,6 +30,7 @@ describe("staff session BFF routes", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
+    resetStaffRefreshCache();
   });
 
   it("logs in without exposing credentials and sets two HttpOnly cookies", async () => {
@@ -174,6 +177,64 @@ describe("staff session BFF routes", () => {
     expect(response.status).toBe(503);
     expect(response.cookies.get(STAFF_ACCESS_COOKIE)?.value).toBe(rotatedAccessToken);
     expect(response.cookies.get(STAFF_REFRESH_COOKIE)?.value).toBe(rotatedRefreshToken);
+  });
+
+  it("rotates the refresh token once for a panel's simultaneous requests", async () => {
+    const apiFetch = vi.fn<typeof fetch>((input) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.endsWith("/staff/auth/refresh")) {
+        return Promise.resolve(jsonResponse(tokens(rotatedAccessToken, rotatedRefreshToken)));
+      }
+      return Promise.resolve(jsonResponse({ items: [] }));
+    });
+    vi.stubGlobal("fetch", apiFetch);
+
+    // Access cookie already expired: every request carries only the refresh cookie.
+    const responses = await Promise.all(
+      ["/mothers", "/staff/organization/villages", "/staff/organization/facilities"].map((path) =>
+        handleStaffProxyRequest(
+          new NextRequest(`http://localhost:3000/api/staff-proxy${path}`, {
+            headers: { cookie: `${STAFF_REFRESH_COOKIE}=${refreshToken}` },
+          }),
+          path,
+        ),
+      ),
+    );
+
+    expect(responses.map((response) => response.status)).toEqual([200, 200, 200]);
+    for (const response of responses) {
+      expect(response.cookies.get(STAFF_REFRESH_COOKIE)?.value).toBe(rotatedRefreshToken);
+    }
+    const refreshCalls = apiFetch.mock.calls.filter(([input]) =>
+      String(input).endsWith("/staff/auth/refresh"),
+    );
+    expect(refreshCalls).toHaveLength(1);
+  });
+
+  it("revokes the session on logout even after the access token expired", async () => {
+    const apiFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(tokens(rotatedAccessToken, rotatedRefreshToken)))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", apiFetch);
+
+    const response = await logout(
+      new NextRequest("http://localhost:3000/api/staff-session/logout", {
+        method: "POST",
+        headers: {
+          cookie: `${STAFF_REFRESH_COOKIE}=${refreshToken}`,
+          origin: "http://localhost:3000",
+        },
+      }),
+    );
+
+    expect(response.status).toBe(204);
+    expect(String(apiFetch.mock.calls[0]?.[0])).toMatch(/\/staff\/auth\/refresh$/u);
+    expect(String(apiFetch.mock.calls[1]?.[0])).toMatch(/\/staff\/auth\/logout$/u);
+    expect(new Headers(apiFetch.mock.calls[1]?.[1]?.headers).get("authorization")).toBe(
+      `Bearer ${rotatedAccessToken}`,
+    );
+    expect(response.cookies.get(STAFF_REFRESH_COOKIE)?.value).toBe("");
   });
 
   it("always clears local cookies on a trusted logout", async () => {

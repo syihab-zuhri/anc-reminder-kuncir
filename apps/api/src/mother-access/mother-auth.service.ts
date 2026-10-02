@@ -18,7 +18,6 @@ import {
   CLOCK,
   MOTHER_AUTH_REPOSITORY,
 } from "../infrastructure/tokens.js";
-import { MotherAccessCodeService } from "./mother-access-code.service.js";
 import {
   MotherAccessCryptoService,
   normalizeMotherAccessCode,
@@ -33,7 +32,6 @@ export class MotherAuthService {
     @Inject(AUDIT_SERVICE) private readonly audit: AuditService,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(API_CONFIG) private readonly config: ApiConfig,
-    private readonly codes: MotherAccessCodeService,
     private readonly crypto: MotherAccessCryptoService,
   ) {}
 
@@ -54,12 +52,11 @@ export class MotherAuthService {
     // unbounded, and the append-only audit log already records the failures that led to the block.
     if (retryAfterSeconds > 0) throw rateLimited(retryAfterSeconds);
 
+    // The lookup hash is a keyed HMAC of the whole 80-bit random code, so finding an active
+    // credential by it already proves the code. A slow password hash on top added no security but
+    // let anyone force a 128 MiB scrypt run per attempt; it is kept only for storage at issue time.
     const candidate =
       canonicalCode === null ? null : await this.repository.findCredentialCandidate(codeLookupHash);
-    const codeValid = await this.codes.verifyOrDummy(
-      canonicalCode ?? input.access_code,
-      candidate?.codeHash,
-    );
     const nameValid =
       input.full_name !== undefined && input.full_name.trim() !== ""
         ? this.crypto.namesEqual(
@@ -67,7 +64,7 @@ export class MotherAuthService {
             candidate?.fullName ?? "synthetic unavailable mother",
           )
         : true;
-    if (candidate === null || canonicalCode === null || !codeValid || !nameValid) {
+    if (candidate === null || canonicalCode === null || !nameValid) {
       await this.recordFailure(rateLimitBuckets(ipBucketHash, codeBucketHash, this.config), now);
       await this.recordPublicAudit("MOTHER_ACCESS_FAILURE", "INVALID_CREDENTIALS", now);
       throw invalidCredentials();

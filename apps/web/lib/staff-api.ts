@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import {
   canonicalErrorEnvelopeSchema,
   createCanonicalError,
@@ -37,22 +39,62 @@ export function staffApiRefresh(refreshToken: string): Promise<StaffApiResult<St
   });
 }
 
+const REFRESH_REUSE_WINDOW_MS = 10_000;
+const refreshes = new Map<
+  string,
+  { readonly result: Promise<StaffApiResult<StaffTokenResponse>>; readonly expiresAt: number }
+>();
+
+/**
+ * Rotates a refresh token once, however many requests carry it. A workspace panel fires several
+ * requests together; after the access token expires each of them arrives with the same refresh
+ * cookie, and the API accepts a refresh token only once. Requests that arrive while the rotation
+ * runs, or within a few seconds after it (before the browser has stored the new cookies), share
+ * its result instead of failing with "Sesi petugas belum aktif".
+ */
+export function refreshStaffSession(
+  refreshToken: string,
+): Promise<StaffApiResult<StaffTokenResponse>> {
+  const now = Date.now();
+  for (const [key, entry] of refreshes) if (entry.expiresAt <= now) refreshes.delete(key);
+
+  const key = createHash("sha256").update(refreshToken).digest("hex");
+  const existing = refreshes.get(key);
+  if (existing !== undefined) return existing.result;
+
+  const result = staffApiRefresh(refreshToken);
+  refreshes.set(key, { result, expiresAt: now + REFRESH_REUSE_WINDOW_MS });
+  // A failed rotation must not be replayed; the next request may try again.
+  void result.then((outcome) => {
+    if (!outcome.ok) refreshes.delete(key);
+  });
+  return result;
+}
+
+/** Test hook: forget shared rotations between test cases. */
+export function resetStaffRefreshCache(): void {
+  refreshes.clear();
+}
+
 export function staffApiMe(accessToken: string): Promise<StaffApiResult<StaffMeResponse>> {
   return staffApiRequest("/staff/me", staffMeResponseSchema, {
     headers: { authorization: `Bearer ${accessToken}` },
   });
 }
 
-export async function staffApiLogout(accessToken: string): Promise<void> {
+/** True when the API revoked the session; false when the access token was already invalid. */
+export async function staffApiLogout(accessToken: string): Promise<boolean> {
   try {
-    await fetch(apiUrl("/staff/auth/logout"), {
+    const response = await fetch(apiUrl("/staff/auth/logout"), {
       method: "POST",
       headers: { authorization: `Bearer ${accessToken}` },
       cache: "no-store",
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
+    return response.ok;
   } catch {
     // Logout is best-effort: the BFF always clears its own cookies.
+    return false;
   }
 }
 

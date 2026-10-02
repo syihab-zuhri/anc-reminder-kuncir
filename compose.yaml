@@ -2,7 +2,7 @@ name: anc-reminder
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:16-alpine
     environment:
       POSTGRES_DB: anc_reminder
       POSTGRES_PASSWORD: anc_dev

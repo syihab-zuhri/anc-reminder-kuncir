@@ -401,11 +401,7 @@ export class AppModule {
             options.reportsRepository ?? new PostgresReportsRepository(pool),
           inject: [DATABASE_POOL],
         },
-        {
-          provide: ReportsService,
-          useFactory: (repo: PostgresReportsRepository) => new ReportsService(repo),
-          inject: [REPORTS_REPOSITORY],
-        },
+        ReportsService,
         {
           provide: PROGRAM_STATUS_REPOSITORY,
           useFactory: (pool: DatabasePool) =>
