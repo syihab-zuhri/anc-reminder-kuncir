@@ -58,6 +58,9 @@ export const visitStatusSchema = z.enum([
   "CONFIRMED",
   "CANCELLED",
   "NOT_APPLICABLE",
+  // Derived only, never stored: the visit window closed before the pregnancy was registered, so
+  // the system could not have reminded anyone. It is not overdue follow-up work.
+  "BEFORE_REGISTRATION",
 ]);
 export type VisitStatus = z.infer<typeof visitStatusSchema>;
 

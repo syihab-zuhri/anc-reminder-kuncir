@@ -122,6 +122,7 @@ interface MilestoneHeaderRow extends QueryResultRow {
   readonly dating_basis: PregnancyMilestoneSnapshot["datingBasis"];
   readonly dating_date: string;
   readonly pregnancy_status: PregnancyMilestoneSnapshot["pregnancyStatus"];
+  readonly created_at: Date;
   readonly closed_at: Date | null;
 }
 
@@ -322,6 +323,7 @@ export class PostgresAncPlanRepository implements AncPlanRepository {
          pregnancy.dating_basis,
          pregnancy.dating_date::text AS dating_date,
          pregnancy.status AS pregnancy_status,
+         pregnancy.created_at,
          pregnancy.closed_at
        FROM pregnancies AS pregnancy
        JOIN anc_plan_versions AS plan ON plan.id = pregnancy.care_plan_version_id
@@ -368,6 +370,7 @@ export class PostgresAncPlanRepository implements AncPlanRepository {
       datingBasis: header.dating_basis,
       datingDate: header.dating_date,
       pregnancyStatus: header.pregnancy_status,
+      registeredAt: header.created_at,
       closedAt: header.closed_at,
       milestones: milestoneResult.rows.map(toMilestoneSnapshot),
     };

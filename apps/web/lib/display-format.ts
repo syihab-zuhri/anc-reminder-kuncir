@@ -12,6 +12,7 @@ const visitStatusLabels: Readonly<Record<VisitStatus, string>> = {
   CONFIRMED: "Sudah periksa",
   CANCELLED: "Dibatalkan",
   NOT_APPLICABLE: "Tidak berlaku",
+  BEFORE_REGISTRATION: "Sebelum terdaftar",
 };
 
 /** Indonesian label for a visit status code; staff and mothers never see the raw code. */

@@ -70,17 +70,18 @@ describe("server-derived ANC state", () => {
   });
 
   it("points a mother registered mid-pregnancy at the open window, not at visits that already passed", () => {
-    // 2026-09-07 is day 37: K1–K4 windows have closed, K5 (week 5) is open.
+    // Registered on 2026-09-06 (day 36): the K1–K4 windows had closed before that, K5 (week 5) is
+    // open. Those earlier visits were never the system's to remind, so they are not overdue.
     const state = derivePregnancyMilestoneState(
-      snapshot(),
+      { ...snapshot(), registeredAt: new Date("2026-09-06T03:00:00.000Z") },
       new Date("2026-09-06T17:00:00.000Z"),
       "Asia/Jakarta",
     );
     expect(state.milestones.slice(0, 4).map((milestone) => milestone.visit_status)).toEqual([
-      "OVERDUE",
-      "OVERDUE",
-      "OVERDUE",
-      "OVERDUE",
+      "BEFORE_REGISTRATION",
+      "BEFORE_REGISTRATION",
+      "BEFORE_REGISTRATION",
+      "BEFORE_REGISTRATION",
     ]);
     expect(state.milestones.slice(0, 4).some((milestone) => milestone.reminder_eligible)).toBe(
       false,
@@ -91,6 +92,42 @@ describe("server-derived ANC state", () => {
       reminder_eligible: true,
     });
     expect(state.next_milestone_code).toBe("K5");
+  });
+
+  it("still reports a visit missed after registration as overdue", () => {
+    // Registered on 2026-08-20, during K2 (week 2); K1 had closed, K2 then closed unattended.
+    const state = derivePregnancyMilestoneState(
+      { ...snapshot(), registeredAt: new Date("2026-08-20T03:00:00.000Z") },
+      new Date("2026-08-23T03:00:00.000Z"),
+      "Asia/Jakarta",
+    );
+    expect(state.milestones.slice(0, 3).map((milestone) => milestone.visit_status)).toEqual([
+      "BEFORE_REGISTRATION",
+      "OVERDUE",
+      "DUE",
+    ]);
+    expect(state.next_milestone_code).toBe("K3");
+  });
+
+  it("never points at a visit from before registration", () => {
+    const input = snapshot();
+    const state = derivePregnancyMilestoneState(
+      {
+        ...input,
+        registeredAt: new Date("2026-10-04T03:00:00.000Z"),
+        milestones: input.milestones.map((milestone) =>
+          milestone.code === "K8"
+            ? { ...milestone, targetWeekStart: 8, targetWeekEnd: 8 }
+            : milestone,
+        ),
+      },
+      new Date("2026-10-04T17:00:00.000Z"),
+      "Asia/Jakarta",
+    );
+    expect(
+      state.milestones.every((milestone) => milestone.visit_status === "BEFORE_REGISTRATION"),
+    ).toBe(true);
+    expect(state.next_milestone_code).toBeNull();
   });
 
   it("falls back to the most recent overdue visit once no window is open or upcoming", () => {
@@ -184,6 +221,8 @@ function snapshot(): PregnancyMilestoneSnapshot {
     datingBasis: "PREGNANCY_START_DATE",
     datingDate: "2026-08-01",
     pregnancyStatus: "ACTIVE",
+    // Registered on the dating date unless a test says otherwise.
+    registeredAt: new Date("2026-08-01T05:00:00.000Z"),
     closedAt: null,
     milestones: milestoneCodeSchema.options.map((code, index) => {
       const puskesmasRequired = code === "K1" || code === "K4" || code === "K5";

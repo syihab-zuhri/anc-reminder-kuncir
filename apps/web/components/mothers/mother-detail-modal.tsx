@@ -421,7 +421,7 @@ export function MotherDetailModal({
                         ? "Waktunya Periksa"
                         : isOverdue
                           ? "Terlewat (Perlu Tindak Lanjut)"
-                          : "Akan Datang";
+                          : visitStatusLabel(m.visit_status);
 
                     const facilityText = facilityPolicyLabel(m.required_facility_policy);
 

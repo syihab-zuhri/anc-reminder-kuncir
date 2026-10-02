@@ -9,6 +9,7 @@ import {
   formatDate,
   formatDateRange,
   villageLabel,
+  visitStatusLabel,
 } from "../../lib/display-format";
 
 type SessionState =
@@ -370,6 +371,13 @@ export function MotherDashboard() {
                 <p className="section-help">
                   Status diperbarui otomatis oleh bidan/Puskesmas saat kunjungan.
                 </p>
+                {data.milestones.some((m) => m.visit_status === "BEFORE_REGISTRATION") && (
+                  <p className="section-help">
+                    &ldquo;Sebelum terdaftar&rdquo; berarti waktu kunjungan itu sudah lewat sebelum
+                    Anda terdaftar di aplikasi. Bila Anda sudah periksa, tunjukkan Buku KIA ke bidan
+                    agar dicatat.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -418,15 +426,7 @@ export function MotherDashboard() {
                             <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM7.25 5a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0V5Zm.75 6.5a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
                           </svg>
                         )}
-                        <span>
-                          {isConfirmed
-                            ? "Sudah Periksa"
-                            : isDue
-                              ? "Waktunya Periksa"
-                              : isOverdue
-                                ? "Terlewat"
-                                : "Akan Datang"}
-                        </span>
+                        <span>{visitStatusLabel(m.visit_status)}</span>
                       </span>
                     </div>
 

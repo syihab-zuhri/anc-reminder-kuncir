@@ -350,11 +350,13 @@ try {
       milestoneTimeline.gestational_age.completed_weeks * 7 +
         milestoneTimeline.gestational_age.additional_days ||
     milestoneTimeline.trimester_label !== "SYNTHETIC_DEV_ONLY" ||
-    // The synthetic K1–K7 windows (weeks 1–7) have all passed for this pregnancy, so the next
-    // visit is the one still to come (K8, unscheduled) and the passed K1 is no longer reminded.
+    // The synthetic K1–K7 windows (weeks 1–7) closed before this pregnancy was registered, so they
+    // are "before registration" rather than overdue, and the next visit is K8 (unscheduled).
     milestoneTimeline.next_milestone_code !== "K8" ||
     milestoneTimeline.milestones[0]?.schedule_source !== "RULE_WINDOW" ||
-    milestoneTimeline.milestones[0]?.visit_status !== "OVERDUE" ||
+    milestoneTimeline.milestones
+      .slice(0, 7)
+      .some((milestone) => milestone.visit_status !== "BEFORE_REGISTRATION") ||
     milestoneTimeline.milestones[0]?.reminder_eligible !== false ||
     milestoneTimeline.milestones[7]?.schedule_source !== "UNSCHEDULED" ||
     milestoneTimeline.milestones[7]?.reminder_eligible !== false

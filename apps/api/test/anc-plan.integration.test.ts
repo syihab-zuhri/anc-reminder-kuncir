@@ -473,6 +473,7 @@ function milestoneTimelineFixture(): PregnancyMilestoneSnapshot {
     datingBasis: "PREGNANCY_START_DATE",
     datingDate: "2026-07-28",
     pregnancyStatus: "ACTIVE",
+    registeredAt: new Date("2026-07-28T03:00:00.000Z"),
     closedAt: null,
     milestones: milestoneCodeSchema.options.map((code, index) => ({
       id: `72000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
