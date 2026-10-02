@@ -13,7 +13,7 @@ import type {
   PushDeliveryAdapter,
   PushDeliveryResult,
   PushMessage,
-} from "../src/scheduler/push-adapter.js";
+} from "../src/push/push-adapter.js";
 
 export class FakeAnnouncementRepository implements AnnouncementRepository {
   /** staff user id -> health center id (announcements belong to the sender's center). */

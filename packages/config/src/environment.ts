@@ -141,11 +141,6 @@ export const apiEnvironmentSchema = z
     MOTHER_ACCESS_BLOCK_MINUTES: positiveInteger("15"),
     FCM_PROJECT_ID: optionalUrl.or(requiredText).optional(),
     FCM_SERVICE_ACCOUNT_JSON: requiredText.optional(),
-    SCHEDULER_ENABLED: z
-      .enum(["true", "false"])
-      .default("true")
-      .transform((value) => value === "true"),
-    SCHEDULER_INTERVAL_SECONDS: positiveInteger("300"),
   })
   .superRefine((environment, context) => {
     requireProductionDatabaseTls(environment, context);
@@ -242,8 +237,6 @@ export const apiEnvironmentSchema = z
     ...(environment.FCM_SERVICE_ACCOUNT_JSON === undefined
       ? {}
       : { fcmServiceAccountJson: environment.FCM_SERVICE_ACCOUNT_JSON }),
-    schedulerEnabled: environment.SCHEDULER_ENABLED,
-    schedulerIntervalSeconds: environment.SCHEDULER_INTERVAL_SECONDS,
     ...(environment.SENTRY_DSN === undefined ? {} : { sentryDsn: environment.SENTRY_DSN }),
   }));
 

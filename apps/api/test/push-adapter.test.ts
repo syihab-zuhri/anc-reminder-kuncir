@@ -5,7 +5,7 @@ import {
   NoopPushAdapter,
   createFcmPushAdapter,
   resolveFcmCredentials,
-} from "../src/scheduler/push-adapter.js";
+} from "../src/push/push-adapter.js";
 
 const accessTokens = { getAccessToken: () => Promise.resolve("test-access-token") };
 

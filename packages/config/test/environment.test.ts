@@ -51,9 +51,22 @@ describe("loadApiConfig", () => {
       waFallbackEscalationHours: 24,
       primaryTimezone: "Asia/Jakarta",
       logLevel: "info",
-      schedulerEnabled: true,
-      schedulerIntervalSeconds: 300,
     });
+  });
+
+  it("ignores the retired SCHEDULER_* variables still present in older .env files", () => {
+    const config = loadApiConfig({
+      ...commonEnvironment,
+      APP_BASE_URL: "http://localhost:3000",
+      API_BASE_URL: "http://localhost:3001",
+      SESSION_SECRET: "synthetic-api-test-secret-00000001",
+      MOTHER_SESSION_SECRET: "synthetic-mother-test-secret-000001",
+      SCHEDULER_ENABLED: "false",
+      SCHEDULER_INTERVAL_SECONDS: "300",
+    });
+
+    expect(config).not.toHaveProperty("schedulerEnabled");
+    expect(config).not.toHaveProperty("schedulerIntervalSeconds");
   });
 
   it("rejects missing secrets, invalid URLs, and invalid retry values", () => {

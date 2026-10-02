@@ -46,8 +46,8 @@ instalasi baru; untuk server yang berjalan sekarang, pakai bagian ini.
 | Port ke luar    | Hanya 80/443 (nginx) dan SSH; 3000, 3001, dan 5432 terikat ke 127.0.0.1                                                                      |
 
 Nilai penting di `.env` produksi: `NODE_ENV=production`, `APP_BASE_URL=https://posyandukkn26.my.id`,
-`API_BASE_URL=https://posyandukkn26.my.id/api/v1`, `SCHEDULER_ENABLED=false` (hanya worker yang membuat
-dan mengirim pengingat), serta `FCM_PROJECT_ID` dan `FCM_SERVICE_ACCOUNT_JSON`. `anc-web` memakai
+`API_BASE_URL=https://posyandukkn26.my.id/api/v1`, serta `FCM_PROJECT_ID` dan `FCM_SERVICE_ACCOUNT_JSON`.
+Hanya worker yang membuat dan mengirim pengingat; API tidak punya scheduler. `anc-web` memakai
 `API_BASE_URL=http://127.0.0.1:3001/api/v1` agar API mempercayai alamat pengunjung yang diteruskan web.
 
 ### Prosedur update (tanpa downtime panjang, dengan jalan kembali)
@@ -69,7 +69,7 @@ packages/database/scripts/migrate-production.mjs` dari folder staging. Latih dul
    mencoba API staging di port 3101, menukar direktori (yang lama menjadi `*.prev-<waktu>`), menjalankan
    ulang worker, API, lalu web, memeriksa kesehatan, dan **mengembalikan versi lama otomatis** bila gagal.
 5. **Verifikasi**: `/api/v1/health/ready`, halaman `/staff/login`, log `journalctl -u anc-api -u anc-worker`
-   (tanpa `fcm_not_configured`, `scheduler_disabled` pada API).
+   (tanpa `fcm_not_configured` pada API).
 
 Rollback manual setelah cutover berhasil: `systemctl stop anc-web anc-api anc-worker`, pindahkan folder
 `*.prev-<waktu>` kembali menjadi `/www/wwwroot/posyandukkn26.my.id`, hapus drop-in
@@ -267,7 +267,6 @@ Nginx situs tidak membuangnya (perilaku bawaan Nginx meneruskan semua header).
 | `APP_BASE_URL`                        | `https://posyandukkn26.my.id`        |
 | `API_BASE_URL`                        | `https://posyandukkn26.my.id/api/v1` |
 | `PRIMARY_TIMEZONE`                    | `Asia/Jakarta`                       |
-| `SCHEDULER_ENABLED`                   | `false`                              |
 | `DATABASE_URL` dan seluruh secret API | sesuai tabel langkah 5               |
 
 FCM adalah satu-satunya kanal notifikasi. API memakainya untuk pengumuman siaran, jadi
@@ -276,9 +275,9 @@ worker. Jika salah satunya kosong, API tetap berjalan tetapi mencatat peringatan
 saat start, dan setiap pengumuman gagal dengan kode `FCM_NOT_CONFIGURED` pada riwayat pengumuman.
 Tidak ada kanal cadangan: token perangkat tidak pernah dikirim ke layanan lain.
 
-`SCHEDULER_ENABLED=false` diperlukan karena worker pada langkah berikut menjadi satu-satunya
-proses yang membuat/mengirim siklus pengingat. Jangan menjalankan scheduler API dan worker loop
-bersamaan.
+API tidak lagi punya scheduler: worker pada langkah berikut adalah satu-satunya proses yang
+membuat/mengirim siklus pengingat. Variabel `SCHEDULER_ENABLED` dan `SCHEDULER_INTERVAL_SECONDS`
+sudah dihapus; bila masih ada di `.env` lama, nilainya diabaikan dan boleh dibuang.
 
 ### 6.3 Worker (`anc-worker`)
 
@@ -483,7 +482,7 @@ backup/restore yang telah diuji dan jangan rollback schema secara terburu-buru.
 - [ ] Web, API, worker berjalan sebagai proses berbeda.
 - [ ] Hanya Nginx menerima trafik publik; port 3000/3001/database privat.
 - [ ] Migrasi database selesai dan backup tersimpan.
-- [ ] `SCHEDULER_ENABLED=false` pada API; hanya worker loop yang aktif.
+- [ ] Worker `anc-worker` aktif; hanya proses itu yang membuat dan mengirim pengingat.
 - [ ] Semua secret berbeda, tidak ada di Git/log.
 - [ ] `google-services.json` Android dan service-account Firebase tidak diunggah ke Git.
 - [ ] Android telah disinkronkan menggunakan URL HTTPS produksi.

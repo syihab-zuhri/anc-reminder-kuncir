@@ -12,7 +12,7 @@ import type { Clock } from "../auth/staff-auth.service.js";
 import { AuditService } from "../audit/audit.service.js";
 import { AuthorizationPolicy, forbidden } from "../authorization/authorization.policy.js";
 import { IdempotencyService } from "../idempotency/idempotency.service.js";
-import type { PushDeliveryAdapter } from "../scheduler/scheduler.service.js";
+import type { PushDeliveryAdapter } from "../push/push-adapter.js";
 import type {
   ActiveDevice,
   AnnouncementDeliveryInsert,

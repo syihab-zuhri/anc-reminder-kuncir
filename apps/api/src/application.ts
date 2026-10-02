@@ -33,10 +33,7 @@ import type { ReminderOperationsRepository } from "./reminder-operations/reminde
 import type { ContentManagementRepository } from "./content-management/content-management.repository.js";
 import type { DeviceRegistrationRepository } from "./device-registration/device-registration.repository.js";
 import type { AnnouncementRepository } from "./announcements/announcement.repository.js";
-import type {
-  InternalSchedulerService,
-  PushDeliveryAdapter,
-} from "./scheduler/scheduler.service.js";
+import type { PushDeliveryAdapter } from "./push/push-adapter.js";
 import { CanonicalErrorFilter } from "./errors/canonical-error.filter.js";
 import { HttpLoggingInterceptor } from "./observability/http-logging.interceptor.js";
 import { JsonLogger } from "./observability/json-logger.js";
@@ -76,7 +73,6 @@ export interface CreateApiApplicationOptions {
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
   readonly pushDeliveryAdapter?: PushDeliveryAdapter;
-  readonly internalSchedulerService?: InternalSchedulerService;
 }
 
 export async function createApiApplication(
@@ -167,9 +163,6 @@ export async function createApiApplication(
       ...(options.pushDeliveryAdapter === undefined
         ? {}
         : { pushDeliveryAdapter: options.pushDeliveryAdapter }),
-      ...(options.internalSchedulerService === undefined
-        ? {}
-        : { internalSchedulerService: options.internalSchedulerService }),
     }),
     { logger },
   );

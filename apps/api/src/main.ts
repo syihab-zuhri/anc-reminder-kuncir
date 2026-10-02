@@ -5,7 +5,7 @@ import { closeDatabasePool, createDatabasePool, type DatabasePool } from "@anc/d
 import type { INestApplication } from "@nestjs/common";
 import { createApiApplication } from "./application.js";
 import { JsonLogger } from "./observability/json-logger.js";
-import { resolveFcmCredentials } from "./scheduler/push-adapter.js";
+import { resolveFcmCredentials } from "./push/push-adapter.js";
 
 export async function bootstrapApi(): Promise<INestApplication> {
   const config = loadApiConfig(process.env);
