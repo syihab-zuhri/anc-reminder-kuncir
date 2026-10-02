@@ -31,6 +31,20 @@ menampilkan `www/error.html` yang ikut dibundel di APK, bukan halaman galat ment
 Cloudflare. Tombol "Coba lagi" memuat ulang halaman yang gagal. Perubahan ini baru berlaku setelah
 `cap:sync` dan APK dibangun ulang.
 
+## Simpan file dan cetak dari aplikasi
+
+WebView Android tidak menangani unduhan dan mengabaikan `window.print()`. Plugin lokal `AncDevice`
+(`android/app/src/main/java/.../AncDevicePlugin.java`, didaftarkan di `MainActivity`) menyediakan
+keduanya untuk portal:
+
+- `saveFile` menyimpan ekspor Excel ke **Download/Pengingat ANC** (Android 10 ke atas). Android 7–9
+  tidak boleh menulis ke folder itu tanpa izin penyimpanan, jadi file dibuka di menu bagikan dan
+  pengguna memilih tempat simpannya.
+- `print` membuka dialog cetak Android untuk halaman rekam ANC, termasuk pilihan "Simpan sebagai PDF".
+
+Portal web memanggilnya lewat `apps/web/lib/native-device.ts`. APK lama yang belum berisi plugin
+mendapat pesan "perbarui aplikasi", bukan notifikasi berhasil palsu.
+
 ## Penandatanganan build release
 
 Kredensial keystore tidak disimpan di repositori. Salin

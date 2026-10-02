@@ -15,6 +15,9 @@ import { MotherArchiveModal } from "./mothers/mother-archive-modal";
 import { MotherDetailModal } from "./mothers/mother-detail-modal";
 import { MotherEditModal } from "./mothers/mother-edit-modal";
 import { formatDate, todayInJakarta, villageLabel } from "../lib/display-format";
+import { deviceEnvironment, OUTDATED_APP_MESSAGE } from "../lib/native-device";
+
+const XLSX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 interface RegisteredMothersPanelProps {
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
@@ -257,6 +260,12 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
   // Export every mother matching the current filters, not only the rows loaded on screen. The
   // server records each export in the audit log because the file holds addresses and phones.
   async function handleExportExcel(): Promise<void> {
+    // Checked before fetching, so no export is audited that the device cannot save.
+    const device = deviceEnvironment();
+    if (device.kind === "outdated-app") {
+      toast.warning(OUTDATED_APP_MESSAGE, "Perbarui Aplikasi");
+      return;
+    }
     setExporting(true);
     try {
       const params = new URLSearchParams();
@@ -280,15 +289,40 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
         return;
       }
 
-      writeMothersWorkbook(data.items);
+      const fileName = `data-ibu-hamil-anc-${todayInJakarta()}.xlsx`;
+      const workbook = buildMothersWorkbook(data.items);
+      let where: string;
+      if (device.kind === "app") {
+        try {
+          const saved = await device.plugin.saveFile({
+            fileName,
+            mimeType: XLSX_MIME_TYPE,
+            data: XLSX.write(workbook, { type: "base64", bookType: "xlsx" }) as string,
+          });
+          where = saved.shared
+            ? "Pilih tempat menyimpan file di menu yang terbuka."
+            : `File tersimpan di ${saved.location}. Buka lewat aplikasi File atau Unduhan.`;
+        } catch (err) {
+          toast.error(
+            err instanceof Error && err.message ? err.message : "File gagal disimpan di HP.",
+            "Ekspor Gagal",
+          );
+          return;
+        }
+      } else {
+        XLSX.writeFile(workbook, fileName);
+        where = `File ${fileName} ada di folder unduhan browser.`;
+      }
+
       if (data.truncated) {
         toast.warning(
-          `Hanya ${data.max_rows.toLocaleString("id-ID")} data terbaru yang diekspor. Persempit filter untuk mengekspor sisanya.`,
+          `Hanya ${data.max_rows.toLocaleString("id-ID")} data terbaru yang diekspor. Persempit filter untuk mengekspor sisanya. ${where}`,
           "Ekspor Sebagian",
         );
       } else {
         toast.success(
-          `${data.items.length.toLocaleString("id-ID")} data ibu hamil diekspor ke file Excel.`,
+          `${data.items.length.toLocaleString("id-ID")} data ibu hamil diekspor. ${where}`,
+          "Ekspor Selesai",
         );
       }
     } catch {
@@ -298,7 +332,7 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
     }
   }
 
-  function writeMothersWorkbook(rows: readonly MotherSummary[]): void {
+  function buildMothersWorkbook(rows: readonly MotherSummary[]): XLSX.WorkBook {
     const headers = [
       "No",
       "Nama Lengkap",
@@ -362,8 +396,7 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Data Ibu Hamil ANC");
 
-    const dateStr = todayInJakarta();
-    XLSX.writeFile(wb, `data-ibu-hamil-anc-${dateStr}.xlsx`);
+    return wb;
   }
 
   // Handle Search Submission
