@@ -330,10 +330,12 @@ try {
       milestoneTimeline.gestational_age.completed_weeks * 7 +
         milestoneTimeline.gestational_age.additional_days ||
     milestoneTimeline.trimester_label !== "SYNTHETIC_DEV_ONLY" ||
-    milestoneTimeline.next_milestone_code !== "K1" ||
+    // The synthetic K1–K7 windows (weeks 1–7) have all passed for this pregnancy, so the next
+    // visit is the one still to come (K8, unscheduled) and the passed K1 is no longer reminded.
+    milestoneTimeline.next_milestone_code !== "K8" ||
     milestoneTimeline.milestones[0]?.schedule_source !== "RULE_WINDOW" ||
     milestoneTimeline.milestones[0]?.visit_status !== "OVERDUE" ||
-    milestoneTimeline.milestones[0]?.reminder_eligible !== true ||
+    milestoneTimeline.milestones[0]?.reminder_eligible !== false ||
     milestoneTimeline.milestones[7]?.schedule_source !== "UNSCHEDULED" ||
     milestoneTimeline.milestones[7]?.reminder_eligible !== false
   ) {
@@ -347,8 +349,8 @@ try {
   );
   if (
     nextMilestone.pregnancy_id !== first.pregnancy.id ||
-    nextMilestone.next_milestone?.code !== "K1" ||
-    nextMilestone.next_milestone?.visit_status !== "OVERDUE"
+    nextMilestone.next_milestone?.code !== "K8" ||
+    nextMilestone.next_milestone?.visit_status !== "UPCOMING"
   ) {
     throw new Error("Server-derived next ANC milestone was inconsistent with the timeline");
   }
