@@ -52,6 +52,7 @@ export class MotherRegistryService {
     this.policy.assertCapability(actor, "MOTHER_REGISTRY_MANAGE");
     const healthCenterId = actor.healthCenterId;
     if (healthCenterId === null) throw forbidden();
+    const bidanVillageId = actor.role === "BIDAN" ? requireBidanVillage(input.village_id) : null;
 
     const now = this.clock();
     assertPregnancyStartDateNotFuture(input.pregnancy_start_date, now, this.config.primaryTimezone);
@@ -69,6 +70,16 @@ export class MotherRegistryService {
           requestIdentity: input,
         },
         async (client) => {
+          if (
+            bidanVillageId !== null &&
+            !(await this.repository.isVillageAssignedToStaff(
+              client,
+              actor.staffUserId,
+              bidanVillageId,
+            ))
+          ) {
+            throw villageNotAssigned();
+          }
           const registration = await this.repository.create(client, {
             motherId: randomUUID(),
             pregnancyId: randomUUID(),
@@ -318,6 +329,28 @@ export function normalizeIndonesianPhone(value: string): string {
     });
   }
   return normalized;
+}
+
+// A Bidan only sees mothers in the villages assigned to them, so a mother they register must live
+// in one of those villages; otherwise she would disappear from their own list right away.
+function requireBidanVillage(villageId: string | null | undefined): string {
+  if (villageId === undefined || villageId === null) {
+    throw new ApiException({
+      status: HttpStatus.UNPROCESSABLE_ENTITY,
+      code: "VILLAGE_REQUIRED",
+      message: "Pilih desa penugasan Anda untuk ibu hamil ini.",
+      fields: { village_id: "required for Bidan" },
+    });
+  }
+  return villageId;
+}
+
+function villageNotAssigned(): ApiException {
+  return new ApiException({
+    status: HttpStatus.FORBIDDEN,
+    code: "VILLAGE_NOT_ASSIGNED",
+    message: "Desa ini bukan wilayah penugasan Anda. Hubungi Puskesmas untuk mengubah penugasan.",
+  });
 }
 
 function constraintOf(error: unknown): string | undefined {

@@ -25,6 +25,10 @@ interface ConfirmationSuccessData {
   readonly confirmedAt: string;
 }
 
+// Mirrors the server rule: a Bidan confirms K2, K3, K6 and K7; K1, K4, K5 and K8 are confirmed by
+// Puskesmas staff (doctor screening, referral facilities).
+const BIDAN_CONFIRMABLE_CODES = new Set<string>(["K2", "K3", "K6", "K7"]);
+
 export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmationPanelProps) {
   const toast = useToast();
   // Loaded data states
@@ -76,8 +80,9 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
         if (fRes.ok) {
           const fData = (await fRes.json()) as readonly Facility[];
           setFacilities(fData);
-          if (fData.length > 0 && !selectedFacilityId) {
-            setSelectedFacilityId(fData[0].id);
+          const firstFacility = fData[0];
+          if (firstFacility !== undefined) {
+            setSelectedFacilityId((current) => current || firstFacility.id);
           }
         }
         if (vRes && vRes.ok) {
@@ -92,7 +97,7 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
         setLoadingInitial(false);
       }
     }
-  }, [userRole, selectedFacilityId]);
+  }, [userRole]);
 
   // When village filter changes, reset mother and milestone selection
   const handleSelectVillage = (villageId: string) => {
@@ -103,6 +108,27 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
     setFeedback(null);
     setSuccessData(null);
   };
+
+  const selectedMilestone = milestones.find((m) => m.id === selectedMilestoneId);
+  // Only facilities of a type the ANC plan allows for this visit (for example K1 at a Puskesmas).
+  const allowedFacilities =
+    selectedMilestone === undefined
+      ? facilities
+      : facilities.filter((f) =>
+          selectedMilestone.allowed_facility_types.includes(f.facility_type),
+        );
+
+  function handleSelectMilestone(milestoneId: string): void {
+    setSelectedMilestoneId(milestoneId);
+    const milestone = milestones.find((m) => m.id === milestoneId);
+    if (milestone === undefined) return;
+    const allowed = facilities.filter((f) =>
+      milestone.allowed_facility_types.includes(f.facility_type),
+    );
+    setSelectedFacilityId((current) =>
+      allowed.some((f) => f.id === current) ? current : (allowed[0]?.id ?? ""),
+    );
+  }
 
   const filteredMothers = selectedVillageId
     ? mothers.filter((m) => m.village_id === selectedVillageId)
@@ -460,15 +486,20 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
                       id="confirm-milestone"
                       className="staff-input"
                       value={selectedMilestoneId}
-                      onChange={(e) => setSelectedMilestoneId(e.target.value)}
+                      onChange={(e) => handleSelectMilestone(e.target.value)}
                       required
                     >
                       <option value="">-- Pilih Milestone --</option>
-                      {milestones.map((ms) => (
-                        <option key={ms.id} value={ms.id}>
-                          {ms.code} ({ms.trimester_label}) - Status: {ms.visit_status}
-                        </option>
-                      ))}
+                      {milestones.map((ms) => {
+                        const confirmedByPuskesmas =
+                          userRole === "BIDAN" && !BIDAN_CONFIRMABLE_CODES.has(ms.code);
+                        return (
+                          <option key={ms.id} value={ms.id} disabled={confirmedByPuskesmas}>
+                            {ms.code} ({ms.trimester_label}) - Status: {ms.visit_status}
+                            {confirmedByPuskesmas ? " · dikonfirmasi Puskesmas" : ""}
+                          </option>
+                        );
+                      })}
                     </select>
                   )}
                 </div>
@@ -484,12 +515,17 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
                     required
                   >
                     <option value="">-- Pilih Fasilitas Kesehatan --</option>
-                    {facilities.map((f) => (
+                    {allowedFacilities.map((f) => (
                       <option key={f.id} value={f.id}>
                         {f.name} ({f.facility_type})
                       </option>
                     ))}
                   </select>
+                  {selectedMilestone !== undefined && allowedFacilities.length === 0 && (
+                    <p className="field-hint">
+                      Belum ada fasilitas yang sesuai untuk kunjungan {selectedMilestone.code}.
+                    </p>
+                  )}
                 </div>
 
                 {/* 5. Tanggal Aktual Kunjungan */}

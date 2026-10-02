@@ -69,6 +69,49 @@ describe("server-derived ANC state", () => {
     expect(state.next_milestone_code).toBe("K2");
   });
 
+  it("points a mother registered mid-pregnancy at the open window, not at visits that already passed", () => {
+    // 2026-09-07 is day 37: K1–K4 windows have closed, K5 (week 5) is open.
+    const state = derivePregnancyMilestoneState(
+      snapshot(),
+      new Date("2026-09-06T17:00:00.000Z"),
+      "Asia/Jakarta",
+    );
+    expect(state.milestones.slice(0, 4).map((milestone) => milestone.visit_status)).toEqual([
+      "OVERDUE",
+      "OVERDUE",
+      "OVERDUE",
+      "OVERDUE",
+    ]);
+    expect(state.milestones.slice(0, 4).some((milestone) => milestone.reminder_eligible)).toBe(
+      false,
+    );
+    expect(state.milestones[4]).toMatchObject({
+      code: "K5",
+      visit_status: "DUE",
+      reminder_eligible: true,
+    });
+    expect(state.next_milestone_code).toBe("K5");
+  });
+
+  it("falls back to the most recent overdue visit once no window is open or upcoming", () => {
+    const input = snapshot();
+    const state = derivePregnancyMilestoneState(
+      {
+        ...input,
+        milestones: input.milestones.map((milestone) =>
+          milestone.code === "K8"
+            ? { ...milestone, targetWeekStart: 8, targetWeekEnd: 8 }
+            : milestone,
+        ),
+      },
+      new Date("2026-10-04T17:00:00.000Z"),
+      "Asia/Jakarta",
+    );
+    expect(state.milestones.every((milestone) => milestone.visit_status === "OVERDUE")).toBe(true);
+    expect(state.milestones.some((milestone) => milestone.reminder_eligible)).toBe(false);
+    expect(state.next_milestone_code).toBe("K8");
+  });
+
   it("gives an explicit staff schedule precedence over the rule window", () => {
     const input = snapshot();
     const state = derivePregnancyMilestoneState(

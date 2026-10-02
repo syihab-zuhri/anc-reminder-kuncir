@@ -51,31 +51,44 @@ export async function processReminderCycles(
   const timezone = options.timezone ?? defaultTimezone;
   const targetDate = anchorDateStr ?? localDateString(new Date(), timezone);
 
-  // 1. Query due/overdue milestones from ACTIVE pregnancies where REMINDER consent is GRANTED
+  // 1. Pick, per ACTIVE pregnancy with REMINDER consent GRANTED, the unfinished visit whose
+  //    reminder period contains the anchor date:
+  //    - rule window: from the first day of target_week_start to the last day of target_week_end
+  //      (the same window the API reports as DUE);
+  //    - explicit appointment (due_at): the $2 days leading up to it, up to the day itself.
+  //    A visit whose period has passed is not reminded any more; staff see it as overdue. This
+  //    keeps a mother registered mid-pregnancy from being reminded of K1 forever.
   const query = `
-    WITH active_milestones AS (
-      SELECT DISTINCT ON (p.id)
+    WITH open_milestones AS (
+      SELECT
         pm.id AS milestone_id,
+        p.id AS pregnancy_id,
         p.mother_id AS mother_id,
         p.health_center_id AS health_center_id,
         pm.due_at AS due_at,
         rule.code AS milestone_code,
-        COALESCE(
-          (pm.due_at AT TIME ZONE $3)::date - make_interval(days => $2),
-          CASE 
-            WHEN rule.target_week_start IS NOT NULL THEN p.dating_date + (rule.target_week_start * 7)
-            ELSE NULL
-          END
-        ) AS reminder_start,
-        rule.reminder_enabled
+        CASE
+          WHEN pm.due_at IS NOT NULL THEN (pm.due_at AT TIME ZONE $3)::date - $2::int
+          WHEN rule.target_week_start IS NOT NULL THEN p.dating_date + rule.target_week_start * 7
+        END AS reminder_start,
+        CASE
+          WHEN pm.due_at IS NOT NULL THEN (pm.due_at AT TIME ZONE $3)::date
+          WHEN rule.target_week_end IS NOT NULL THEN p.dating_date + rule.target_week_end * 7 + 6
+        END AS reminder_end
       FROM pregnancies p
       JOIN pregnancy_milestones pm ON pm.pregnancy_id = p.id
       JOIN anc_milestone_rules rule ON pm.rule_id = rule.id
       WHERE p.status = 'ACTIVE'
         AND pm.visit_status NOT IN ('CONFIRMED', 'CANCELLED', 'NOT_APPLICABLE')
-      ORDER BY p.id, rule.code ASC
+        AND rule.reminder_enabled = true
+    ),
+    active_milestones AS (
+      SELECT DISTINCT ON (om.pregnancy_id) om.*
+        FROM open_milestones om
+       WHERE $1::date BETWEEN om.reminder_start AND om.reminder_end
+       ORDER BY om.pregnancy_id, om.reminder_start, om.milestone_code
     )
-    SELECT 
+    SELECT
       am.milestone_id,
       am.mother_id,
       am.health_center_id,
@@ -89,18 +102,33 @@ export async function processReminderCycles(
        ORDER BY recorded_at DESC, id DESC
        LIMIT 1
     ) c ON true
-    LEFT JOIN reminder_cycles rc 
-      ON rc.milestone_id = am.milestone_id 
+    LEFT JOIN reminder_cycles rc
+      ON rc.milestone_id = am.milestone_id
      AND DATE(rc.cycle_anchor_at AT TIME ZONE $3) = $1::date
-    WHERE am.reminder_enabled = true
-      AND c.status = 'GRANTED'
-      AND $1::date >= am.reminder_start
+    WHERE c.status = 'GRANTED'
       AND rc.id IS NULL
+      -- One cycle every $2 days: anchors are calendar days, so the previous cycle must be
+      -- strictly newer than $2 days ago to block this one.
       AND NOT EXISTS (
         SELECT 1 FROM reminder_cycles last_rc
          WHERE last_rc.milestone_id = am.milestone_id
            AND last_rc.status <> 'CANCELLED'
-           AND last_rc.cycle_anchor_at >= $1::timestamptz - make_interval(days => $2)
+           AND last_rc.cycle_anchor_at > $1::timestamptz - make_interval(days => $2)
+      )
+      -- Without an Android device the cycle would become another WhatsApp task. While a task
+      -- for this visit is still open, staff already have it in their queue.
+      AND (
+        EXISTS (
+          SELECT 1 FROM devices d
+           WHERE d.mother_id = am.mother_id AND d.platform = 'ANDROID' AND d.status = 'ACTIVE'
+        )
+        OR NOT EXISTS (
+          SELECT 1
+            FROM wa_fallback_actions open_wf
+            JOIN reminder_cycles open_rc ON open_rc.id = open_wf.reminder_cycle_id
+           WHERE open_rc.milestone_id = am.milestone_id
+             AND open_wf.status IN ('READY', 'LINK_GENERATED', 'LINK_OPENED')
+        )
       )
     LIMIT 500;
   `;

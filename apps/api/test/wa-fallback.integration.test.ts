@@ -44,6 +44,7 @@ class FakeWaFallbackRepository implements WaFallbackRepository {
       phone_number_masked: "0812****7890",
       milestone_code: "K2",
       due_at: "2026-09-01T00:00:00.000Z",
+      window_end_date: "2026-09-04",
       status: "READY",
       wa_me_url: null,
       link_generated_at: null,
@@ -332,6 +333,8 @@ describe("wa-fallback integration (API-WA-001..003)", () => {
     expect(linkData.wa_me_url).toContain("wa.me/6281234567890");
     expect(decodeURIComponent(linkData.wa_me_url)).toContain("K2 dari Puskesmas Kuncir");
     expect(decodeURIComponent(linkData.wa_me_url)).not.toContain("{{");
+    // The staff disclaimer is shown in the app only; it must not reach the mother.
+    expect(decodeURIComponent(linkData.wa_me_url)).not.toContain("aksi manual Bidan");
     // Exclude unmasked NIK or private medical notes
     expect(linkData.wa_me_url).not.toContain("3603");
     expect(linkData.wa_me_url).not.toContain("NIK");

@@ -224,12 +224,41 @@ describe("mother registry API", () => {
     expect(registry.created).toHaveLength(0);
 
     const bidanToken = await login("bidan");
+    const assignedVillageId = "61000000-0000-4000-8000-000000000001";
+    const otherVillageId = "61000000-0000-4000-8000-000000000002";
+    registry.assignVillage(bidanId, assignedVillageId);
+
+    // Without a village the mother would disappear from the Bidan's own list.
+    const missingVillage = await request(server())
+      .post("/api/v1/mothers")
+      .set("authorization", `Bearer ${bidanToken}`)
+      .send({ ...registrationRequest(), idempotency_key: "8b26fdbd-6306-4bbf-9765-3fd620888e71" })
+      .expect(422);
+    expect(errorCode(missingVillage)).toBe("VILLAGE_REQUIRED");
+
+    const outsideAssignment = await request(server())
+      .post("/api/v1/mothers")
+      .set("authorization", `Bearer ${bidanToken}`)
+      .send({
+        ...registrationRequest(),
+        idempotency_key: "8b26fdbd-6306-4bbf-9765-3fd620888e72",
+        village_id: otherVillageId,
+      })
+      .expect(403);
+    expect(errorCode(outsideAssignment)).toBe("VILLAGE_NOT_ASSIGNED");
+    expect(registry.created).toHaveLength(0);
+
     await request(server())
       .post("/api/v1/mothers")
       .set("authorization", `Bearer ${bidanToken}`)
-      .send(registrationRequest())
+      .send({
+        ...registrationRequest(),
+        idempotency_key: "8b26fdbd-6306-4bbf-9765-3fd620888e73",
+        village_id: assignedVillageId,
+      })
       .expect(201);
     expect(registry.created).toHaveLength(1);
+    expect(registry.created[0]?.villageId).toBe(assignedVillageId);
   });
 
   it("fails safely when no approved active ANC plan can be selected", async () => {
@@ -345,6 +374,19 @@ class FakeMotherRegistryRepository implements MotherRegistryRepository {
 
   private queuedError: { code: string; constraint: string } | null = null;
   private readonly archivedMotherIds = new Set<string>();
+  private readonly villageAssignments = new Set<string>();
+
+  public assignVillage(staffUserId: string, villageId: string): void {
+    this.villageAssignments.add(`${staffUserId}:${villageId}`);
+  }
+
+  public async isVillageAssignedToStaff(
+    _client: TransactionClient,
+    staffUserId: string,
+    villageId: string,
+  ): Promise<boolean> {
+    return this.villageAssignments.has(`${staffUserId}:${villageId}`);
+  }
 
   public failNextWith(error: { code: string; constraint: string }): void {
     this.queuedError = error;

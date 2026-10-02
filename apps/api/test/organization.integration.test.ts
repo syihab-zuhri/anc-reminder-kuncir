@@ -158,6 +158,73 @@ describe("organization and assignment API", () => {
     );
   });
 
+  it("lets Bidan read their assigned villages and active facilities without managing them", async () => {
+    const puskesmasToken = await login("puskesmas");
+    const assignedVillageId = stringField(
+      bodyRecord(
+        await request(server())
+          .post("/api/v1/staff/organization/villages")
+          .set("authorization", `Bearer ${puskesmasToken}`)
+          .send({ code: "KNC-01", name: "Kuncir" })
+          .expect(201),
+      ),
+      "id",
+    );
+    await request(server())
+      .post("/api/v1/staff/organization/villages")
+      .set("authorization", `Bearer ${puskesmasToken}`)
+      .send({ code: "SKM-01", name: "Sukomoro" })
+      .expect(201);
+    await request(server())
+      .post("/api/v1/staff/organization/facilities")
+      .set("authorization", `Bearer ${puskesmasToken}`)
+      .send({ code: "POS-01", name: "Posyandu Mawar", facility_type: "POSYANDU" })
+      .expect(201);
+    await request(server())
+      .post("/api/v1/staff/organization/facilities")
+      .set("authorization", `Bearer ${puskesmasToken}`)
+      .send({ code: "POS-02", name: "Posyandu Lama", facility_type: "POSYANDU" })
+      .expect(201);
+    organization.assignments.push({
+      id: "62000000-0000-4000-8000-000000000001",
+      staff_user_id: bidanId,
+      scope_type: "AREA",
+      scope_id: assignedVillageId,
+    });
+    const retired = organization.facilities.findIndex((facility) => facility.code === "POS-02");
+    const retiredFacility = organization.facilities[retired];
+    if (retiredFacility === undefined) throw new Error("Expected the second facility");
+    organization.facilities[retired] = { ...retiredFacility, status: "INACTIVE" };
+
+    const bidanToken = await login("bidan");
+    const villages = await request(server())
+      .get("/api/v1/staff/organization/villages")
+      .set("authorization", `Bearer ${bidanToken}`)
+      .expect(200);
+    expect((villages.body as ReadonlyArray<{ id: string }>).map((village) => village.id)).toEqual([
+      assignedVillageId,
+    ]);
+    const facilities = await request(server())
+      .get("/api/v1/staff/organization/facilities")
+      .set("authorization", `Bearer ${bidanToken}`)
+      .expect(200);
+    expect(
+      (facilities.body as ReadonlyArray<{ code: string }>).map((facility) => facility.code),
+    ).toEqual(["POS-01"]);
+
+    // Puskesmas still sees everything it manages, including inactive records.
+    const allFacilities = await request(server())
+      .get("/api/v1/staff/organization/facilities")
+      .set("authorization", `Bearer ${puskesmasToken}`)
+      .expect(200);
+    expect(allFacilities.body).toHaveLength(2);
+    await request(server())
+      .put(`/api/v1/staff/organization/villages/${assignedVillageId}`)
+      .set("authorization", `Bearer ${bidanToken}`)
+      .send({ name: "Tidak Boleh" })
+      .expect(403);
+  });
+
   it("denies Bidan management and rejects out-of-scope assignment without leakage", async () => {
     const bidanToken = await login("bidan");
     await request(server())

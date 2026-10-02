@@ -62,6 +62,7 @@ interface FallbackRow {
   readonly phone_normalized: string;
   readonly milestone_code: MilestoneCode;
   readonly due_at: Date | null;
+  readonly window_end_date: string | null;
   readonly status: WaFallbackStatus;
   readonly link_generated_at: Date | null;
   readonly link_opened_at: Date | null;
@@ -81,6 +82,10 @@ const QUEUE_BASE_SQL = String.raw`
     m.phone_normalized,
     pm.code AS milestone_code,
     pm.due_at,
+    CASE
+      WHEN rule.target_week_end IS NULL THEN NULL
+      ELSE to_char(p.dating_date + rule.target_week_end * 7 + 6, 'YYYY-MM-DD')
+    END AS window_end_date,
     wf.status,
     wf.link_generated_at,
     wf.link_opened_at,
@@ -91,6 +96,8 @@ const QUEUE_BASE_SQL = String.raw`
   JOIN mothers m ON wf.mother_id = m.id
   JOIN reminder_cycles rc ON wf.reminder_cycle_id = rc.id
   JOIN pregnancy_milestones pm ON rc.milestone_id = pm.id
+  JOIN pregnancies p ON p.id = pm.pregnancy_id
+  JOIN anc_milestone_rules rule ON rule.id = pm.rule_id
 `;
 
 export class PostgresWaFallbackRepository implements WaFallbackRepository {
@@ -113,7 +120,9 @@ export class PostgresWaFallbackRepository implements WaFallbackRepository {
                )
            )
          )
-       ORDER BY wf.status ASC, pm.due_at ASC NULLS LAST
+       ORDER BY wf.status ASC,
+                COALESCE(pm.due_at::date, p.dating_date + rule.target_week_end * 7 + 6) ASC NULLS LAST,
+                wf.id
        LIMIT 100`,
       [scope.healthCenterId, scope.role, scope.actorStaffId],
     );
@@ -406,6 +415,7 @@ function toItem(row: FallbackRow): WaFallbackItem {
     phone_number_masked: maskPhone(row.phone_normalized),
     milestone_code: row.milestone_code,
     due_at: row.due_at?.toISOString() ?? null,
+    window_end_date: row.window_end_date,
     status: row.status,
     wa_me_url: null,
     link_generated_at: row.link_generated_at?.toISOString() ?? null,

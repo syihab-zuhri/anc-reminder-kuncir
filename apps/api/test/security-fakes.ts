@@ -268,6 +268,23 @@ export class FakeOrganizationScopeRepository implements OrganizationScopeReposit
     return this.villages.filter((item) => item.health_center_id === healthCenterId);
   }
 
+  public async listAssignedVillages(
+    healthCenterId: string,
+    staffUserId: string,
+  ): Promise<readonly Village[]> {
+    return this.villages.filter(
+      (village) =>
+        village.health_center_id === healthCenterId &&
+        village.status === "ACTIVE" &&
+        this.assignments.some(
+          (assignment) =>
+            assignment.staff_user_id === staffUserId &&
+            assignment.scope_type === "AREA" &&
+            assignment.scope_id === village.id,
+        ),
+    );
+  }
+
   public async createVillage(
     healthCenterId: string,
     input: VillageCreateRequest,

@@ -44,11 +44,12 @@ export class WaFallbackService {
     let generatedAt = target.status === "LINK_GENERATED" ? target.linkGeneratedAt : new Date();
     if (generatedAt === null) throw invalidState();
     // The message carries no personal or clinical data: wa.me URLs are
-    // unencrypted and must not leak mother identity.
-    const messageText = `${renderApprovedTemplate(target.templateBody, {
+    // unencrypted and must not leak mother identity. It is exactly the approved
+    // template; the disclaimer is for the staff member and is returned separately.
+    const messageText = renderApprovedTemplate(target.templateBody, {
       milestone_code: target.milestoneCode,
       facility_name: target.facilityName,
-    })} ${WA_DISCLAIMER}`;
+    });
     const waMeUrl = `https://wa.me/${normalizeWaPhone(target.phoneNormalized)}?text=${encodeURIComponent(messageText)}`;
 
     if (target.status === "READY") {

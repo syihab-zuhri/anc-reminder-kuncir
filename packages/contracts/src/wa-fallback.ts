@@ -5,6 +5,10 @@ import { milestoneCodeSchema, waFallbackActionStatusSchema } from "./domain.js";
 // Reuses the authoritative DB enum. A wa.me link never reports delivery, so
 // RESOLVED_MANUALLY records staff follow-up, not message receipt.
 export const waFallbackStatusSchema = waFallbackActionStatusSchema;
+
+const isoDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/u, "Expected date in YYYY-MM-DD format");
 export type WaFallbackStatus = z.infer<typeof waFallbackStatusSchema>;
 
 export const waFallbackItemSchema = z
@@ -16,6 +20,9 @@ export const waFallbackItemSchema = z
     phone_number_masked: z.string(),
     milestone_code: milestoneCodeSchema,
     due_at: z.string().datetime({ offset: true }).nullable(),
+    // Last day of the visit window from the ANC plan, so staff can see how urgent a follow-up is
+    // when no explicit appointment (due_at) was set.
+    window_end_date: isoDateSchema.nullable(),
     status: waFallbackStatusSchema,
     wa_me_url: z.string().url().nullable(),
     link_generated_at: z.string().datetime({ offset: true }).nullable(),

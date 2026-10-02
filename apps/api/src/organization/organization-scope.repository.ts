@@ -75,6 +75,8 @@ export interface AssignmentTarget extends StaffAssignment {
 
 export interface OrganizationScopeRepository {
   listVillages(healthCenterId: string): Promise<readonly Village[]>;
+  /** Active villages of the center that the staff user holds an active AREA assignment for. */
+  listAssignedVillages(healthCenterId: string, staffUserId: string): Promise<readonly Village[]>;
   createVillage(healthCenterId: string, input: VillageCreateRequest): Promise<Village>;
   updateVillage(
     healthCenterId: string,
@@ -129,6 +131,28 @@ export class PostgresOrganizationScopeRepository implements OrganizationScopeRep
     const result = await this.pool.query<VillageRow>(
       `${villageSelect} WHERE health_center_id = $1 ORDER BY name, id`,
       [healthCenterId],
+    );
+    return result.rows.map(toVillage);
+  }
+
+  public async listAssignedVillages(
+    healthCenterId: string,
+    staffUserId: string,
+  ): Promise<readonly Village[]> {
+    const result = await this.pool.query<VillageRow>(
+      `${villageSelect} v
+        WHERE v.health_center_id = $1
+          AND v.status = 'ACTIVE'
+          AND EXISTS (
+            SELECT 1
+              FROM staff_assignments a
+             WHERE a.staff_user_id = $2
+               AND a.revoked_at IS NULL
+               AND a.scope_type = 'AREA'
+               AND a.scope_id = v.id
+          )
+        ORDER BY v.name, v.id`,
+      [healthCenterId, staffUserId],
     );
     return result.rows.map(toVillage);
   }

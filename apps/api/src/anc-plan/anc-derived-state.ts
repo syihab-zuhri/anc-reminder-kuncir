@@ -110,9 +110,7 @@ export function derivePregnancyMilestoneState(
     deriveMilestone(milestone, snapshot.datingDate, snapshot.pregnancyStatus, asOfDate, timezone),
   );
   const nextMilestone =
-    snapshot.pregnancyStatus === "ACTIVE"
-      ? milestones.find((milestone) => !terminalVisitStatuses.has(milestone.visit_status))
-      : undefined;
+    snapshot.pregnancyStatus === "ACTIVE" ? selectNextMilestone(milestones) : undefined;
 
   return {
     pregnancy_id: snapshot.pregnancyId,
@@ -186,11 +184,30 @@ function deriveMilestone(
     schedule_source: scheduleSource,
     visit_status: visitStatus,
     record_validation_status: milestone.recordValidationStatus,
+    // Reminders run while the visit window is open. Once it has passed, the visit is shown as
+    // overdue for staff follow-up instead of being repeated to the mother indefinitely.
     reminder_eligible:
-      pregnancyStatus === "ACTIVE" &&
-      milestone.reminderEnabled &&
-      (visitStatus === "DUE" || visitStatus === "OVERDUE"),
+      pregnancyStatus === "ACTIVE" && milestone.reminderEnabled && visitStatus === "DUE",
   };
+}
+
+/**
+ * The visit to point the mother and staff at: the one whose window is open now, otherwise the
+ * next one still to come. Visits whose window already passed (for example because the mother
+ * was registered mid-pregnancy) are skipped; only when nothing is open or upcoming any more is
+ * the most recent overdue visit returned.
+ */
+function selectNextMilestone(
+  milestones: readonly PregnancyMilestoneResponse[],
+): PregnancyMilestoneResponse | undefined {
+  const unfinished = milestones.filter(
+    (milestone) => !terminalVisitStatuses.has(milestone.visit_status),
+  );
+  return (
+    unfinished.find((milestone) => milestone.visit_status === "DUE") ??
+    unfinished.find((milestone) => milestone.visit_status === "UPCOMING") ??
+    unfinished.at(-1)
+  );
 }
 
 function deriveVisitStatus(

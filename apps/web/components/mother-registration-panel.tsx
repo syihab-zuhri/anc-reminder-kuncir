@@ -102,7 +102,7 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
   const [phoneNumber, setPhoneNumber] = useState("");
   const [pregnancyStartDate, setPregnancyStartDate] = useState("");
 
-  const { villages } = useVillages();
+  const { villages, loading: villagesLoading, error: villagesError } = useVillages();
   const { facilities } = useFacilities();
 
   // Filter facilities by selected village if any
@@ -496,6 +496,15 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
                   </option>
                 ))}
               </select>
+              {!villagesLoading && villages.length === 0 && (
+                <span className="field-help" role="status" style={{ marginTop: "0.35rem" }}>
+                  {villagesError !== null
+                    ? "Daftar desa gagal dimuat. Muat ulang halaman, lalu coba lagi."
+                    : userRole === "BIDAN"
+                      ? "Anda belum ditugaskan ke desa mana pun. Minta petugas Puskesmas menetapkan desa penugasan Anda."
+                      : "Belum ada desa terdaftar. Tambahkan desa di menu Administrasi."}
+                </span>
+              )}
               {fieldErrors.villageId && (
                 <span
                   id="err-reg-village"

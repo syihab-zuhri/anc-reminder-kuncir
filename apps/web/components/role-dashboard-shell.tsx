@@ -597,7 +597,7 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
                     <td>
                       <span className="badge-code">{item.milestone_code}</span>
                     </td>
-                    <td>{item.due_at ?? "-"}</td>
+                    <td>{followUpDate(item)}</td>
                     <td>
                       <span className={`badge-status status-${item.status.toLowerCase()}`}>
                         {item.status}
@@ -825,4 +825,21 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
       </div>
     </div>
   );
+}
+
+const followUpDateFormatter = new Intl.DateTimeFormat("id-ID", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "Asia/Jakarta",
+});
+
+/** The appointment date when staff set one, otherwise the last day of the visit window. */
+function followUpDate(item: WaFallbackItem): string {
+  if (item.due_at !== null) return followUpDateFormatter.format(new Date(item.due_at));
+  if (item.window_end_date !== null) {
+    // Noon Jakarta time keeps the calendar day stable whatever the browser's time zone is.
+    return followUpDateFormatter.format(new Date(`${item.window_end_date}T12:00:00+07:00`));
+  }
+  return "-";
 }

@@ -75,6 +75,12 @@ export interface MotherRegistryRepository {
     motherId: string,
     healthCenterId: string,
   ): Promise<MotherRecordArchiveResponse | null>;
+  /** True when the staff user holds an active AREA assignment for the village. */
+  isVillageAssignedToStaff(
+    client: TransactionClient,
+    staffUserId: string,
+    villageId: string,
+  ): Promise<boolean>;
 }
 
 export class MotherRecordUnavailableError extends Error {
@@ -178,6 +184,25 @@ export class PostgresMotherRegistryRepository implements MotherRegistryRepositor
       consent_source: "STAFF_REGISTRATION",
       consent_recorded_at: input.recordedAt,
     });
+  }
+
+  public async isVillageAssignedToStaff(
+    client: TransactionClient,
+    staffUserId: string,
+    villageId: string,
+  ): Promise<boolean> {
+    const result = await client.query<{ readonly assigned: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1
+           FROM staff_assignments
+          WHERE staff_user_id = $1
+            AND scope_type = 'AREA'
+            AND scope_id = $2
+            AND revoked_at IS NULL
+       ) AS assigned`,
+      [staffUserId, villageId],
+    );
+    return result.rows[0]?.assigned === true;
   }
 
   public async findRegistration(
