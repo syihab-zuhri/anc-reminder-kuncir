@@ -287,7 +287,12 @@ sudah dihapus; bila masih ada di `.env` lama, nilainya diabaikan dan boleh dibua
 | `WORKER_MODE`                                                                             | `loop`                 |
 | `WORKER_POLL_INTERVAL_SECONDS`                                                            | `300`                  |
 | `PRIMARY_TIMEZONE`                                                                        | `Asia/Jakarta`         |
+| `REMINDER_SEND_HOUR`                                                                      | `8` (opsional)         |
 | `DATABASE_URL`, `PUSH_TOKEN_ENCRYPTION_KEY`, `FCM_PROJECT_ID`, `FCM_SERVICE_ACCOUNT_JSON` | sesuai tabel langkah 5 |
+
+`REMINDER_SEND_HOUR` adalah jam lokal (0–23, zona `PRIMARY_TIMEZONE`) mulai kapan worker membuat
+pengingat baru; sebelum jam itu tidak ada push maupun antrean WA baru. Bila tidak diisi, nilainya 8
+(08:00 WIB). Siklus tetap dihitung per tanggal, dan push yang gagal tetap dicoba ulang sepanjang hari.
 
 ## 7. Menjalankan tiga Node Project
 

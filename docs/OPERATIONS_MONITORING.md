@@ -52,6 +52,7 @@ Dokumen ini mendefinisikan arsitektur pemantauan (_monitoring_), batas indikator
 - **Job Outbox Engine**:
   - Outbox Claims: Menggunakan `FOR UPDATE SKIP LOCKED` pada PostgreSQL.
   - Cycle Anchor: Menggunakan `PRIMARY_TIMEZONE` (Asia/Jakarta) dengan batasan `REMINDER_INTERVAL_DAYS`.
+  - Jam kirim: siklus baru baru dibuat mulai `REMINDER_SEND_HOUR` waktu lokal (default 08:00 WIB). Log `worker_bootstrap_completed` memuat `reminder_send_window_open`; sebelum jam itu `reminder_cycles_created` selalu 0.
 - **Worker Alerting Triggers**:
   - **Worker Dead Check**: Jika worker tidak memproses siklus pengingat selama > 15 menit saat antrean pending > 0.
   - **Scheduler Lag Alert**: Jika siklus terjadwal terlambat diproses melebihi threshold SLA.
