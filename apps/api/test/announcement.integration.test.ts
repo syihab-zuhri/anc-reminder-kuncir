@@ -58,7 +58,7 @@ describe("announcement broadcast", () => {
     }> = [
       {
         id: puskesmasId,
-        identifier: "puskesmas.kuncir",
+        identifier: "puskesmas.contoh",
         role: "PUSKESMAS",
         healthCenterId: centerId,
       },
@@ -68,7 +68,7 @@ describe("announcement broadcast", () => {
         role: "PUSKESMAS",
         healthCenterId: otherCenterId,
       },
-      { id: bidanId, identifier: "bidan.kuncir", role: "BIDAN", healthCenterId: centerId },
+      { id: bidanId, identifier: "bidan.contoh", role: "BIDAN", healthCenterId: centerId },
       { id: superAdminId, identifier: "super.admin", role: "SUPER_ADMIN", healthCenterId: null },
     ];
     repository = new FakeAnnouncementRepository();
@@ -116,7 +116,7 @@ describe("announcement broadcast", () => {
     addDevice("ibu-satu-token", centerId);
     addDevice("ibu-dua-token", centerId);
     addDevice("ibu-luar-wilayah", otherCenterId);
-    const token = await login("puskesmas.kuncir");
+    const token = await login("puskesmas.contoh");
 
     const response = await createAnnouncement(token, 1);
 
@@ -141,7 +141,7 @@ describe("announcement broadcast", () => {
 
   it("sends a genuine announcement payload instead of a fake K1 reminder", async () => {
     addDevice("ibu-satu-token", centerId);
-    const token = await login("puskesmas.kuncir");
+    const token = await login("puskesmas.contoh");
 
     const created = (await createAnnouncement(token, 1)).body as AnnouncementCreateResponse;
 
@@ -171,7 +171,7 @@ describe("announcement broadcast", () => {
       invalidateDevice: true,
     });
     adapter.throwFor.add("token-meledak");
-    const token = await login("puskesmas.kuncir");
+    const token = await login("puskesmas.contoh");
 
     const response = await createAnnouncement(token, 1);
 
@@ -191,7 +191,7 @@ describe("announcement broadcast", () => {
       addDevice(`token-${index.toString().padStart(3, "0")}`, centerId);
     }
     adapter.gate = new Promise((resolve) => setTimeout(resolve, 40));
-    const token = await login("puskesmas.kuncir");
+    const token = await login("puskesmas.contoh");
 
     const response = await createAnnouncement(token, 1);
 
@@ -203,7 +203,7 @@ describe("announcement broadcast", () => {
 
   it("replays a repeated key without sending or recording a second broadcast", async () => {
     addDevice("ibu-satu-token", centerId);
-    const token = await login("puskesmas.kuncir");
+    const token = await login("puskesmas.contoh");
 
     const first = (await createAnnouncement(token, 1)).body as AnnouncementCreateResponse;
     const replay = await createAnnouncement(token, 1);
@@ -223,7 +223,7 @@ describe("announcement broadcast", () => {
     adapter.gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    const token = await login("puskesmas.kuncir");
+    const token = await login("puskesmas.contoh");
 
     const original = createAnnouncement(token, 1).then((response) => response);
     await waitFor(() => adapter.messages.length === 1);
@@ -244,7 +244,7 @@ describe("announcement broadcast", () => {
   });
 
   it("rejects a reused key carrying different content", async () => {
-    const token = await login("puskesmas.kuncir");
+    const token = await login("puskesmas.contoh");
     await createAnnouncement(token, 1);
 
     const conflicting = await request(server())
@@ -263,7 +263,7 @@ describe("announcement broadcast", () => {
     ["blank title", { idempotency_key: key(2), title: "  ", body: "Isi" }],
     ["unknown field", { idempotency_key: key(2), title: "Judul", body: "Isi", target: "semua" }],
   ])("rejects a request with %s", async (_label, payload) => {
-    const token = await login("puskesmas.kuncir");
+    const token = await login("puskesmas.contoh");
 
     const response = await request(server())
       .post("/api/v1/announcements")
@@ -275,7 +275,7 @@ describe("announcement broadcast", () => {
     expect(adapter.messages).toHaveLength(0);
   });
 
-  it.each(["bidan.kuncir", "super.admin"])("denies broadcasting and history to %s", async (id) => {
+  it.each(["bidan.contoh", "super.admin"])("denies broadcasting and history to %s", async (id) => {
     const token = await login(id);
 
     expect((await createAnnouncement(token, 1)).status).toBe(403);
@@ -302,7 +302,7 @@ describe("announcement broadcast", () => {
       createdAt: new Date("2026-08-12T05:00:00.000Z"),
       sentAt: new Date("2026-08-12T05:00:01.000Z"),
     });
-    const token = await login("puskesmas.kuncir");
+    const token = await login("puskesmas.contoh");
     await createAnnouncement(token, 1);
 
     const response = await request(server())
@@ -313,7 +313,7 @@ describe("announcement broadcast", () => {
     const history = response.body as AnnouncementListResponse;
     expect(history.announcements.map((row) => row.title)).toEqual(["Jadwal Posyandu"]);
     expect(history.announcements[0]).toMatchObject({
-      staff_username: "puskesmas.kuncir",
+      staff_username: "puskesmas.contoh",
       total_devices: 1,
       success_count: 1,
     });
@@ -330,7 +330,7 @@ describe("announcement broadcast", () => {
   });
 
   it("audits a sent announcement against the health center scope", async () => {
-    const token = await login("puskesmas.kuncir");
+    const token = await login("puskesmas.contoh");
     const created = (await createAnnouncement(token, 1)).body as AnnouncementCreateResponse;
 
     expect(auditRepository.events.filter((event) => event.action === "ANNOUNCEMENT_SENT")).toEqual([

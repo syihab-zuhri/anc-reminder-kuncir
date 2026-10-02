@@ -50,10 +50,9 @@ export class MotherAuthService {
     const codeBucketHash = this.crypto.rateLimitBucketHash("CODE", rateCode);
     const bucketHashes = [ipBucketHash, codeBucketHash];
     const retryAfterSeconds = await this.repository.rateLimitRetryAfterSeconds(bucketHashes, now);
-    if (retryAfterSeconds > 0) {
-      await this.recordPublicAudit("MOTHER_ACCESS_THROTTLED", "RATE_LIMITED", now);
-      throw rateLimited(retryAfterSeconds);
-    }
+    // Rejections while blocked are deliberately not audited, as for staff login: they are
+    // unbounded, and the append-only audit log already records the failures that led to the block.
+    if (retryAfterSeconds > 0) throw rateLimited(retryAfterSeconds);
 
     const candidate =
       canonicalCode === null ? null : await this.repository.findCredentialCandidate(codeLookupHash);

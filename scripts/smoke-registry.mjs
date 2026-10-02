@@ -226,9 +226,25 @@ try {
     address: "Synthetic Registry Address",
     phone_number: syntheticPhone,
     pregnancy_start_date: "2026-05-01",
-    consent: { notification_allowed: true },
+    consent: { notification_allowed: true, data_processing_allowed: true },
   };
   const authorization = `Bearer ${login.access_token}`;
+  const refusedConsent = await readErrorShape(
+    await request("/mothers", {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify({
+        ...registrationRequest,
+        idempotency_key: randomUUID(),
+        consent: { notification_allowed: true, data_processing_allowed: false },
+      }),
+    }),
+    400,
+    "Registration without health data consent",
+  );
+  if (refusedConsent.code !== "VALIDATION_ERROR") {
+    throw new Error(`Registration without health data consent returned ${refusedConsent.code}`);
+  }
   const first = await readJson(
     await request("/mothers", {
       method: "POST",
@@ -265,10 +281,13 @@ try {
        mother.phone_normalized,
        pregnancy.status AS pregnancy_status,
        pregnancy.dating_basis,
-       consent.status AS consent_status
+       consent.status AS consent_status,
+       processing.status AS processing_consent_status
      FROM mothers AS mother
      JOIN pregnancies AS pregnancy ON pregnancy.mother_id = mother.id AND pregnancy.status = 'ACTIVE'
      JOIN consent_records AS consent ON consent.mother_id = mother.id AND consent.purpose = 'REMINDER'
+     JOIN consent_records AS processing
+       ON processing.mother_id = mother.id AND processing.purpose = 'DATA_PROCESSING'
     WHERE mother.id = $1`,
     [first.mother?.id],
   );
@@ -282,7 +301,8 @@ try {
     row.phone_normalized !== "628123456789" ||
     row.pregnancy_status !== "ACTIVE" ||
     row.dating_basis !== "PREGNANCY_START_DATE" ||
-    row.consent_status !== "GRANTED"
+    row.consent_status !== "GRANTED" ||
+    row.processing_consent_status !== "GRANTED"
   ) {
     throw new Error(
       "Registry persistence did not preserve the protected atomic registration state",
@@ -1620,7 +1640,8 @@ try {
   const serializedMotherAudit = JSON.stringify(motherAccessAudit.rows);
   if (
     motherAuditCounts["PUBLIC:MOTHER_ACCESS_FAILURE"] !== 10 ||
-    motherAuditCounts["PUBLIC:MOTHER_ACCESS_THROTTLED"] !== 1 ||
+    // Blocked attempts are not audited (unbounded); only the failures before the block are.
+    motherAuditCounts["PUBLIC:MOTHER_ACCESS_THROTTLED"] !== undefined ||
     motherAuditCounts["BUMIL:MOTHER_ACCESS_SUCCESS"] !== 1 ||
     motherAuditCounts["BUMIL:MOTHER_LOGOUT"] !== 1 ||
     motherAccessAudit.rows.some(

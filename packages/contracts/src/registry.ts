@@ -29,6 +29,10 @@ export const motherRegistrationRequestSchema = z
     consent: z
       .object({
         notification_allowed: z.boolean(),
+        // Health data needs the mother's explicit consent (UU PDP); without it she is not registered.
+        data_processing_allowed: z.literal(true, {
+          error: "Persetujuan pemrosesan data kesehatan wajib diberikan.",
+        }),
       })
       .strict(),
   })

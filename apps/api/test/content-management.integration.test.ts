@@ -54,7 +54,7 @@ describe("content management integration (TASK-P4-009)", () => {
         role: "PUSKESMAS",
         healthCenterId: centerId,
       },
-      { id: bidanId, identifier: "bidan.kuncir", role: "BIDAN", healthCenterId: centerId },
+      { id: bidanId, identifier: "bidan.contoh", role: "BIDAN", healthCenterId: centerId },
       { id: superAdminId, identifier: "super.admin", role: "SUPER_ADMIN", healthCenterId: null },
     ];
     for (const user of users) {
@@ -192,7 +192,7 @@ describe("content management integration (TASK-P4-009)", () => {
     expect(await repository.listTemplates(centerId)).toHaveLength(0);
   });
 
-  it.each(["bidan.kuncir", "super.admin"])(
+  it.each(["bidan.contoh", "super.admin"])(
     "denies content governance to %s",
     async (identifier) => {
       const token = await login(identifier);

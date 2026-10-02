@@ -196,7 +196,7 @@ X-Request-ID: <unique-request-id>
 
 ```json
 {
-  "identifier": "puskesmas.kuncir",
+  "identifier": "puskesmas.contoh",
   "password": "replace-with-strong-password-2026"
 }
 ```
@@ -210,7 +210,7 @@ X-Request-ID: <unique-request-id>
   "expires_in": 3600,
   "user": {
     "id": "507f1f77bcf86cd799439011",
-    "email": "puskesmas.kuncir",
+    "email": "puskesmas.contoh",
     "name": "Operator Puskesmas Kuncir",
     "role": "puskesmas",
     "health_center_id": "KUNCIR-PUSKESMAS"
@@ -293,7 +293,7 @@ X-Request-ID: <unique-request-id>
 ```json
 {
   "id": "507f1f77bcf86cd799439011",
-  "email": "puskesmas.kuncir",
+  "email": "puskesmas.contoh",
   "name": "Operator Puskesmas Kuncir",
   "role": "puskesmas",
   "health_center_id": "KUNCIR-PUSKESMAS",

@@ -44,7 +44,7 @@ sementara di environment proses dan tidak boleh disimpan di repository atau shel
 $env:PROVISION_CONFIRM = "CREATE_INITIAL_PUSKESMAS"
 $env:PROVISION_HEALTH_CENTER_CODE = "PKM-KUNCIR"
 $env:PROVISION_HEALTH_CENTER_NAME = "Puskesmas Kuncir"
-$env:PROVISION_LOGIN_IDENTIFIER = "puskesmas.kuncir"
+$env:PROVISION_LOGIN_IDENTIFIER = "puskesmas.contoh"
 $env:PROVISION_DISPLAY_NAME = "Operator Puskesmas Kuncir"
 $env:PROVISION_PASSWORD = "replace-with-strong-password-2026"
 npm run staff:provision:puskesmas

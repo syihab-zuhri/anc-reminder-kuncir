@@ -33,7 +33,7 @@ describe("Server-Source-of-Truth Enforcement (TASK-P6-006)", () => {
     staffAuthRepo.seedUser({
       id: bidanId,
       healthCenterId: centerId,
-      loginIdentifier: "bidan.kuncir",
+      loginIdentifier: "bidan.contoh",
       passwordHash: await hasher.hash(password),
       displayName: "Bidan Desa Kuncir",
       role: "BIDAN",
@@ -57,7 +57,7 @@ describe("Server-Source-of-Truth Enforcement (TASK-P6-006)", () => {
     const server = app.getHttpServer() as Parameters<typeof request>[0];
     const loginRes = await request(server)
       .post("/api/v1/staff/auth/login")
-      .send({ login_identifier: "bidan.kuncir", password });
+      .send({ login_identifier: "bidan.contoh", password });
     bidanToken = (loginRes.body as { access_token: string }).access_token;
   });
 

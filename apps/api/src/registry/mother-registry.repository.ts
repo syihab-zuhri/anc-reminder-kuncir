@@ -19,6 +19,7 @@ export interface CreateMotherRegistrationInput {
   readonly motherId: string;
   readonly pregnancyId: string;
   readonly consentId: string;
+  readonly dataProcessingConsentId: string;
   readonly healthCenterId: string;
   readonly fullName: string;
   readonly nikCiphertext: string;
@@ -160,11 +161,13 @@ export class PostgresMotherRegistryRepository implements MotherRegistryRepositor
     await client.query(
       `INSERT INTO consent_records (
          id, mother_id, purpose, status, source, recorded_at
-       ) VALUES ($1, $2, 'REMINDER', $3, 'STAFF_REGISTRATION', $4)`,
+       ) VALUES ($1, $2, 'REMINDER', $3, 'STAFF_REGISTRATION', $5),
+                ($4, $2, 'DATA_PROCESSING', 'GRANTED', 'STAFF_REGISTRATION', $5)`,
       [
         input.consentId,
         input.motherId,
         input.notificationAllowed ? "GRANTED" : "WITHDRAWN",
+        input.dataProcessingConsentId,
         input.recordedAt,
       ],
     );

@@ -70,7 +70,7 @@ describe("API-REPORT-001 Organization Summary Report Integration Tests", () => {
     staffAuthRepo.seedUser({
       id: puskesmasStaffId,
       healthCenterId: centerId,
-      loginIdentifier: "puskesmas.kuncir",
+      loginIdentifier: "puskesmas.contoh",
       passwordHash,
       displayName: "Dr. Puskesmas",
       role: "PUSKESMAS",
@@ -120,7 +120,7 @@ describe("API-REPORT-001 Organization Summary Report Integration Tests", () => {
   }
 
   it("allows Puskesmas staff to fetch organization summary report", async () => {
-    const token = await loginAs("puskesmas.kuncir");
+    const token = await loginAs("puskesmas.contoh");
     const server = app.getHttpServer() as Parameters<typeof request>[0];
 
     const res = await request(server)

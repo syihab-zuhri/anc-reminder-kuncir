@@ -61,6 +61,22 @@ export const motherListResponseSchema = z
   .strict();
 export type MotherListResponse = z.infer<typeof motherListResponseSchema>;
 
+/** The list filters, without paging: an export always covers every matching mother. */
+export const motherExportQuerySchema = motherListQuerySchema
+  .omit({ cursor: true, limit: true })
+  .strict();
+export type MotherExportQuery = z.infer<typeof motherExportQuerySchema>;
+
+export const motherExportResponseSchema = z
+  .object({
+    items: z.array(motherSummarySchema),
+    /** True when more mothers matched than `max_rows`; the export then holds the newest ones. */
+    truncated: z.boolean(),
+    max_rows: z.number().int().positive(),
+  })
+  .strict();
+export type MotherExportResponse = z.infer<typeof motherExportResponseSchema>;
+
 export const motherDetailResponseSchema = z
   .object({
     mother: motherSummarySchema,
