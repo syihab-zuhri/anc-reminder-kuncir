@@ -30,6 +30,18 @@ export function localDateString(date: Date, timeZone: string): string {
   return `${value("year")}-${value("month")}-${value("day")}`;
 }
 
+/** Hour of the day (0-23) that `date` falls on inside the given IANA time zone. */
+export function localHour(date: Date, timeZone: string): number {
+  const hour = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    hourCycle: "h23",
+  })
+    .formatToParts(date)
+    .find((part) => part.type === "hour")?.value;
+  return Number(hour);
+}
+
 export async function processReminderCycles(
   pool: DatabasePool,
   anchorDateStr?: string,

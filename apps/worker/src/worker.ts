@@ -8,7 +8,12 @@ import {
   type DatabaseReadiness,
 } from "@anc/database";
 import { JsonWorkerLogger, type WorkerLogger } from "./logger.js";
-import { localDateString, processReminderCycles } from "./reminder-processor.js";
+import {
+  localDateString,
+  localHour,
+  processReminderCycles,
+  type ReminderProcessingResult,
+} from "./reminder-processor.js";
 import { createFcmPushAdapter, type PushDeliveryAdapter } from "./push-adapter.js";
 import { processPendingPushAttempts } from "./push-processor.js";
 
@@ -40,6 +45,12 @@ export class WorkerDependencyUnavailableError extends Error {
   }
 }
 
+const noRemindersCreated: ReminderProcessingResult = {
+  createdCyclesCount: 0,
+  pushAttemptsCount: 0,
+  waFallbackActionsCount: 0,
+};
+
 const defaultDependencies: WorkerDependencies = {
   loadConfig: loadWorkerConfig,
   createPool: createDatabasePool,
@@ -70,11 +81,19 @@ export async function runWorkerOnce(options: RunWorkerOnceOptions = {}): Promise
       throw new WorkerDependencyUnavailableError();
     }
 
-    const anchorDate = localDateString(options.now ?? new Date(), config.primaryTimezone);
-    const reminderResult = await processReminderCycles(pool, anchorDate, {
-      intervalDays: config.reminderIntervalDays,
-      timezone: config.primaryTimezone,
-    });
+    const now = options.now ?? new Date();
+    const anchorDate = localDateString(now, config.primaryTimezone);
+    // New reminder cycles (and with them the push or WA follow-up) only start from the configured
+    // local hour, so nobody is notified at midnight. The cycle stays anchored to the calendar day,
+    // and retries of attempts that already exist keep running around the clock.
+    const reminderSendWindowOpen =
+      localHour(now, config.primaryTimezone) >= config.reminderSendHour;
+    const reminderResult = reminderSendWindowOpen
+      ? await processReminderCycles(pool, anchorDate, {
+          intervalDays: config.reminderIntervalDays,
+          timezone: config.primaryTimezone,
+        })
+      : noRemindersCreated;
     const pushResult = await processPendingPushAttempts(
       pool,
       options.pushAdapter ??
@@ -93,6 +112,7 @@ export async function runWorkerOnce(options: RunWorkerOnceOptions = {}): Promise
       event: "worker_bootstrap_completed",
       processed_jobs: result.processedJobs,
       database_checked_at: result.databaseCheckedAt,
+      reminder_send_window_open: reminderSendWindowOpen,
       reminder_cycles_created: reminderResult.createdCyclesCount,
       push_attempts_created: reminderResult.pushAttemptsCount,
       wa_fallbacks_created: reminderResult.waFallbackActionsCount,

@@ -205,6 +205,27 @@ describe("loadWorkerConfig", () => {
     expect(config.logLevel).toBe("warn");
   });
 
+  it("sends reminders from 08:00 local time unless REMINDER_SEND_HOUR says otherwise", () => {
+    const workerEnvironment = {
+      ...commonEnvironment,
+      FCM_PROJECT_ID: "anc-test-project",
+      FCM_SERVICE_ACCOUNT_JSON: "secret://fcm/service-account",
+    };
+
+    expect(loadWorkerConfig(workerEnvironment).reminderSendHour).toBe(8);
+    expect(
+      loadWorkerConfig({ ...workerEnvironment, REMINDER_SEND_HOUR: "0" }).reminderSendHour,
+    ).toBe(0);
+    expect(
+      loadWorkerConfig({ ...workerEnvironment, REMINDER_SEND_HOUR: " 23 " }).reminderSendHour,
+    ).toBe(23);
+    for (const invalid of ["24", "-1", "8.5", "08:00", "pagi", ""]) {
+      expect(() =>
+        loadWorkerConfig({ ...workerEnvironment, REMINDER_SEND_HOUR: invalid }),
+      ).toThrow();
+    }
+  });
+
   it("fails closed when a required push credential is blank", () => {
     expect(() =>
       loadWorkerConfig({

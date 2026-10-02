@@ -41,6 +41,16 @@ function positiveInteger(defaultValue?: string) {
 
 const reminderIntervalDays = positiveInteger("3");
 
+// Local hour (0-23, in PRIMARY_TIMEZONE) from which the worker may open new reminder cycles, so
+// mothers are not notified in the middle of the night.
+const reminderSendHour = z
+  .string()
+  .trim()
+  .regex(/^\d{1,2}$/, "REMINDER_SEND_HOUR must be a whole hour from 0 to 23")
+  .default("8")
+  .transform(Number)
+  .pipe(z.number().int().min(0).max(23));
+
 const apiPort = z
   .string()
   .trim()
@@ -249,6 +259,7 @@ export const workerEnvironmentSchema = z
     // Deployment injects the complete JSON through its secret store. Never
     // commit a service-account file or place the value in logs.
     FCM_SERVICE_ACCOUNT_JSON: requiredText,
+    REMINDER_SEND_HOUR: reminderSendHour,
   })
   .superRefine(requireProductionDatabaseTls)
   .transform((environment) => ({
@@ -258,6 +269,7 @@ export const workerEnvironmentSchema = z
     fcmServiceAccountJson: environment.FCM_SERVICE_ACCOUNT_JSON,
     pushTokenEncryptionKey: environment.PUSH_TOKEN_ENCRYPTION_KEY,
     reminderIntervalDays: environment.REMINDER_INTERVAL_DAYS,
+    reminderSendHour: environment.REMINDER_SEND_HOUR,
     pushMaxAttempts: environment.PUSH_MAX_ATTEMPTS,
     pushBackoffSeconds: environment.PUSH_BACKOFF_SECONDS,
     waFallbackEscalationHours: environment.WA_FALLBACK_ESCALATION_HOURS,
