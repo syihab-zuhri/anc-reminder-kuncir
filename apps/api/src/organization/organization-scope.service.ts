@@ -36,7 +36,13 @@ export class OrganizationScopeService {
   ) {}
 
   public async listVillages(actor: StaffActor): Promise<readonly Village[]> {
-    return this.repository.listVillages(this.requireManagedCenter(actor));
+    if (this.policy.hasCapability(actor, "ORGANIZATION_MANAGE")) {
+      return this.repository.listVillages(this.requireCenter(actor));
+    }
+    // Read-only for Bidan, limited to the villages assigned to them: those are the villages whose
+    // mothers they can see, so registering a mother anywhere else would hide her from them.
+    this.policy.assertCapability(actor, "MOTHER_BASIC_READ");
+    return this.repository.listAssignedVillages(this.requireCenter(actor), actor.staffUserId);
   }
 
   public async createVillage(actor: StaffActor, input: VillageCreateRequest): Promise<Village> {
@@ -108,7 +114,14 @@ export class OrganizationScopeService {
   }
 
   public async listFacilities(actor: StaffActor): Promise<readonly Facility[]> {
-    return this.repository.listFacilities(this.requireManagedCenter(actor));
+    if (this.policy.hasCapability(actor, "ORGANIZATION_MANAGE")) {
+      return this.repository.listFacilities(this.requireCenter(actor));
+    }
+    // Read-only for Bidan: they pick where a visit took place, which can be any active facility
+    // of their Puskesmas. Inactive facilities are only shown to those who manage them.
+    this.policy.assertCapability(actor, "MOTHER_BASIC_READ");
+    const facilities = await this.repository.listFacilities(this.requireCenter(actor));
+    return facilities.filter((facility) => facility.status === "ACTIVE");
   }
 
   public async createFacility(actor: StaffActor, input: FacilityCreateRequest): Promise<Facility> {

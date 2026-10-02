@@ -16,6 +16,8 @@ export function BumilPatientPortal() {
   const [loadingMothers, setLoadingMothers] = useState(true);
 
   const [milestones, setMilestones] = useState<readonly PregnancyMilestoneResponse[]>([]);
+  const [nextMilestoneCode, setNextMilestoneCode] =
+    useState<PregnancyMilestoneListResponse["next_milestone_code"]>(null);
   const [loadingMilestones, setLoadingMilestones] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,6 +55,7 @@ export function BumilPatientPortal() {
     if (!mother || !mother.active_pregnancy) {
       async function clearMilestones(): Promise<void> {
         setMilestones([]);
+        setNextMilestoneCode(null);
       }
       void clearMilestones();
       return;
@@ -74,6 +77,7 @@ export function BumilPatientPortal() {
         if (res.ok) {
           const data = (await res.json()) as PregnancyMilestoneListResponse;
           setMilestones(data.milestones ?? []);
+          setNextMilestoneCode(data.next_milestone_code ?? null);
         } else {
           setError("Gagal memuat linimasa pemeriksaan kehamilan.");
         }
@@ -96,11 +100,10 @@ export function BumilPatientPortal() {
     : 0;
   const progressPercent = Math.min(100, Math.max(0, Math.round((totalDays / 280) * 100)));
 
-  // Determine next milestone
+  // The server decides which visit comes next (the open window, else the next upcoming one), so
+  // the preview shows exactly what the mother sees in her own portal.
   const nextMilestone =
-    milestones.find((m) => m.visit_status === "DUE" || m.visit_status === "OVERDUE") ??
-    milestones.find((m) => m.visit_status === "UPCOMING") ??
-    milestones[0];
+    nextMilestoneCode === null ? undefined : milestones.find((m) => m.code === nextMilestoneCode);
 
   return (
     <div className="staff-panel-card bumil-portal-wrap">

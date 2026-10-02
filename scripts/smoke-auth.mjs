@@ -104,12 +104,25 @@ try {
     body: JSON.stringify({ login_identifier: bidanLoginIdentifier, password }),
   });
   const bidanLogin = await readJson(bidanLoginResponse, "Bidan login");
+  const bidanAuthorization = `Bearer ${bidanLogin.access_token}`;
+  // Bidan may read the villages assigned to them (registration needs them) but never manage them.
+  const bidanVillages = await readJson(
+    await request("/staff/organization/villages", {
+      headers: { authorization: bidanAuthorization },
+    }),
+    "Bidan village list",
+  );
+  if (bidanVillages.length !== 1 || bidanVillages[0].id !== village.id) {
+    throw new Error("Bidan village list did not contain exactly the assigned village");
+  }
   const deniedOrganizationResponse = await request("/staff/organization/villages", {
-    headers: { authorization: `Bearer ${bidanLogin.access_token}` },
+    method: "POST",
+    headers: { authorization: bidanAuthorization },
+    body: JSON.stringify({ code: `DENIED-${suffix}`, name: "Bidan Must Not Create" }),
   });
   if (deniedOrganizationResponse.status !== 403) {
     throw new Error(
-      `Bidan organization access was not denied: ${deniedOrganizationResponse.status}`,
+      `Bidan organization management was not denied: ${deniedOrganizationResponse.status}`,
     );
   }
 

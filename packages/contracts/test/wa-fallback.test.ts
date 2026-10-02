@@ -14,6 +14,7 @@ const item = {
   phone_number_masked: "0812****7890",
   milestone_code: "K2",
   due_at: "2026-09-01T00:00:00.000Z",
+  window_end_date: "2026-09-04",
   status: "LINK_OPENED",
   wa_me_url: null,
   link_generated_at: "2026-08-13T01:00:00.000Z",
@@ -28,6 +29,11 @@ describe("WhatsApp fallback contracts", () => {
     expect(waFallbackItemSchema.safeParse(item).success).toBe(true);
     expect(waFallbackItemSchema.safeParse({ ...item, status: "RESOLVED" }).success).toBe(false);
     expect(waFallbackItemSchema.safeParse({ ...item, due_at: "2026-09-01" }).success).toBe(false);
+    expect(waFallbackItemSchema.safeParse({ ...item, window_end_date: null }).success).toBe(true);
+    expect(
+      waFallbackItemSchema.safeParse({ ...item, window_end_date: "2026-09-04T00:00:00.000Z" })
+        .success,
+    ).toBe(false);
   });
 
   it("requires generated-link responses to declare LINK_GENERATED", () => {

@@ -52,6 +52,8 @@ Dokumen ini mendefinisikan arsitektur pemantauan (_monitoring_), batas indikator
 - **Job Outbox Engine**:
   - Outbox Claims: Menggunakan `FOR UPDATE SKIP LOCKED` pada PostgreSQL.
   - Cycle Anchor: Menggunakan `PRIMARY_TIMEZONE` (Asia/Jakarta) dengan batasan `REMINDER_INTERVAL_DAYS`.
+  - Kunjungan yang diingatkan: kunjungan yang jendelanya sedang terbuka menurut aturan ANC aktif (dari minggu `target_week_start` sampai akhir minggu `target_week_end`), atau 3 hari menjelang janji temu bila petugas menetapkan tanggal. Setelah jendela lewat, kunjungan tidak diingatkan lagi dan tampil sebagai terlewat untuk ditindaklanjuti petugas. Ibu yang didaftarkan di pertengahan kehamilan langsung diingatkan untuk kunjungan yang sedang berjalan.
+  - Jarak siklus: tepat `REMINDER_INTERVAL_DAYS` hari. Bila ibu tidak punya perangkat Android aktif, siklus baru tidak dibuat selama tugas WhatsApp untuk kunjungan yang sama masih terbuka, sehingga antrean tidak berisi duplikat.
   - Jam kirim: siklus baru baru dibuat mulai `REMINDER_SEND_HOUR` waktu lokal (default 08:00 WIB). Log `worker_bootstrap_completed` memuat `reminder_send_window_open`; sebelum jam itu `reminder_cycles_created` selalu 0.
 - **Worker Alerting Triggers**:
   - **Worker Dead Check**: Jika worker tidak memproses siklus pengingat selama > 15 menit saat antrean pending > 0.
