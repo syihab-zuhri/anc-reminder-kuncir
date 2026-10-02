@@ -4,8 +4,9 @@ import type {
   MotherAccessCredentialIssueResponse,
   MotherRegistrationResponse,
 } from "@anc/contracts";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useFacilities, useVillages } from "../hooks/use-organization-data";
+import { facilityTypeLabel } from "../lib/display-format";
 import { useToast } from "../lib/toast-context";
 
 interface MotherRegistrationPanelProps {
@@ -111,34 +112,6 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
     return facilities.filter((f) => f.village_id === villageId || !f.village_id);
   }, [facilities, villageId]);
 
-  // Searchable Dropdown State for Facility
-  const [facilitySearchQuery, setFacilitySearchQuery] = useState("");
-  const [facilityDropdownOpen, setFacilityDropdownOpen] = useState(false);
-  const facilityDropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (facilityDropdownRef.current && !facilityDropdownRef.current.contains(e.target as Node)) {
-        setFacilityDropdownOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const selectedFacility = useMemo(
-    () => availableFacilities.find((f) => f.id === facilityId),
-    [availableFacilities, facilityId],
-  );
-
-  const filteredFacilities = useMemo(() => {
-    if (!facilitySearchQuery.trim()) return availableFacilities;
-    const q = facilitySearchQuery.toLowerCase();
-    return availableFacilities.filter(
-      (f) => f.name.toLowerCase().includes(q) || f.facility_type.toLowerCase().includes(q),
-    );
-  }, [availableFacilities, facilitySearchQuery]);
-
   // Consents start unticked: the mother has to agree explicitly (UU PDP).
   const [consentReminder, setConsentReminder] = useState(false);
   const [consentDataProcessing, setConsentDataProcessing] = useState(false);
@@ -175,7 +148,7 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
   if (userRole === "SUPER_ADMIN") {
     return (
       <div className="staff-panel-card staff-panel-restricted">
-        <span className="staff-panel-badge badge-warning">Deny by Default</span>
+        <span className="staff-panel-badge badge-warning">Akses Dibatasi</span>
         <h3>Pendaftaran Ibu Hamil Tidak Tersedia untuk Super Admin</h3>
         <p>
           Sesuai kebijakan keamanan data, peran Super Admin tidak diperkenankan mendaftarkan atau
@@ -393,7 +366,7 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
       {step === "FORM" && (
         <form onSubmit={handleGoToReview}>
           <div className="form-section-title" style={{ marginBottom: "1rem" }}>
-            <h3>Field Wajib Pendaftaran (5 Komponen Wajib)</h3>
+            <h3>Isian Wajib Pendaftaran</h3>
             <p style={{ fontSize: "0.85rem", color: "var(--color-ink-muted)" }}>
               Pastikan seluruh data pasien terverifikasi dari KTP/KK resmi.
             </p>
@@ -406,7 +379,7 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
               className={`staff-input ${fieldErrors.fullName ? "input-has-error" : ""}`}
               type="text"
               required
-              placeholder="e.g. Siti Aminah"
+              placeholder="Contoh: Siti Aminah"
               value={fullName}
               onChange={(e) => {
                 setFullName(e.target.value);
@@ -484,7 +457,6 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
                 onChange={(e) => {
                   setVillageId(e.target.value);
                   setFacilityId("");
-                  setFacilitySearchQuery("");
                   if (fieldErrors.villageId)
                     setFieldErrors((prev) => ({ ...prev, villageId: undefined }));
                 }}
@@ -519,206 +491,27 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
               )}
             </div>
 
-            {/* 4. TPMB / Faskes Pendaftaran (Searchable Dropdown) */}
+            {/* 4. TPMB / Faskes Pendaftaran */}
             <div className="form-group">
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: "0.35rem",
-                  fontSize: "0.86rem",
-                  fontWeight: 700,
-                }}
+              <label htmlFor="reg-facility">4. TPMB / Faskes Pendaftaran</label>
+              <select
+                id="reg-facility"
+                className="staff-input"
+                style={{ minHeight: "34px", fontSize: "0.82rem", borderRadius: "6px" }}
+                value={facilityId}
+                onChange={(e) => setFacilityId(e.target.value)}
+                aria-describedby="hint-reg-facility"
               >
-                4. TPMB / Faskes Pendaftaran
-              </label>
-              <div ref={facilityDropdownRef} style={{ position: "relative" }}>
-                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                  <svg
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.75"
-                    width="14"
-                    height="14"
-                    style={{
-                      position: "absolute",
-                      left: "0.65rem",
-                      color: "var(--ink-faint, #777)",
-                      pointerEvents: "none",
-                    }}
-                    aria-hidden="true"
-                  >
-                    <circle cx="8.5" cy="8.5" r="5.5" />
-                    <line x1="12.5" y1="12.5" x2="17" y2="17" />
-                  </svg>
-
-                  <input
-                    type="text"
-                    className="staff-input"
-                    style={{
-                      minHeight: "34px",
-                      paddingLeft: "2rem",
-                      paddingRight: facilityId ? "2rem" : "0.75rem",
-                      fontSize: "0.82rem",
-                      borderRadius: "6px",
-                      width: "100%",
-                    }}
-                    placeholder={
-                      selectedFacility
-                        ? `${selectedFacility.name} (${selectedFacility.facility_type})`
-                        : "Ketik untuk cari TPMB / Posyandu…"
-                    }
-                    value={
-                      facilityDropdownOpen
-                        ? facilitySearchQuery
-                        : selectedFacility
-                          ? `${selectedFacility.name} (${selectedFacility.facility_type})`
-                          : ""
-                    }
-                    onFocus={() => {
-                      setFacilityDropdownOpen(true);
-                      if (selectedFacility && !facilitySearchQuery) {
-                        setFacilitySearchQuery("");
-                      }
-                    }}
-                    onChange={(e) => {
-                      setFacilitySearchQuery(e.target.value);
-                      if (!facilityDropdownOpen) setFacilityDropdownOpen(true);
-                    }}
-                  />
-
-                  {facilityId && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFacilityId("");
-                        setFacilitySearchQuery("");
-                      }}
-                      style={{
-                        position: "absolute",
-                        right: "0.45rem",
-                        background: "transparent",
-                        border: "none",
-                        color: "var(--ink-faint, #777)",
-                        cursor: "pointer",
-                        padding: "0.2rem",
-                        fontSize: "0.85rem",
-                        lineHeight: 1,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                      title="Hapus pilihan faskes"
-                      aria-label="Hapus pilihan faskes"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-
-                {facilityDropdownOpen && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "calc(100% + 4px)",
-                      left: 0,
-                      right: 0,
-                      zIndex: 50,
-                      backgroundColor: "var(--paper-raised, #ffffff)",
-                      border: "1px solid var(--line, #ddd)",
-                      borderRadius: "6px",
-                      boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                      maxHeight: "220px",
-                      overflowY: "auto",
-                      padding: "0.3rem",
-                    }}
-                  >
-                    <div
-                      onClick={() => {
-                        setFacilityId("");
-                        setFacilitySearchQuery("");
-                        setFacilityDropdownOpen(false);
-                      }}
-                      style={{
-                        padding: "0.4rem 0.65rem",
-                        fontSize: "0.8rem",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                        backgroundColor: !facilityId ? "rgba(22, 61, 55, 0.08)" : "transparent",
-                        fontWeight: !facilityId ? 650 : 400,
-                        color: "var(--ink)",
-                      }}
-                    >
-                      — Tanpa Faskes Khusus —
-                    </div>
-
-                    {filteredFacilities.length === 0 ? (
-                      <div
-                        style={{
-                          padding: "0.5rem 0.65rem",
-                          fontSize: "0.8rem",
-                          color: "var(--ink-muted, #666)",
-                          fontStyle: "italic",
-                        }}
-                      >
-                        Tidak ada TPMB / Posyandu yang cocok
-                      </div>
-                    ) : (
-                      filteredFacilities.map((f) => {
-                        const isSelected = facilityId === f.id;
-                        return (
-                          <div
-                            key={f.id}
-                            onClick={() => {
-                              setFacilityId(f.id);
-                              setFacilitySearchQuery(f.name);
-                              setFacilityDropdownOpen(false);
-                            }}
-                            style={{
-                              padding: "0.4rem 0.65rem",
-                              fontSize: "0.8rem",
-                              borderRadius: "4px",
-                              cursor: "pointer",
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              backgroundColor: isSelected
-                                ? "rgba(22, 61, 55, 0.08)"
-                                : "transparent",
-                              fontWeight: isSelected ? 650 : 400,
-                              color: "var(--ink)",
-                            }}
-                          >
-                            <span>{f.name}</span>
-                            <span
-                              style={{
-                                fontSize: "0.72rem",
-                                color: "var(--ink-muted, #777)",
-                                backgroundColor: "rgba(0,0,0,0.05)",
-                                padding: "0.1rem 0.35rem",
-                                borderRadius: "3px",
-                              }}
-                            >
-                              {f.facility_type}
-                            </span>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                )}
-
-                <small
-                  className="field-help"
-                  style={{
-                    display: "block",
-                    marginTop: "0.25rem",
-                    color: "var(--color-ink-muted)",
-                  }}
-                >
-                  Ketik nama untuk mencari posyandu/faskes di wilayah desa yang dipilih.
-                </small>
-              </div>
+                <option value="">Tanpa faskes khusus</option>
+                {availableFacilities.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name} · {facilityTypeLabel(f.facility_type)}
+                  </option>
+                ))}
+              </select>
+              <small id="hint-reg-facility" className="field-help">
+                Pilihan mengikuti desa yang dipilih. Boleh dikosongkan.
+              </small>
             </div>
           </div>
 
@@ -751,7 +544,7 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
               className={`staff-input ${fieldErrors.phoneNumber ? "input-has-error" : ""}`}
               type="tel"
               required
-              placeholder="e.g. 081234567890"
+              placeholder="Contoh: 081234567890"
               value={phoneNumber}
               onChange={(e) => {
                 setPhoneNumber(e.target.value);
@@ -767,7 +560,7 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
           </div>
 
           <div className="form-group">
-            <label htmlFor="reg-dating">7. Tanggal Awal Kehamilan (HPHT / Dating Date) *</label>
+            <label htmlFor="reg-dating">7. Tanggal Awal Kehamilan (HPHT) *</label>
             <input
               id="reg-dating"
               className={`staff-input ${fieldErrors.pregnancyStartDate ? "input-has-error" : ""}`}
@@ -789,7 +582,7 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
                 className="field-help"
                 style={{ display: "block", marginTop: "0.25rem", color: "var(--color-ink-muted)" }}
               >
-                Digunakan oleh server untuk menghitung usia kehamilan dan jadwal K1-K8 otomatis.
+                Dipakai untuk menghitung usia kehamilan dan jadwal K1–K8 secara otomatis.
               </small>
             )}
 

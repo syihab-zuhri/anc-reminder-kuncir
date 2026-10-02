@@ -4,6 +4,7 @@ import {
   milestoneCodeSchema,
   pregnancyStatusSchema,
   recordValidationStatusSchema,
+  requiredFacilityPolicySchema,
   visitStatusSchema,
 } from "./domain.js";
 
@@ -88,7 +89,12 @@ export const bumilMilestoneSummarySchema = z
     milestone_code: milestoneCodeSchema,
     visit_status: visitStatusSchema,
     record_validation_status: recordValidationStatusSchema,
+    /** Where the visit takes place, from the ANC plan rule. */
+    required_facility_policy: requiredFacilityPolicySchema,
     due_at: isoDateSchema.nullable(),
+    /** First and last day of the visit window from the ANC plan, so the mother sees when to go. */
+    target_date_start: isoDateSchema.nullable(),
+    target_date_end: isoDateSchema.nullable(),
     occurred_on: isoDateSchema.nullable(),
   })
   .strict();
@@ -101,6 +107,7 @@ export const bumilDashboardResponseSchema = z
         full_name: z.string().min(1),
         address: z.string().min(1),
         village_name: z.string().min(1).nullable(),
+        health_center_name: z.string().min(1).nullable(),
       })
       .strict(),
     active_pregnancy: z

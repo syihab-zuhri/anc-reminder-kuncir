@@ -415,20 +415,12 @@ svg {
   background: rgba(251, 248, 241, 0.92);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  /* The accent offset is a shadow, not a ::after: the card's own stacking context (z-index and
+     backdrop-filter) would paint a pseudo-element over the card background instead of behind it. */
+  box-shadow:
+    10px 10px 0 var(--accent-soft),
+    var(--shadow-md);
   backdrop-filter: blur(12px);
-}
-
-.operations-preview::after {
-  position: absolute;
-  right: -10px;
-  bottom: -10px;
-  z-index: -1;
-  width: 40%;
-  height: 40%;
-  background: var(--accent-soft);
-  border-radius: var(--radius-lg);
-  content: "";
 }
 
 .preview-topline,
@@ -945,7 +937,7 @@ svg {
 
   .role-card {
     min-height: auto;
-    padding: 1.75rem;
+    padding: 1.75rem 1.75rem 3.25rem;
     border: 1px solid var(--line);
     border-radius: var(--radius-md);
     background: var(--paper-raised);
@@ -960,6 +952,12 @@ svg {
   .role-card h3 {
     margin-top: 1.5rem;
     font-size: 1.85rem;
+  }
+
+  .role-rule {
+    right: 1.75rem;
+    bottom: 1.75rem;
+    left: 1.75rem;
   }
 
   .access-section {
@@ -1069,12 +1067,9 @@ svg {
   .operations-preview {
     padding: 1.25rem;
     border-radius: var(--radius-md);
-  }
-
-  .operations-preview::after {
-    right: -6px;
-    bottom: -6px;
-    border-radius: var(--radius-md);
+    box-shadow:
+      6px 6px 0 var(--accent-soft),
+      var(--shadow-md);
   }
 
   .preview-heading {
@@ -1107,12 +1102,18 @@ svg {
   }
 
   .role-card {
-    padding: 1.25rem;
+    padding: 1.25rem 1.25rem 2.75rem;
   }
 
   .role-card h3 {
     margin: 1rem 0 0.5rem;
     font-size: 1.6rem;
+  }
+
+  .role-rule {
+    right: 1.25rem;
+    bottom: 1.25rem;
+    left: 1.25rem;
   }
 
   .access-option {

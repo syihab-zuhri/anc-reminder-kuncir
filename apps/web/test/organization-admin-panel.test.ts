@@ -19,9 +19,9 @@ describe("organization admin modular sub-tabs", () => {
     expect(markup).toContain("Pengaturan Fasilitas &amp; Petugas");
     expect(markup).toContain("Fasilitas");
     expect(markup).toContain("Desa Binaan");
-    expect(markup).toContain("Akun Staf Bidan");
+    expect(markup).toContain("Akun Petugas");
     expect(markup).toContain("Penugasan Wilayah");
-    expect(markup).toContain("Aturan Jadwal ANC");
+    expect(markup).toContain("Jadwal ANC");
   });
 
   it("denies access to organization admin for BIDAN and SUPER_ADMIN", () => {

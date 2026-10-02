@@ -2,6 +2,8 @@
 
 import type { Facility, FacilityType, Village } from "@anc/contracts";
 
+import { villageLabel } from "../../lib/display-format";
+
 interface AdminFacilitiesTabProps {
   readonly facilities: readonly Facility[];
   readonly villages: readonly Village[];
@@ -286,7 +288,9 @@ export function AdminFacilitiesTab({
                   </td>
                   <td>
                     {f.village_id
-                      ? `Desa ${villages.find((v) => v.id === f.village_id)?.name ?? f.village_id}`
+                      ? villageLabel(
+                          villages.find((v) => v.id === f.village_id)?.name ?? f.village_id,
+                        )
                       : "-"}
                   </td>
                   <td style={{ textAlign: "right" }}>

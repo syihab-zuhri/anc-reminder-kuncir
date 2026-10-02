@@ -2,6 +2,8 @@
 
 import type { StaffAssignmentDetail, StaffSummary, Village } from "@anc/contracts";
 
+import { villageLabel } from "../../lib/display-format";
+
 interface AdminAssignmentsTabProps {
   readonly assignments: readonly StaffAssignmentDetail[];
   readonly bidanUsers: readonly StaffSummary[];
@@ -36,7 +38,7 @@ export function AdminAssignmentsTab({
             <h3>Tetapkan Penugasan Wilayah Kerja Bidan</h3>
             <p className="field-hint">
               Bidan Desa hanya dapat mengakses dan mengonfirmasi ibu hamil yang berdomisili di desa
-              terpenuhi penugasannya.
+              penugasannya.
             </p>
           </div>
         </header>
@@ -128,9 +130,9 @@ export function AdminAssignmentsTab({
                   <td>
                     <strong>
                       {a.village_name
-                        ? `Desa ${a.village_name}`
+                        ? villageLabel(a.village_name)
                         : villages.find((v) => v.id === a.scope_id)?.name
-                          ? `Desa ${villages.find((v) => v.id === a.scope_id)?.name}`
+                          ? villageLabel(villages.find((v) => v.id === a.scope_id)?.name ?? "-")
                           : "Wilayah Penugasan"}
                     </strong>
                   </td>

@@ -3,6 +3,7 @@ import type {
   Facility,
   FacilityCreateRequest,
   FacilityUpdateRequest,
+  HealthCenterProfile,
   StaffAssignment,
   StaffAssignmentCreateRequest,
   StaffAssignmentDetail,
@@ -17,6 +18,13 @@ import type { DatabasePool } from "@anc/database";
 
 interface QueryRow {
   readonly [column: string]: unknown;
+}
+
+interface HealthCenterProfileRow extends QueryRow {
+  readonly id: string;
+  readonly name: string;
+  readonly address: string | null;
+  readonly facility_code: string | null;
 }
 
 interface VillageRow extends QueryRow {
@@ -74,6 +82,7 @@ export interface AssignmentTarget extends StaffAssignment {
 }
 
 export interface OrganizationScopeRepository {
+  findHealthCenterProfile(healthCenterId: string): Promise<HealthCenterProfile | null>;
   listVillages(healthCenterId: string): Promise<readonly Village[]>;
   /** Active villages of the center that the staff user holds an active AREA assignment for. */
   listAssignedVillages(healthCenterId: string, staffUserId: string): Promise<readonly Village[]>;
@@ -126,6 +135,19 @@ export interface OrganizationScopeRepository {
 
 export class PostgresOrganizationScopeRepository implements OrganizationScopeRepository {
   public constructor(private readonly pool: DatabasePool) {}
+
+  public async findHealthCenterProfile(
+    healthCenterId: string,
+  ): Promise<HealthCenterProfile | null> {
+    const result = await this.pool.query<HealthCenterProfileRow>(
+      `SELECT id, name, address, facility_code FROM health_centers WHERE id = $1 LIMIT 1`,
+      [healthCenterId],
+    );
+    const row = result.rows[0];
+    return row === undefined
+      ? null
+      : { id: row.id, name: row.name, address: row.address, facility_code: row.facility_code };
+  }
 
   public async listVillages(healthCenterId: string): Promise<readonly Village[]> {
     const result = await this.pool.query<VillageRow>(

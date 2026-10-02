@@ -40,7 +40,7 @@ describe("registered mothers panel", () => {
     );
 
     expect(markup).toContain("Data Ibu Hamil Terdaftar Tidak Tersedia untuk Super Admin");
-    expect(markup).toContain("Deny by Default");
+    expect(markup).toContain("Akses Dibatasi");
     expect(markup).not.toContain("Pencarian Pasien");
   });
 });

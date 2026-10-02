@@ -20,6 +20,8 @@ export function createTrustedServerConfig(
   return {
     allowNavigation: [url.hostname],
     cleartext: isLocalDevelopment,
+    // Bundled page shown instead of the raw WebView or proxy error when the server is unreachable.
+    errorPath: "error.html",
     url: url.origin,
   };
 }

@@ -12,8 +12,7 @@ export default async function MotherLoginPage(props: {
       <div className="mother-login-card">
         <h1>Masuk ke Portal Ibu Hamil</h1>
         <p className="mother-login-lead">
-          Gunakan nama lengkap dan kode akses yang diberikan oleh bidan atau petugas Puskesmas saat
-          pendaftaran.
+          Masukkan kode akses yang diberikan bidan atau petugas Puskesmas saat pendaftaran.
         </p>
         {reason === "session-expired" && (
           <div className="mother-alert alert-warning">

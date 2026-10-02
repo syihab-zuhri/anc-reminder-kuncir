@@ -10,6 +10,8 @@ import type {
 } from "@anc/contracts";
 import { useEffect, useState } from "react";
 
+import { formatDate, visitStatusLabel, waStatusLabel } from "../lib/display-format";
+
 interface RoleDashboardShellProps {
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
   readonly healthCenterId: string | null;
@@ -301,13 +303,13 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
               </strong>
             </div>
             <div className="metric-card">
-              <span className="metric-label">Jadwal Due (Jatuh Tempo)</span>
+              <span className="metric-label">Waktunya Periksa</span>
               <strong className="metric-value text-due">
                 {puskesmasData.summary.milestones_due_count}
               </strong>
             </div>
             <div className="metric-card">
-              <span className="metric-label">Overdue (Terlewat)</span>
+              <span className="metric-label">Terlewat</span>
               <strong className="metric-value text-overdue">
                 {puskesmasData.summary.milestones_overdue_count}
               </strong>
@@ -315,7 +317,7 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
             {/* Fitur Tambahan: Detail Klinis K1-K6 (Disembunyikan sementara) */}
           </div>
           <div className="queue-section">
-            <h3>Antrean Tindakan Prioritas (Priority Action Queue)</h3>
+            <h3>Antrean Tindakan Prioritas</h3>
             {puskesmasData.priority_action_queue.filter(
               (item) => item.action_type !== "VALIDATION_NEEDED",
             ).length === 0 ? (
@@ -327,8 +329,8 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
                     <tr>
                       <th>Nama Pasien</th>
                       <th>Desa</th>
-                      <th>Milestone</th>
-                      <th>Status Visit</th>
+                      <th>Kunjungan</th>
+                      <th>Status Kunjungan</th>
                       <th>Jatuh Tempo</th>
                       <th>Tindakan Diperlukan</th>
                     </tr>
@@ -349,16 +351,16 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
                             <span
                               className={`badge-status status-${item.visit_status.toLowerCase()}`}
                             >
-                              {item.visit_status}
+                              {visitStatusLabel(item.visit_status)}
                             </span>
                           </td>
-                          <td>{item.due_at ?? "-"}</td>
+                          <td>{formatDate(item.due_at)}</td>
                           <td>
                             <span className="badge-action">
                               {item.action_type === "VALIDATION_NEEDED"
                                 ? "Butuh Validasi Detail K1-K6"
                                 : item.action_type === "WA_FALLBACK_REQUIRED"
-                                  ? "Tindak Lanjut Fallback WA"
+                                  ? "Ingatkan lewat WhatsApp"
                                   : "Konfirmasi Pemeriksaan"}
                             </span>
                           </td>
@@ -381,13 +383,13 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
               <strong className="metric-value">{bidanData.summary.assigned_mothers_count}</strong>
             </div>
             <div className="metric-card">
-              <span className="metric-label">Jadwal Due Periode Ini</span>
+              <span className="metric-label">Waktunya Periksa</span>
               <strong className="metric-value text-due">
                 {bidanData.summary.milestones_due_count}
               </strong>
             </div>
             <div className="metric-card">
-              <span className="metric-label">Milestone Overdue</span>
+              <span className="metric-label">Kunjungan Terlewat</span>
               <strong className="metric-value text-overdue">
                 {bidanData.summary.milestones_overdue_count}
               </strong>
@@ -414,7 +416,7 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
                       <th>Nama Pasien</th>
                       <th>Telepon</th>
                       <th>Desa</th>
-                      <th>Milestone</th>
+                      <th>Kunjungan</th>
                       <th>Status</th>
                       <th>Jatuh Tempo</th>
                     </tr>
@@ -434,10 +436,10 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
                           <span
                             className={`badge-status status-${item.visit_status.toLowerCase()}`}
                           >
-                            {item.visit_status}
+                            {visitStatusLabel(item.visit_status)}
                           </span>
                         </td>
-                        <td>{item.due_at ?? "-"}</td>
+                        <td>{formatDate(item.due_at)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -455,11 +457,11 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
             style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
           >
             <div>
-              <h3>Kegagalan Reminder &amp; Tindak Lanjut</h3>
+              <h3>Pengingat Gagal &amp; Tindak Lanjut</h3>
               {reminderSummary && (
                 <p className="field-hint">
-                  SLA tindak lanjut {reminderSummary.fallback_sla_hours} jam · status pengiriman
-                  WhatsApp selalu <strong>UNKNOWN</strong>.
+                  Batas waktu tindak lanjut {reminderSummary.fallback_sla_hours} jam. Sistem tidak
+                  bisa mengetahui apakah pesan WhatsApp benar-benar terkirim.
                 </p>
               )}
             </div>
@@ -468,7 +470,7 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
               type="button"
               onClick={() => void fetchReminderSummary()}
             >
-              {reminderLoading ? "Memuat..." : "Refresh Reminder"}
+              {reminderLoading ? "Memuat..." : "Muat Ulang"}
             </button>
           </header>
 
@@ -478,7 +480,7 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
             <>
               <div className="metrics-row" style={{ marginTop: "1rem" }}>
                 <div className="metric-card">
-                  <span className="metric-label">Push Menunggu</span>
+                  <span className="metric-label">Notifikasi Menunggu</span>
                   <strong className="metric-value">
                     {reminderSummary.summary.pending_push_attempts_count}
                   </strong>
@@ -490,13 +492,13 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
                   </strong>
                 </div>
                 <div className="metric-card">
-                  <span className="metric-label">Gagal Terminal</span>
+                  <span className="metric-label">Gagal Permanen</span>
                   <strong className="metric-value text-overdue">
                     {reminderSummary.summary.terminal_push_failures_count}
                   </strong>
                 </div>
                 <div className="metric-card">
-                  <span className="metric-label">Melewati SLA / Tidak Terhubung</span>
+                  <span className="metric-label">Lewat Batas Waktu / Tidak Terhubung</span>
                   <strong className="metric-value text-overdue">
                     {reminderSummary.summary.escalated_fallbacks_count +
                       reminderSummary.summary.unreachable_fallbacks_count}
@@ -520,7 +522,7 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
               type="button"
               onClick={() => void fetchReportSummary()}
             >
-              {reportLoading ? "Memuat..." : "Refresh Laporan"}
+              {reportLoading ? "Memuat..." : "Muat Ulang"}
             </button>
           </header>
 
@@ -547,7 +549,7 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
                       </td>
                       <td>{row.total_mothers} orang</td>
                       <td>{row.active_pregnancies} bumil</td>
-                      <td>{row.confirmed_visits} visit</td>
+                      <td>{row.confirmed_visits} kunjungan</td>
                     </tr>
                   ))}
                 </tbody>
@@ -562,7 +564,7 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
         <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h3>Antrean Tindak Lanjut WhatsApp</h3>
           <button className="btn-secondary" type="button" onClick={() => void fetchWaQueue()}>
-            {waLoading ? "Memuat..." : "Refresh Queue"}
+            {waLoading ? "Memuat..." : "Muat Ulang Antrean"}
           </button>
         </header>
 
@@ -581,7 +583,7 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
                 <tr>
                   <th>Nama Ibu Hamil</th>
                   <th>Nomor Telepon</th>
-                  <th>Milestone</th>
+                  <th>Kunjungan</th>
                   <th>Jatuh Tempo</th>
                   <th>Status</th>
                   <th>Aksi Manual</th>
@@ -600,7 +602,7 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
                     <td>{followUpDate(item)}</td>
                     <td>
                       <span className={`badge-status status-${item.status.toLowerCase()}`}>
-                        {item.status}
+                        {waStatusLabel(item.status)}
                       </span>
                     </td>
                     <td>

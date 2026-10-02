@@ -4,6 +4,13 @@ import type { BumilDashboardResponse, MotherMeResponse } from "@anc/contracts";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import {
+  facilityPolicyLabel,
+  formatDate,
+  formatDateRange,
+  villageLabel,
+} from "../../lib/display-format";
+
 type SessionState =
   | { readonly kind: "loading" }
   | { readonly kind: "ready"; readonly identity: MotherMeResponse }
@@ -15,6 +22,7 @@ export function MotherDashboard() {
   const [data, setData] = useState<BumilDashboardResponse | null>(null);
   const [dataError, setDataError] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [pushProblem, setPushProblem] = useState<"denied" | "failed" | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -61,11 +69,12 @@ export function MotherDashboard() {
     }
   }, [router]);
 
-  // Synchronize push notification registration when running inside Capacitor Android app
+  // Inside the Android app, register for push notifications and send the token to the server.
   useEffect(() => {
     if (session.kind !== "ready") return;
 
     let unmounted = false;
+    const listeners: { remove: () => Promise<void> }[] = [];
     async function syncCapacitorPush() {
       try {
         const cap = (
@@ -93,17 +102,35 @@ export function MotherDashboard() {
           if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale") {
             perm = await pn.requestPermissions();
           }
-          if (perm.receive === "granted") {
-            await pn.register();
-            await pn.addListener("registration", async (token) => {
+          if (perm.receive !== "granted") {
+            if (!unmounted) setPushProblem("denied");
+            return;
+          }
+          // Listen before registering: the token event can fire as soon as register() runs.
+          listeners.push(
+            await pn.addListener("registration", (token) => {
               if (unmounted) return;
-              await fetch("/api/mother-proxy/mother/me/devices/android", {
+              void fetch("/api/mother-proxy/mother/me/devices/android", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ push_token: token.value }),
-              });
-            });
+              })
+                .then((res) => {
+                  if (!unmounted) setPushProblem(res.ok ? null : "failed");
+                })
+                .catch(() => {
+                  if (!unmounted) setPushProblem("failed");
+                });
+            }),
+            await pn.addListener("registrationError", () => {
+              if (!unmounted) setPushProblem("failed");
+            }),
+          );
+          if (unmounted) {
+            for (const listener of listeners) void listener.remove();
+            return;
           }
+          await pn.register();
         }
       } catch (err) {
         console.warn("Capacitor push sync skipped:", err);
@@ -113,6 +140,7 @@ export function MotherDashboard() {
     void syncCapacitorPush();
     return () => {
       unmounted = true;
+      for (const listener of listeners) void listener.remove();
     };
   }, [session.kind]);
 
@@ -203,6 +231,17 @@ export function MotherDashboard() {
 
       {data !== null && (
         <>
+          {pushProblem && (
+            <div className="mother-alert alert-warning" role="status">
+              <p>
+                {pushProblem === "denied"
+                  ? "Notifikasi pengingat sedang mati. Izinkan notifikasi untuk aplikasi Pengingat ANC di Pengaturan HP agar jadwal periksa muncul sebagai pengingat."
+                  : "Pengingat lewat notifikasi belum berhasil diaktifkan. Coba buka aplikasi lagi nanti."}{" "}
+                Bidan tetap dapat mengingatkan Anda lewat WhatsApp.
+              </p>
+            </div>
+          )}
+
           {/* Profile & Gestational Age Card */}
           <section className="mother-profile-card">
             <div className="mother-profile-info">
@@ -210,8 +249,8 @@ export function MotherDashboard() {
                 <h3>{data.mother_info.full_name}</h3>
                 <p className="mother-profile-meta">
                   {data.mother_info.village_name
-                    ? `Desa ${data.mother_info.village_name}`
-                    : "Wilayah Puskesmas Kuncir"}
+                    ? villageLabel(data.mother_info.village_name)
+                    : `Wilayah ${data.mother_info.health_center_name ?? "Puskesmas"}`}
                   {data.mother_info.address ? ` · ${data.mother_info.address}` : ""}
                 </p>
               </div>
@@ -251,9 +290,9 @@ export function MotherDashboard() {
                     />
                   </div>
                   <div className="pregnancy-progress-markers" aria-hidden="true">
-                    <span>Trimester 1 (0-13 mg)</span>
-                    <span>Trimester 2 (14-27 mg)</span>
-                    <span>Trimester 3 (28-40 mg)</span>
+                    <span>Trimester 1 (0–12 mg)</span>
+                    <span>Trimester 2 (13–27 mg)</span>
+                    <span>Trimester 3 (28+ mg)</span>
                   </div>
                 </div>
               </div>
@@ -288,7 +327,7 @@ export function MotherDashboard() {
               </div>
               <div className="next-milestone-body">
                 <div>
-                  <h4>Milestone {data.next_milestone.milestone_code}</h4>
+                  <h4>Kunjungan {data.next_milestone.milestone_code}</h4>
                   <p className="milestone-facility">
                     <svg
                       viewBox="0 0 20 20"
@@ -306,19 +345,17 @@ export function MotherDashboard() {
                       />
                     </svg>
                     <span>
-                      Rekomendasi:{" "}
-                      <strong>
-                        {data.next_milestone.recommended_facility_name ?? "TPMB / Bidan"}
-                      </strong>
+                      Rekomendasi: <strong>{nextVisitPlace(data)}</strong>
                     </span>
                   </p>
                 </div>
                 <div className="next-milestone-due">
                   <span>Jatuh Tempo:</span>
                   <strong>
-                    {data.next_milestone.due_at ??
-                      data.next_milestone.expected_due_date ??
-                      "Sesuai Jadwal"}
+                    {formatDate(
+                      data.next_milestone.due_at ?? data.next_milestone.expected_due_date,
+                      "Sesuai jadwal",
+                    )}
                   </strong>
                 </div>
               </div>
@@ -396,10 +433,12 @@ export function MotherDashboard() {
                     <div className="timeline-detail">
                       <p className="timeline-date">
                         {m.occurred_on
-                          ? `Periksa: ${m.occurred_on}`
+                          ? `Periksa: ${formatDate(m.occurred_on)}`
                           : m.due_at
-                            ? `Jatuh Tempo: ${m.due_at}`
-                            : "Sesuai Usia Kehamilan"}
+                            ? `Janji periksa: ${formatDate(m.due_at)}`
+                            : m.target_date_start && m.target_date_end
+                              ? `Jadwal: ${formatDateRange(m.target_date_start, m.target_date_end)}`
+                              : "Sesuai usia kehamilan"}
                       </p>
                       <p className="timeline-facility-tag">
                         <svg
@@ -423,11 +462,7 @@ export function MotherDashboard() {
                           />
                           <circle cx="10" cy="7" r="1.75" />
                         </svg>
-                        <span>
-                          {m.milestone_code === "K1" || m.milestone_code === "K5"
-                            ? "Puskesmas (Dokter)"
-                            : "TPMB / Praktik Mandiri Bidan"}
-                        </span>
+                        <span>{facilityPolicyLabel(m.required_facility_policy, true)}</span>
                       </p>
                     </div>
                   </div>
@@ -489,12 +524,24 @@ export function MotherDashboard() {
 
           <footer className="mother-dashboard-footer">
             <p>
-              Seluruh perhitungan usia kehamilan dan status pemeriksaan dihitung oleh server.
-              Halaman ini tidak menyimpan data lokal.
+              Usia kehamilan dan jadwal periksa dihitung dari tanggal HPHT yang dicatat bidan. Jika
+              ada yang tidak sesuai, sampaikan ke bidan atau petugas Puskesmas.
             </p>
           </footer>
         </>
       )}
     </div>
   );
+}
+
+/** Where the next visit should take place: the Puskesmas by name when it must be there. */
+function nextVisitPlace(data: BumilDashboardResponse): string {
+  const next = data.next_milestone;
+  if (next === null) return "-";
+  const policy = data.milestones.find(
+    (m) => m.milestone_code === next.milestone_code,
+  )?.required_facility_policy;
+  return policy === undefined || policy === "PUSKESMAS_REQUIRED"
+    ? (next.recommended_facility_name ?? "Puskesmas")
+    : facilityPolicyLabel(policy);
 }

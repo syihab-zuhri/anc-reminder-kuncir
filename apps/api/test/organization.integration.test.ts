@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import type { INestApplication } from "@nestjs/common";
-import { staffTokenResponseSchema } from "@anc/contracts";
+import { healthCenterProfileSchema, staffTokenResponseSchema } from "@anc/contracts";
 import type { DatabasePool, DatabaseReadiness } from "@anc/database";
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -223,6 +223,28 @@ describe("organization and assignment API", () => {
       .set("authorization", `Bearer ${bidanToken}`)
       .send({ name: "Tidak Boleh" })
       .expect(403);
+  });
+
+  it("lets every staff member of the center read its printed profile", async () => {
+    organization.healthCenters.push({
+      id: centerId,
+      name: "Puskesmas Contoh",
+      address: "Jl. Contoh No. 1, Kab. Contoh",
+      facility_code: "00000001",
+    });
+    for (const identifier of ["puskesmas", "bidan"]) {
+      const token = await login(identifier);
+      const response = await request(server())
+        .get("/api/v1/staff/health-center")
+        .set("authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(healthCenterProfileSchema.parse(response.body)).toEqual({
+        id: centerId,
+        name: "Puskesmas Contoh",
+        address: "Jl. Contoh No. 1, Kab. Contoh",
+        facility_code: "00000001",
+      });
+    }
   });
 
   it("denies Bidan management and rejects out-of-scope assignment without leakage", async () => {

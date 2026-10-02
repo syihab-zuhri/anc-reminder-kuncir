@@ -164,7 +164,7 @@ export function LoginForm({ notice }: LoginFormProps) {
         <svg viewBox="0 0 20 20" aria-hidden="true">
           <path d="M5.5 8V6a4.5 4.5 0 0 1 9 0v2M4 8h12v9H4z" />
         </svg>
-        Sesi disimpan di cookie aman dan tidak diletakkan di penyimpanan browser.
+        Jangan bagikan kata sandi. Keluar dari akun setelah selesai, terutama di perangkat bersama.
       </p>
     </form>
   );

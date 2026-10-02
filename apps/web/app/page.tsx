@@ -98,9 +98,7 @@ export default function HomePage() {
                     <span>{item.label}</span>
                     <span>{item.note}</span>
                   </dt>
-                  <dd className="metric-value" aria-label={`${item.label}: belum ada data`}>
-                    {item.value}
-                  </dd>
+                  <dd className="metric-value">{item.value}</dd>
                 </div>
               ))}
             </dl>

@@ -40,7 +40,7 @@ describe("content management panel", () => {
     );
 
     expect(markup).toContain("Meja editorial klinis");
-    expect(markup).toContain("Preview selalu menggunakan milestone dan fasilitas sintetis");
+    expect(markup).toContain("Pratinjau selalu memakai kunjungan dan fasilitas contoh");
     expect(markup).not.toContain("WhatsApp terkirim");
   });
 

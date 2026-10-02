@@ -14,6 +14,7 @@ import { MotherAccessCodeModal } from "./mothers/mother-access-code-modal";
 import { MotherArchiveModal } from "./mothers/mother-archive-modal";
 import { MotherDetailModal } from "./mothers/mother-detail-modal";
 import { MotherEditModal } from "./mothers/mother-edit-modal";
+import { formatDate, todayInJakarta, villageLabel } from "../lib/display-format";
 
 interface RegisteredMothersPanelProps {
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
@@ -361,7 +362,7 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Data Ibu Hamil ANC");
 
-    const dateStr = new Date().toISOString().split("T")[0];
+    const dateStr = todayInJakarta();
     XLSX.writeFile(wb, `data-ibu-hamil-anc-${dateStr}.xlsx`);
   }
 
@@ -606,7 +607,7 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
   if (userRole === "SUPER_ADMIN") {
     return (
       <div className="staff-panel-card staff-panel-restricted">
-        <span className="staff-panel-badge badge-warning">Deny by Default</span>
+        <span className="staff-panel-badge badge-warning">Akses Dibatasi</span>
         <h3>Data Ibu Hamil Terdaftar Tidak Tersedia untuk Super Admin</h3>
         <p>
           Sesuai standar privasi data medis (Permenkes 24/2022), Super Admin hanya mengelola
@@ -900,7 +901,7 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
                     <td data-label="Wilayah & Kontak">
                       <div style={{ display: "grid", gap: "0.2rem" }}>
                         <span className="village-badge">
-                          {mother.village_name ? `Desa ${mother.village_name}` : "Tanpa Desa"}
+                          {mother.village_name ? villageLabel(mother.village_name) : "Tanpa Desa"}
                         </span>
                         <small style={{ color: "var(--ink-muted)", fontSize: "0.8rem" }}>
                           {mother.phone_masked}
@@ -936,7 +937,7 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
                             </strong>
                           </div>
                           <small style={{ color: "var(--ink-muted)", fontSize: "0.78rem" }}>
-                            HPHT: <code>{preg.dating_date}</code>
+                            HPHT: <code>{formatDate(preg.dating_date)}</code>
                           </small>
                         </div>
                       ) : (
@@ -982,7 +983,11 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
                         <button
                           type="button"
                           className="btn-secondary"
-                          style={{ padding: "0.45rem 0.75rem", fontSize: "0.78rem" }}
+                          style={{
+                            padding: "0.45rem 0.75rem",
+                            fontSize: "0.78rem",
+                            whiteSpace: "nowrap",
+                          }}
                           onClick={() => void handleOpenDetail(mother)}
                           title="Lihat Linimasa ANC K1–K8"
                         >
@@ -1027,7 +1032,7 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
                                   : "Arsipkan data Ibu Hamil"
                               }
                             >
-                              Hapus Data
+                              Arsipkan
                             </button>
                           </>
                         )}

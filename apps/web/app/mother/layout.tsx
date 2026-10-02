@@ -21,7 +21,7 @@ export default function MotherLayout({ children }: Readonly<{ children: React.Re
       </header>
       <main className="mother-main">{children}</main>
       <footer className="mother-footer">
-        <p>Sistem Pengingat ANC · Posyandu Kuncir</p>
+        <p>Sistem Pengingat Pemeriksaan Kehamilan (ANC)</p>
       </footer>
     </div>
   );

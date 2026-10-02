@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/require-await -- test doubles intentionally satisfy async ports in memory */
 import type {
   Facility,
+  HealthCenterProfile,
   FacilityCreateRequest,
   StaffAssignment,
   StaffAssignmentCreateRequest,
@@ -262,7 +263,14 @@ export class FakeOrganizationScopeRepository implements OrganizationScopeReposit
   public readonly staff: StaffSummary[] = [];
   public readonly assignments: StaffAssignment[] = [];
   public readonly passwordHashes = new Map<string, string>();
+  public readonly healthCenters: HealthCenterProfile[] = [];
   private readonly scopeCenters = new Map<string, string>();
+
+  public async findHealthCenterProfile(
+    healthCenterId: string,
+  ): Promise<HealthCenterProfile | null> {
+    return this.healthCenters.find((item) => item.id === healthCenterId) ?? null;
+  }
 
   public async listVillages(healthCenterId: string): Promise<readonly Village[]> {
     return this.villages.filter((item) => item.health_center_id === healthCenterId);

@@ -24,6 +24,13 @@ Set-Location apps/android/android
 .\gradlew.bat assembleRelease
 ```
 
+## Halaman saat server tidak bisa dijangkau
+
+Bila portal gagal dimuat (internet putus atau server mengembalikan galat seperti 502), aplikasi
+menampilkan `www/error.html` yang ikut dibundel di APK, bukan halaman galat mentah WebView atau
+Cloudflare. Tombol "Coba lagi" memuat ulang halaman yang gagal. Perubahan ini baru berlaku setelah
+`cap:sync` dan APK dibangun ulang.
+
 ## Penandatanganan build release
 
 Kredensial keystore tidak disimpan di repositori. Salin

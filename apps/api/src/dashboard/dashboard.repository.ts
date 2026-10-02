@@ -249,6 +249,7 @@ export class PostgresDashboardRepository implements DashboardRepository {
           full_name: mother.full_name,
           address: mother.address,
           village_name: mother.village_name,
+          health_center_name: mother.health_center_name,
         },
         active_pregnancy: null,
         next_milestone: null,
@@ -281,6 +282,7 @@ export class PostgresDashboardRepository implements DashboardRepository {
         full_name: mother.full_name,
         address: mother.address,
         village_name: mother.village_name,
+        health_center_name: mother.health_center_name,
       },
       active_pregnancy: {
         id: pregnancy.row.pregnancy_id,
@@ -304,7 +306,10 @@ export class PostgresDashboardRepository implements DashboardRepository {
         milestone_code: milestone.code,
         visit_status: milestone.visit_status,
         record_validation_status: milestone.record_validation_status,
+        required_facility_policy: milestone.required_facility_policy,
         due_at: explicitDueDate(milestone, timezone),
+        target_date_start: milestone.target_date_start,
+        target_date_end: milestone.target_date_end,
         occurred_on: occurredOnByMilestone.get(milestone.id) ?? null,
       })),
     };
@@ -404,7 +409,7 @@ function emptyBidanDashboard(): BidanDashboardResponse {
 
 function emptyBumilDashboard(): BumilDashboardResponse {
   return {
-    mother_info: { full_name: "", address: "", village_name: null },
+    mother_info: { full_name: "", address: "", village_name: null, health_center_name: null },
     active_pregnancy: null,
     next_milestone: null,
     milestones: [],

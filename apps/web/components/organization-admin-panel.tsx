@@ -816,7 +816,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
                 strokeLinejoin="round"
               />
             </svg>
-            <span>Akun Staf Bidan</span>
+            <span>Akun Petugas</span>
           </span>
           <span className="admin-subtab-badge">{staffList.length}</span>
         </button>
@@ -874,7 +874,7 @@ export function OrganizationAdminPanel({ userRole }: OrganizationAdminPanelProps
                 strokeLinejoin="round"
               />
             </svg>
-            <span>Aturan Jadwal ANC</span>
+            <span>Jadwal ANC</span>
           </span>
           <span className="admin-subtab-badge">K1–K8</span>
         </button>
