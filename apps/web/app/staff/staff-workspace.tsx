@@ -17,6 +17,7 @@ import { OrganizationAdminPanel } from "@/components/organization-admin-panel";
 import { PuskesmasClinicalRecordPanel } from "@/components/puskesmas-clinical-record-panel";
 import { RegisteredMothersPanel } from "@/components/registered-mothers-panel";
 import { RoleDashboardShell } from "@/components/role-dashboard-shell";
+import { useHealthCenterProfile } from "../../hooks/use-health-center-profile";
 
 type SessionState =
   | { readonly kind: "loading" }
@@ -379,6 +380,20 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
   const [loggingOut, setLoggingOut] = useState(false);
   const [activeTab, setActiveTab] = useState<ModuleTab>(initialTab);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const healthCenter = useHealthCenterProfile(
+    session.kind === "ready" && session.staff.health_center_id !== null,
+  );
+
+  // The open tab lives in the address (?tab=...), so a refresh keeps it and Back returns to the
+  // previous tab instead of leaving the workspace.
+  useEffect(() => {
+    function syncFromLocation(): void {
+      setActiveTab(tabFromLocation() ?? initialTab);
+    }
+    syncFromLocation();
+    window.addEventListener("popstate", syncFromLocation);
+    return () => window.removeEventListener("popstate", syncFromLocation);
+  }, [initialTab]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -462,6 +477,11 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
   const isSecondaryTabActive = secondaryMobileTabs.some((t) => t.id === effectiveTab);
 
   function handleSelectTab(tabId: ModuleTab) {
+    if (tabId !== effectiveTab) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", tabId);
+      window.history.pushState(null, "", url);
+    }
     setActiveTab(tabId);
     setIsMoreMenuOpen(false);
   }
@@ -549,7 +569,7 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
         <header className="staff-workspace-header">
           <div>
             <span className="staff-workspace-date">Ruang kerja / akses terverifikasi</span>
-            <p>Sistem Pengingat ANC Kuncir</p>
+            <p>Sistem Pengingat ANC{healthCenter ? ` · ${healthCenter.name}` : ""}</p>
           </div>
           <div className="staff-identity-chip">
             <span>{staff.display_name.slice(0, 1).toUpperCase()}</span>
@@ -565,7 +585,7 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
             <RoleDashboardShell
               userRole={staff.role}
               healthCenterId={staff.health_center_id}
-              onNavigateTab={setActiveTab}
+              onNavigateTab={handleSelectTab}
             />
 
             <section className="staff-session-card" aria-labelledby="session-title">
@@ -575,7 +595,7 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
                   <p
                     style={{ fontSize: "0.82rem", color: "var(--ink-muted)", margin: "0.2rem 0 0" }}
                   >
-                    Sesi terhubung aman dan terverifikasi oleh server.
+                    Anda masuk dengan akun petugas yang terdaftar.
                   </p>
                 </div>
                 <span
@@ -601,7 +621,7 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
                   <dt>Wilayah Fasilitas</dt>
                   <dd>
                     {staff.health_center_id
-                      ? "Puskesmas Kuncir"
+                      ? (healthCenter?.name ?? "Memuat...")
                       : "Seluruh Wilayah (Puskesmas Induk)"}
                   </dd>
                 </div>
@@ -618,7 +638,7 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
           <RegisteredMothersPanel
             userRole={staff.role}
             healthCenterId={staff.health_center_id}
-            onNavigateTab={setActiveTab}
+            onNavigateTab={handleSelectTab}
           />
         )}
 
@@ -626,7 +646,7 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
           <MotherRegistrationPanel
             userRole={staff.role}
             healthCenterId={staff.health_center_id}
-            onNavigateTab={setActiveTab}
+            onNavigateTab={handleSelectTab}
           />
         )}
 
@@ -763,6 +783,11 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
       )}
     </div>
   );
+}
+
+function tabFromLocation(): ModuleTab | null {
+  const tab = new URLSearchParams(window.location.search).get("tab");
+  return TAB_DEFINITIONS.find((definition) => definition.id === tab)?.id ?? null;
 }
 
 function StaffWorkspaceLoading() {

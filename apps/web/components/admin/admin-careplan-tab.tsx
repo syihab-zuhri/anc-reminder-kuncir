@@ -2,6 +2,8 @@
 
 import type { AncPlanResponse, StaffSummary } from "@anc/contracts";
 
+import { facilityPolicyLabel } from "../../lib/display-format";
+
 interface AdminCarePlanTabProps {
   readonly carePlan: AncPlanResponse | null;
   readonly loadingPlan: boolean;
@@ -99,9 +101,7 @@ export function AdminCarePlanTab({ carePlan, loadingPlan, staffList }: AdminCare
                           fontSize: "0.82rem",
                         }}
                       >
-                        {rule.required_facility_policy === "PUSKESMAS_REQUIRED"
-                          ? "Wajib di Puskesmas"
-                          : "Posyandu, Bidan, atau Puskesmas"}
+                        {facilityPolicyLabel(rule.required_facility_policy)}
                       </span>
                     </td>
                     <td>
@@ -113,9 +113,9 @@ export function AdminCarePlanTab({ carePlan, loadingPlan, staffList }: AdminCare
                         }`}
                         style={{ fontSize: "0.8rem" }}
                       >
-                        {rule.required_facility_policy === "PUSKESMAS_REQUIRED"
-                          ? "USG dan skrining dokter"
-                          : "Pemeriksaan rutin oleh bidan"}
+                        {rule.required_facility_policy === "FLEXIBLE"
+                          ? "Pemeriksaan rutin oleh bidan"
+                          : "Pemeriksaan oleh dokter"}
                       </span>
                     </td>
                   </tr>

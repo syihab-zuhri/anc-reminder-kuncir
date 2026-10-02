@@ -14,15 +14,15 @@ export default function ForbiddenPage() {
         <Link href="/" aria-label="Pengingat ANC, beranda">
           <BrandMark />
         </Link>
-        <span>Authorization boundary / 403</span>
+        <span>Akses ditolak</span>
       </header>
       <section>
         <div>
           <p className="staff-kicker">Di luar kewenangan</p>
           <h1>Akses berhenti di sini.</h1>
           <p>
-            Sesi Anda aktif, tetapi tindakan atau wilayah ini tidak termasuk dalam scope yang
-            diberikan server. Keberadaan data di luar scope tidak ditampilkan.
+            Anda sudah masuk, tetapi tindakan atau wilayah ini tidak termasuk tugas akun Anda. Data
+            di luar wilayah tugas Anda tidak ditampilkan. Hubungi Puskesmas bila Anda perlu akses.
           </p>
           <div className="staff-forbidden-actions">
             <Link href="/staff">Kembali ke ruang kerja</Link>

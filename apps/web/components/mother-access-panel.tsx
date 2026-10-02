@@ -294,7 +294,7 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
                 strokeLinejoin="round"
               />
             </svg>
-            <span>Terbitkan Ulang (Reissue)</span>
+            <span>Terbitkan Ulang</span>
           </span>
         </button>
         <button
@@ -321,7 +321,7 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
                 strokeLinejoin="round"
               />
             </svg>
-            <span>Cabut Akses (Revoke)</span>
+            <span>Cabut Akses</span>
           </span>
         </button>
       </div>
@@ -353,9 +353,7 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
               marginBottom: "0.5rem",
             }}
           >
-            {issuedCodeResult.action_kind === "INITIAL"
-              ? "Penerbitan Pertama"
-              : "Penerbitan Ulang (Reissued)"}
+            {issuedCodeResult.action_kind === "INITIAL" ? "Penerbitan Pertama" : "Penerbitan Ulang"}
           </div>
           <h3 className="admin-form-card-title" style={{ borderBottom: "none", margin: 0 }}>
             Serahkan Kode Akses kepada Ibu Hamil
@@ -395,8 +393,8 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
             }}
           >
             <strong>PERHATIAN KEAMANAN KETAT:</strong> Kode di atas{" "}
-            <u>HANYA DITAMPILKAN SEKALI INI</u>. Server hanya menyimpan verifikasi salted scrypt
-            hash dan tidak dapat menampilkan kembali teks jernih kode ini setelah ditutup.
+            <u>HANYA DITAMPILKAN SEKALI INI</u>. Sistem tidak menyimpan kode aslinya, jadi kode ini
+            tidak bisa ditampilkan lagi setelah jendela ditutup.
           </div>
 
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
@@ -441,8 +439,8 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
         <div className="admin-form-card">
           <h3 className="admin-form-card-title">Penerbitan Kode Akses Pasien</h3>
           <p className="admin-form-card-desc">
-            Terbitkan kode akses mandiri baru berformat Crockford Base32 untuk ibu hamil yang
-            terdaftar.
+            Terbitkan kode akses (16 karakter) agar ibu hamil yang terdaftar bisa membuka Portal Ibu
+            Hamil.
           </p>
 
           <form onSubmit={(e) => void handleIssueCredential(e)}>
@@ -522,7 +520,7 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
       {/* Tab 2: Penerbitan Ulang (Reissue) */}
       {!issuedCodeResult && activeTab === "reissue" && (
         <div className="admin-form-card">
-          <h3 className="admin-form-card-title">Penerbitan Ulang Kode Akses (Reissue)</h3>
+          <h3 className="admin-form-card-title">Penerbitan Ulang Kode Akses</h3>
           <p className="admin-form-card-desc">
             Gunakan menu ini jika kode pasien hilang atau lupa. Kredensial lama otomatis dibatalkan.
           </p>
@@ -607,7 +605,7 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
                 type="submit"
                 disabled={submitting || !selectedMotherId}
               >
-                {submitting ? "Memproses Reissue..." : "Terbitkan Kode Pengganti"}
+                {submitting ? "Memproses..." : "Terbitkan Kode Pengganti"}
               </button>
             </div>
           </form>
@@ -617,7 +615,7 @@ export function MotherAccessPanel({ userRole }: MotherAccessPanelProps) {
       {/* Tab 3: Pencabutan Akses (Revoke) */}
       {!issuedCodeResult && activeTab === "revoke" && (
         <div className="admin-form-card">
-          <h3 className="admin-form-card-title">Pencabutan Akses Pasien (Revoke)</h3>
+          <h3 className="admin-form-card-title">Pencabutan Akses Pasien</h3>
           <p className="admin-form-card-desc">
             Mencabut kredensial dan menghentikan seluruh sesi mandiri ibu hamil secara permanen.
           </p>

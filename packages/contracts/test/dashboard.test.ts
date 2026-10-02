@@ -72,6 +72,7 @@ describe("Dashboard contracts", () => {
         full_name: "Siti Aminah",
         address: "Jl. Kuncir No. 1",
         village_name: "Desa Kuncir",
+        health_center_name: "Puskesmas Contoh",
       },
       active_pregnancy: {
         id: "70000000-0000-4000-8000-000000000001",
@@ -93,7 +94,10 @@ describe("Dashboard contracts", () => {
           milestone_code: "K1",
           visit_status: "CONFIRMED",
           record_validation_status: "VALIDATED",
+          required_facility_policy: "FLEXIBLE",
           due_at: "2026-06-01",
+          target_date_start: "2026-05-29",
+          target_date_end: "2026-07-30",
           occurred_on: "2026-05-28",
         },
       ],

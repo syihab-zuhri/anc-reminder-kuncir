@@ -65,8 +65,7 @@ export function MotherAccessCodeModal({
 
         <div className="staff-modal-body">
           <p style={{ color: "var(--ink-muted)", fontSize: "0.85rem", margin: 0 }}>
-            Pasien dapat masuk ke portal mandiri di <code>/mother/login</code> menggunakan Nama
-            Lengkap dan Kode Akses ini.
+            Ibu masuk ke Portal Ibu Hamil di <code>/mother/login</code> cukup dengan kode akses ini.
           </p>
 
           {accessCodeError && (
@@ -113,8 +112,7 @@ export function MotherAccessCodeModal({
           ) : (
             <div style={{ display: "grid", gap: "0.75rem" }}>
               <p style={{ fontSize: "0.88rem", color: "var(--ink)", margin: 0 }}>
-                Terbitkan kode akses 16-karakter format Crockford Base32 baru untuk{" "}
-                <strong>{mother.full_name}</strong>.
+                Terbitkan kode akses baru (16 karakter) untuk <strong>{mother.full_name}</strong>.
               </p>
             </div>
           )}

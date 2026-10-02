@@ -63,7 +63,8 @@ export function MotherLoginForm() {
             autoComplete="off"
             autoFocus
             inputMode="text"
-            placeholder="Contoh: ANC-CR89-HUYQ-XKBT-FWLP"
+            placeholder="ANC-XXXX-XXXX-XXXX-XXXX"
+            aria-describedby="mother-access-code-hint"
             value={accessCode}
             onChange={(e) => {
               setAccessCode(e.target.value);
@@ -113,9 +114,9 @@ export function MotherLoginForm() {
             )}
           </button>
         </div>
-        <small className="field-help">
-          Cukup masukkan kode akses 16 karakter yang tertera di buku KIA atau diberikan oleh Bidan.
-          Sistem otomatis mengenali identitas Anda.
+        <small id="mother-access-code-hint" className="field-help">
+          Masukkan kode akses 16 karakter dari Bidan, misalnya ANC-CR89-HUYQ-XKBT-FWLP. Huruf besar
+          atau kecil sama saja.
         </small>
       </div>
 

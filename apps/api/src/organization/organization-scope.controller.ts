@@ -23,6 +23,7 @@ import {
   villageCreateRequestSchema,
   villageUpdateRequestSchema,
   type Facility,
+  type HealthCenterProfile,
   type StaffAssignment,
   type StaffAssignmentDetail,
   type StaffSummary,
@@ -42,6 +43,13 @@ const uuidPathSchema = z.string().uuid();
 @UseGuards(StaffAuthGuard)
 export class OrganizationScopeController {
   public constructor(private readonly service: OrganizationScopeService) {}
+
+  @Get("health-center")
+  public getHealthCenterProfile(
+    @Req() request: AuthenticatedRequest,
+  ): Promise<HealthCenterProfile> {
+    return this.service.getHealthCenterProfile(requireActor(request));
+  }
 
   @Get("organization/villages")
   public listVillages(@Req() request: AuthenticatedRequest): Promise<readonly Village[]> {

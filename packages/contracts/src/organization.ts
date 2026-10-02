@@ -55,6 +55,17 @@ export const assignmentRevokeRequestSchema = z
   .strict();
 export type AssignmentRevokeRequest = z.infer<typeof assignmentRevokeRequestSchema>;
 
+/** The staff member's own health center, as printed on records and shown in the workspace. */
+export const healthCenterProfileSchema = z
+  .object({
+    id: z.string().uuid(),
+    name: z.string().min(1),
+    address: z.string().min(1).nullable(),
+    facility_code: z.string().min(1).nullable(),
+  })
+  .strict();
+export type HealthCenterProfile = z.infer<typeof healthCenterProfileSchema>;
+
 export const villageSchema = z
   .object({
     id: z.string().uuid(),

@@ -10,6 +10,7 @@ import type {
 import { useEffect, useState } from "react";
 import { fetchAllMothers } from "../lib/mothers-api";
 import { useToast } from "../lib/toast-context";
+import { todayInJakarta, visitStatusLabel } from "../lib/display-format";
 import { MotherListNotice } from "./mother-list-notice";
 
 interface BidanVisitConfirmationPanelProps {
@@ -46,7 +47,7 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
 
   const [selectedMilestoneId, setSelectedMilestoneId] = useState("");
   const [selectedFacilityId, setSelectedFacilityId] = useState("");
-  const [occurredOn, setOccurredOn] = useState(new Date().toISOString().slice(0, 10));
+  const [occurredOn, setOccurredOn] = useState(todayInJakarta());
 
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(
@@ -169,7 +170,7 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
   if (userRole === "SUPER_ADMIN") {
     return (
       <div className="staff-panel-card staff-panel-restricted">
-        <span className="staff-panel-badge badge-warning">Deny by Default</span>
+        <span className="staff-panel-badge badge-warning">Akses Dibatasi</span>
         <h3>Konfirmasi Kunjungan Tidak Tersedia untuk Super Admin</h3>
         <p>
           Pencatatan konfirmasi kunjungan hanya dilakukan oleh petugas lapangan (Bidan / Puskesmas).
@@ -364,7 +365,7 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
                   <strong style={{ color: "#0f172a" }}>{successData.motherName}</strong>
                 </div>
                 <div>
-                  <small style={{ color: "#64748b", display: "block" }}>Milestone ANC</small>
+                  <small style={{ color: "#64748b", display: "block" }}>Kunjungan ANC</small>
                   <strong style={{ color: "#0f172a" }}>
                     {successData.milestoneCode} ({successData.trimesterLabel})
                   </strong>
@@ -476,7 +477,7 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
               <>
                 {/* 3. Pilih Jadwal Milestone */}
                 <div className="form-group">
-                  <label htmlFor="confirm-milestone">3. Pilih Jadwal Milestone Kunjungan *</label>
+                  <label htmlFor="confirm-milestone">3. Pilih Kunjungan *</label>
                   {loadingMilestones ? (
                     <p className="field-hint">Memuat jadwal milestone...</p>
                   ) : milestones.length === 0 ? (
@@ -489,13 +490,13 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
                       onChange={(e) => handleSelectMilestone(e.target.value)}
                       required
                     >
-                      <option value="">-- Pilih Milestone --</option>
+                      <option value="">-- Pilih Kunjungan --</option>
                       {milestones.map((ms) => {
                         const confirmedByPuskesmas =
                           userRole === "BIDAN" && !BIDAN_CONFIRMABLE_CODES.has(ms.code);
                         return (
                           <option key={ms.id} value={ms.id} disabled={confirmedByPuskesmas}>
-                            {ms.code} ({ms.trimester_label}) - Status: {ms.visit_status}
+                            {ms.code} ({ms.trimester_label}) - {visitStatusLabel(ms.visit_status)}
                             {confirmedByPuskesmas ? " · dikonfirmasi Puskesmas" : ""}
                           </option>
                         );

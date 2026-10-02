@@ -31,6 +31,9 @@ const staffLoginRateLimitMigration = loadModule(
 const motherNikFingerprintMigration = loadModule(
   "../migrations/000021_mother_nik_fingerprint.cjs",
 ) as BaselineMigration;
+const healthCenterProfileMigration = loadModule(
+  "../migrations/000022_health_center_profile.cjs",
+) as BaselineMigration;
 const motherPrivateAccessMigration = loadModule(
   "../migrations/000006_phase_2_mother_private_access.cjs",
 ) as BaselineMigration;
@@ -493,5 +496,27 @@ describe("mother NIK fingerprint migration", () => {
 
     expect(statement).toContain("DROP INDEX IF EXISTS mothers_active_nik_unique_idx");
     expect(statement).toContain("DROP COLUMN IF EXISTS nik_fingerprint");
+  });
+});
+
+describe("health center profile migration", () => {
+  it("adds an optional, non-blank address and facility code", () => {
+    const sql = vi.fn();
+    healthCenterProfileMigration.up({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("ADD COLUMN address text,");
+    expect(statement).toContain("ADD COLUMN facility_code text,");
+    expect(statement).toContain("address IS NULL OR btrim(address) <> ''");
+    expect(statement).toContain("facility_code IS NULL OR btrim(facility_code) <> ''");
+  });
+
+  it("provides an explicit reverse migration", () => {
+    const sql = vi.fn();
+    healthCenterProfileMigration.down({ sql });
+    const statement = sql.mock.calls.map(([value]) => String(value)).join("\n");
+
+    expect(statement).toContain("DROP COLUMN IF EXISTS facility_code");
+    expect(statement).toContain("DROP COLUMN IF EXISTS address");
   });
 });

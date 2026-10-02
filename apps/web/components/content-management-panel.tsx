@@ -31,8 +31,16 @@ type Feedback = { readonly type: "success" | "error"; readonly message: string }
 
 export const SYNTHETIC_PREVIEW_VALUES = {
   milestone_code: "K2",
-  facility_name: "Puskesmas Kuncir — data sintetis",
+  facility_name: "Puskesmas Contoh",
 } as const;
+
+const contentStatusLabels: Readonly<Record<ContentVersionStatus, string>> = {
+  DRAFT: "Draf",
+  REVIEW: "Ditinjau",
+  APPROVED: "Disetujui",
+  PUBLISHED: "Terbit",
+  ARCHIVED: "Diarsipkan",
+};
 
 const lifecycle: readonly ContentVersionStatus[] = [
   "DRAFT",
@@ -293,8 +301,8 @@ function ContentWorkspace() {
           <p className="staff-kicker">Meja editorial klinis</p>
           <h2 id="content-studio-title">Naskah yang aman, jejak persetujuan yang jelas.</h2>
           <p>
-            Susun template tanpa data pasien, tinjau hasil substitusi sintetis, lalu terbitkan
-            melalui lifecycle yang dikendalikan server.
+            Susun template tanpa data pasien, periksa pratinjaunya dengan data contoh, lalu
+            terbitkan setelah melewati tahap tinjau dan persetujuan.
           </p>
         </div>
         <dl className="content-studio-metrics" aria-label="Ringkasan pustaka konten">
@@ -371,7 +379,7 @@ function ContentWorkspace() {
           ) : content === null || content.items.length === 0 ? (
             <div className="content-library-empty">
               <strong>Belum ada template.</strong>
-              <p>Buat template lokal pertama untuk memulai alur review.</p>
+              <p>Buat template lokal pertama untuk memulai proses tinjau.</p>
             </div>
           ) : (
             <div className="content-library-list">
@@ -397,7 +405,7 @@ function ContentWorkspace() {
                       {current?.status ?? "KOSONG"}
                     </span>
                     {template.system_managed ? (
-                      <span className="content-system-label">Baseline sistem</span>
+                      <span className="content-system-label">Bawaan sistem</span>
                     ) : null}
                   </button>
                 );
@@ -410,8 +418,8 @@ function ContentWorkspace() {
           {selectedTemplate === null || selectedVersion === null ? (
             <div className="content-review-empty">
               <span aria-hidden="true">Aa</span>
-              <h3>Pilih template untuk membuka meja review.</h3>
-              <p>Preview selalu menggunakan milestone dan fasilitas sintetis—bukan data pasien.</p>
+              <h3>Pilih template untuk mulai meninjau.</h3>
+              <p>Pratinjau selalu memakai kunjungan dan fasilitas contoh, bukan data pasien.</p>
             </div>
           ) : (
             <>
@@ -424,7 +432,7 @@ function ContentWorkspace() {
                   <h3>{selectedVersion.title}</h3>
                 </div>
                 <span className={`content-status-seal status-${selectedVersion.status}`}>
-                  {selectedVersion.status}
+                  {contentStatusLabels[selectedVersion.status]}
                 </span>
               </header>
 
@@ -620,7 +628,7 @@ function VersionHistory({
             type="button"
             onClick={() => onSelect(version.id)}
           >
-            v{version.version_no} <small>{version.status}</small>
+            v{version.version_no} <small>{contentStatusLabels[version.status]}</small>
           </button>
         ))}
       </div>
@@ -631,14 +639,17 @@ function VersionHistory({
 function LifecycleTrack({ status }: { readonly status: ContentVersionStatus }) {
   const currentIndex = lifecycle.indexOf(status);
   return (
-    <ol className="content-lifecycle-track" aria-label={`Lifecycle saat ini ${status}`}>
+    <ol
+      className="content-lifecycle-track"
+      aria-label={`Tahap saat ini: ${contentStatusLabels[status]}`}
+    >
       {lifecycle.map((step, index) => (
         <li
           key={step}
           className={index === currentIndex ? "is-current" : index < currentIndex ? "is-past" : ""}
         >
           <span>{(index + 1).toString().padStart(2, "0")}</span>
-          <strong>{step}</strong>
+          <strong>{contentStatusLabels[step]}</strong>
         </li>
       ))}
     </ol>
@@ -654,27 +665,27 @@ function SyntheticPreview({
 }) {
   const rendered = renderSyntheticContentPreview(version.body);
   return (
-    <aside className="content-preview-stage" aria-label="Preview sintetis">
+    <aside className="content-preview-stage" aria-label="Pratinjau dengan data contoh">
       <header>
-        <span>02 / PREVIEW</span>
-        <strong>SINTETIS · BUKAN PESAN PASIEN</strong>
+        <span>02 / PRATINJAU</span>
+        <strong>DATA CONTOH · BUKAN PESAN PASIEN</strong>
       </header>
       <div className={`content-device-preview preview-${contentType}`}>
         <div className="content-device-topline">
-          <span>{contentType === "WAME_REMINDER" ? "WA manual" : "ANC Kuncir"}</span>
+          <span>{contentType === "WAME_REMINDER" ? "WhatsApp" : "Pengingat ANC"}</span>
           <span>09:41</span>
         </div>
         <div className="content-preview-message">
           <strong>{version.title}</strong>
           <p>{rendered}</p>
           {contentType === "WAME_REMINDER" ? (
-            <small>Preview link manual · status pengiriman tidak diketahui</small>
+            <small>Pratinjau pesan WhatsApp · status pengiriman tidak diketahui</small>
           ) : null}
         </div>
       </div>
       <p className="content-preview-footnote">
-        Nilai <code>K2</code> dan <code>Puskesmas Kuncir</code> di atas adalah data uji tetap. UI
-        tidak mengambil identitas ibu, nomor telepon, atau detail klinis untuk preview.
+        Nilai <code>K2</code> dan <code>Puskesmas Contoh</code> di atas hanya contoh. Pratinjau
+        tidak memakai identitas ibu, nomor telepon, atau data klinis.
       </p>
     </aside>
   );
@@ -704,7 +715,7 @@ function GovernanceActions({
       <div className="content-governance-note">
         <span aria-hidden="true">◇</span>
         <div>
-          <strong>Baseline sistem bersifat read-only.</strong>
+          <strong>Template bawaan sistem tidak bisa diubah.</strong>
           <p>Buat template lokal untuk mengusulkan naskah pengganti pada fasilitas ini.</p>
         </div>
       </div>

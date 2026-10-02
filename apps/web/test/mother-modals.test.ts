@@ -236,7 +236,8 @@ describe("mother modal sub-components", () => {
     expect(markup).toContain("Siti Fatimah");
     expect(markup).toContain("20 Minggu 3 Hari");
     expect(markup).toContain("Linimasa Paket ANC (K1 – K8)");
-    expect(markup).toContain("CONFIRMED");
+    expect(markup).toContain("Sudah periksa");
+    expect(markup).not.toContain(">CONFIRMED<");
     expect(markup).toContain("Terbitkan Kode Akses");
   });
 

@@ -2,6 +2,15 @@
 
 import type { MotherSummary, PregnancyMilestoneListResponse } from "@anc/contracts";
 
+import { useHealthCenterProfile } from "../../hooks/use-health-center-profile";
+import {
+  facilityPolicyLabel,
+  formatDate,
+  formatDateRange,
+  villageLabel,
+  visitStatusLabel,
+} from "../../lib/display-format";
+
 interface MotherDetailModalProps {
   readonly mother: MotherSummary;
   readonly milestones: PregnancyMilestoneListResponse | null;
@@ -21,14 +30,24 @@ export function MotherDetailModal({
   onOpenAccessCode,
   isPuskesmas,
 }: MotherDetailModalProps) {
+  const healthCenter = useHealthCenterProfile();
+  const healthCenterName = healthCenter?.name ?? "Puskesmas";
   const phoneRaw = mother.phone_number || mother.phone_masked || "-";
   const phoneDisplay = phoneRaw.startsWith("62") ? "0" + phoneRaw.slice(2) : phoneRaw;
 
   const villageDisplay = mother.village_name
-    ? mother.village_name.toLowerCase().startsWith("desa ")
-      ? mother.village_name
-      : `Desa ${mother.village_name}`
-    : "Wilayah Puskesmas Kuncir";
+    ? villageLabel(mother.village_name)
+    : `Wilayah ${healthCenterName}`;
+
+  // Where each visit takes place, from the active ANC plan rules of this pregnancy.
+  const codesWithPolicy = (policy: string): string =>
+    (milestones?.milestones ?? [])
+      .filter((m) => m.required_facility_policy === policy)
+      .map((m) => m.code)
+      .join(", ");
+  const puskesmasCodes = codesWithPolicy("PUSKESMAS_REQUIRED");
+  const ponedCodes = codesWithPolicy("PONED_OR_RS_REQUIRED");
+  const flexibleCodes = codesWithPolicy("FLEXIBLE");
 
   const now = new Date();
   const printDateStr = now.toLocaleDateString("id-ID", {
@@ -92,12 +111,20 @@ export function MotherDetailModal({
           <div className="print-header-content">
             <div className="print-header-logo-group">
               <div className="print-inst-info">
-                <p className="print-inst-sub">PEMERINTAH KABUPATEN NGANJUK · DINAS KESEHATAN</p>
-                <h2 className="print-inst-name">PUSKESMAS KUNCIR</h2>
-                <p className="print-inst-address">
-                  Jl. Raya Kuncir No. 26, Kec. Loceret, Kab. Nganjuk, Jawa Timur 64471 · Kode
-                  Faskes: PKM-KUNCIR
-                </p>
+                <p className="print-inst-sub">SISTEM PENGINGAT PEMERIKSAAN KEHAMILAN (ANC)</p>
+                <h2 className="print-inst-name">{healthCenterName.toUpperCase()}</h2>
+                {(healthCenter?.address || healthCenter?.facility_code) && (
+                  <p className="print-inst-address">
+                    {[
+                      healthCenter.address,
+                      healthCenter.facility_code
+                        ? `Kode Faskes: ${healthCenter.facility_code}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
               </div>
             </div>
             <div className="print-header-right">
@@ -110,8 +137,7 @@ export function MotherDetailModal({
           <div className="print-doc-heading">
             <h1>LEMBAR PEMANTAUAN PEMERIKSAAN KUNJUNGAN IBU HAMIL (K1 – K8)</h1>
             <p>
-              Standar Pelayanan Antenatal Care (ANC) Terpadu Kemenkes RI · Dicetak: {printDateStr},{" "}
-              {printTimeStr} WIB
+              Jadwal 8 kontak ANC (model WHO 2016) · Dicetak: {printDateStr}, {printTimeStr} WIB
             </p>
           </div>
         </div>
@@ -159,7 +185,7 @@ export function MotherDetailModal({
                 <th>Alamat Domisili</th>
                 <td>{mother.address || "-"}</td>
                 <th>HPHT (Hari Pertama Haid)</th>
-                <td>{mother.active_pregnancy?.dating_date ?? "-"}</td>
+                <td>{formatDate(mother.active_pregnancy?.dating_date)}</td>
               </tr>
             </tbody>
           </table>
@@ -206,7 +232,8 @@ export function MotherDetailModal({
                       {mother.active_pregnancy.completed_days} Hari
                     </div>
                     <small style={{ color: "var(--ink-muted)", fontSize: "0.72rem" }}>
-                      Tanggal HPHT: <strong>{mother.active_pregnancy.dating_date}</strong>
+                      Tanggal HPHT:{" "}
+                      <strong>{formatDate(mother.active_pregnancy.dating_date)}</strong>
                     </small>
                   </div>
                   <div style={{ textAlign: "right" }}>
@@ -268,7 +295,7 @@ export function MotherDetailModal({
                     borderRadius: "9999px",
                   }}
                 >
-                  Target: Milestone {milestones.next_milestone_code}
+                  Kunjungan berikutnya: {milestones.next_milestone_code}
                 </span>
               )}
             </div>
@@ -295,15 +322,12 @@ export function MotherDetailModal({
                   const isDue = m.visit_status === "DUE";
                   const isOverdue = m.visit_status === "OVERDUE";
                   const targetDate = m.due_at
-                    ? m.due_at.slice(0, 10)
+                    ? formatDate(m.due_at)
                     : m.target_date_start && m.target_date_end
-                      ? `${m.target_date_start.slice(5)} - ${m.target_date_end.slice(5)}`
-                      : "Sesuai Jadwal";
+                      ? formatDateRange(m.target_date_start, m.target_date_end)
+                      : "Sesuai jadwal";
 
-                  const facility =
-                    m.required_facility_policy === "PUSKESMAS_REQUIRED"
-                      ? "Puskesmas"
-                      : "TPMB / Bidan";
+                  const facility = facilityPolicyLabel(m.required_facility_policy, true);
 
                   return (
                     <div
@@ -337,7 +361,7 @@ export function MotherDetailModal({
                           className={`badge-status status-${m.visit_status.toLowerCase()}`}
                           style={{ fontSize: "0.62rem", padding: "0.1rem 0.35rem" }}
                         >
-                          {m.visit_status}
+                          {visitStatusLabel(m.visit_status)}
                         </span>
                       </div>
 
@@ -394,21 +418,18 @@ export function MotherDetailModal({
                     const statusText = isConfirmed
                       ? "Terkonfirmasi (Hadir)"
                       : isDue
-                        ? "Jatuh Tempo (Waktunya Periksa)"
+                        ? "Waktunya Periksa"
                         : isOverdue
                           ? "Terlewat (Perlu Tindak Lanjut)"
                           : "Akan Datang";
 
-                    const facilityText =
-                      m.required_facility_policy === "PUSKESMAS_REQUIRED"
-                        ? "Puskesmas (Dokter + USG)"
-                        : "TPMB / Praktik Mandiri Bidan";
+                    const facilityText = facilityPolicyLabel(m.required_facility_policy);
 
                     const targetDate = m.due_at
-                      ? m.due_at.slice(0, 10)
+                      ? formatDate(m.due_at)
                       : m.target_date_start && m.target_date_end
-                        ? `${m.target_date_start} s/d ${m.target_date_end}`
-                        : "Sesuai Jadwal";
+                        ? formatDateRange(m.target_date_start, m.target_date_end)
+                        : "Sesuai jadwal";
 
                     return (
                       <tr key={m.code} className={isConfirmed ? "row-confirmed" : ""}>
@@ -440,17 +461,22 @@ export function MotherDetailModal({
             </h3>
             <div className="print-guidance-content">
               <div className="print-guidance-col">
-                <strong>Ketentuan Standar Pemeriksaan ANC Kemenkes RI:</strong>
+                <strong>Jadwal Pemeriksaan Kehamilan (Model ANC WHO 2016):</strong>
                 <ol>
-                  <li>Pemeriksaan Antenatal Care minimal 6 (enam) kali selama masa kehamilan.</li>
                   <li>
-                    Minimal 2 kali diperiksa oleh Dokter di Puskesmas: pada K1 (Trimester 1) dan K5
-                    (Trimester 3) disertai skrining risiko dan pemeriksaan USG dasar.
+                    Pemeriksaan kehamilan dijadwalkan 8 kali (K1–K8): satu kali di trimester 1, dua
+                    kali di trimester 2, dan lima kali di trimester 3.
                   </li>
-                  <li>
-                    Pemeriksaan K2, K3, K4, dan K6 dapat dilaksanakan di Posyandu / Praktik Mandiri
-                    Bidan (TPMB) binaan Puskesmas Kuncir.
-                  </li>
+                  {puskesmasCodes && <li>{puskesmasCodes} dilakukan di Puskesmas.</li>}
+                  {ponedCodes && (
+                    <li>{ponedCodes} dilakukan di fasilitas PONED atau rumah sakit.</li>
+                  )}
+                  {flexibleCodes && (
+                    <li>
+                      {flexibleCodes} dapat dilakukan di Posyandu, Praktik Mandiri Bidan, atau
+                      Puskesmas.
+                    </li>
+                  )}
                 </ol>
               </div>
               <div className="print-guidance-col">
@@ -462,7 +488,7 @@ export function MotherDetailModal({
                     kabur.
                   </li>
                   <li>Demam tinggi, muntah terus-menerus hingga tidak dapat makan/minum.</li>
-                  <li>Gerakan janin berkurang atau tidak terasa sama sekali dalam 12 jam.</li>
+                  <li>Gerakan janin berkurang dibandingkan biasanya, atau tidak terasa.</li>
                 </ul>
               </div>
             </div>
@@ -471,17 +497,11 @@ export function MotherDetailModal({
           {/* ── Print-only Signature & Verification Block ── */}
           <div className="print-footer-block print-only">
             <div className="print-disclaimer">
-              <p>
-                Dokumen rekam pemantauan ini diterbitkan melalui Sistem Informasi Pengingat ANC
-                Posyandu Kuncir.
-              </p>
-              <p>
-                Sah digunakan sebagai bukti pemantauan status periksa ibu hamil lintas fasilitas
-                pelayanan kesehatan binaan Puskesmas Kuncir.
-              </p>
+              <p>Ringkasan pemantauan ini dicetak dari Sistem Pengingat ANC {healthCenterName}.</p>
+              <p>Dokumen ini tidak menggantikan Buku KIA ibu.</p>
             </div>
             <div className="print-signature-box">
-              <p className="print-sig-date">Kuncir, Nganjuk, {printDateStr}</p>
+              <p className="print-sig-date">.................., {printDateStr}</p>
               <p className="print-sig-title">Petugas Pemeriksa / Bidan Desa</p>
               <div style={{ height: "35pt" }} />
               <p className="print-sig-name">

@@ -13,41 +13,41 @@ export const landingCopy = {
     eyebrow: "Ruang kerja kesehatan ibu",
     title: "Setiap kunjungan, terlihat dan tertata.",
     description:
-      "Satu ruang yang tenang untuk membantu Puskesmas, Bidan, dan ibu hamil mengikuti tindak lanjut ANC dari informasi yang disiapkan server.",
+      "Satu ruang yang tenang untuk membantu Puskesmas, Bidan, dan ibu hamil mengikuti jadwal pemeriksaan kehamilan (ANC) bersama.",
     primaryAction: "Lihat ruang akses",
     secondaryAction: "Pelajari alurnya",
     privacyNote: "Data ditampilkan secukupnya, sesuai peran dan wilayah kerja.",
   },
   preview: {
-    eyebrow: "Ringkasan operasional",
-    badge: "Fondasi aktif",
-    title: "Ruang kerja siap disambungkan.",
+    eyebrow: "Jadwal pemeriksaan kehamilan",
+    badge: "Model ANC WHO 2016",
+    title: "Delapan kali periksa selama kehamilan.",
     description:
-      "Data operasional akan tampil setelah layanan autentikasi dan server API tersedia.",
+      "Jadwal dihitung dari tanggal HPHT. Pengingat dikirim selama waktu tiap kunjungan berjalan.",
     items: [
       {
-        label: "Perlu perhatian",
-        value: "—",
-        note: "Menunggu data server",
+        label: "Trimester 1",
+        value: "K1",
+        note: "Sampai usia 12 minggu",
       },
       {
-        label: "Konfirmasi kunjungan",
-        value: "—",
-        note: "Menunggu data server",
+        label: "Trimester 2",
+        value: "K2–K3",
+        note: "Usia 13–27 minggu",
       },
       {
-        label: "Tindak lanjut pengingat",
-        value: "—",
-        note: "Menunggu data server",
+        label: "Trimester 3",
+        value: "K4–K8",
+        note: "Usia 28 minggu sampai persalinan",
       },
     ],
-    footnote: "Tampilan ini tidak menghitung status ANC di perangkat.",
+    footnote: "Pengingat datang lewat aplikasi Android, atau lewat WhatsApp dari Bidan.",
   },
   workflow: {
     eyebrow: "Satu alur, tiga peran",
     title: "Informasi yang tepat untuk tindakan yang tepat.",
     description:
-      "Setiap pengguna mendapat ruang kerja yang ringkas tanpa membawa aturan klinis ke perangkat.",
+      "Setiap pengguna mendapat ruang kerja yang ringkas, sesuai peran dan wilayah tugasnya.",
     roles: [
       {
         index: "01",

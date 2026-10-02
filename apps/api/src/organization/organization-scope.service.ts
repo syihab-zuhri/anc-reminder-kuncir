@@ -5,6 +5,7 @@ import type {
   Facility,
   FacilityCreateRequest,
   FacilityUpdateRequest,
+  HealthCenterProfile,
   StaffAssignment,
   StaffAssignmentCreateRequest,
   StaffAssignmentDetail,
@@ -34,6 +35,20 @@ export class OrganizationScopeService {
     private readonly policy: AuthorizationPolicy,
     private readonly passwordHasher: PasswordHasher,
   ) {}
+
+  /** Any staff member of a health center may read its name, address, and facility code. */
+  public async getHealthCenterProfile(actor: StaffActor): Promise<HealthCenterProfile> {
+    this.policy.assertCapability(actor, "STAFF_SELF_READ");
+    const profile = await this.repository.findHealthCenterProfile(this.requireCenter(actor));
+    if (profile === null) {
+      throw new ApiException({
+        status: HttpStatus.NOT_FOUND,
+        code: "HEALTH_CENTER_NOT_FOUND",
+        message: "Data Puskesmas tidak ditemukan.",
+      });
+    }
+    return profile;
+  }
 
   public async listVillages(actor: StaffActor): Promise<readonly Village[]> {
     if (this.policy.hasCapability(actor, "ORGANIZATION_MANAGE")) {

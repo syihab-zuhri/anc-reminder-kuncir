@@ -17,13 +17,17 @@ export class PostgresReportsRepository implements ReportsRepository {
     now: Date,
   ): Promise<OrganizationReportResponse> {
     const totalMothersRes = await this.pool.query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM mothers WHERE health_center_id = $1`,
+      // Archived records (registered by mistake or moved away) are not part of the caseload.
+      `SELECT COUNT(*) as count FROM mothers WHERE health_center_id = $1 AND archived_at IS NULL`,
       [healthCenterId],
     );
     const totalMothers = parseInt(totalMothersRes.rows[0]?.count ?? "0", 10);
 
     const totalActiveRes = await this.pool.query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM pregnancies WHERE health_center_id = $1 AND status = 'ACTIVE'`,
+      `SELECT COUNT(*) as count
+       FROM pregnancies p
+       JOIN mothers m ON m.id = p.mother_id AND m.archived_at IS NULL
+       WHERE p.health_center_id = $1 AND p.status = 'ACTIVE'`,
       [healthCenterId],
     );
     const totalActive = parseInt(totalActiveRes.rows[0]?.count ?? "0", 10);
@@ -32,6 +36,7 @@ export class PostgresReportsRepository implements ReportsRepository {
       `SELECT COUNT(*) as count 
        FROM pregnancy_milestones pm
        JOIN pregnancies p ON pm.pregnancy_id = p.id
+       JOIN mothers m ON m.id = p.mother_id AND m.archived_at IS NULL
        WHERE p.health_center_id = $1 AND pm.visit_status = 'CONFIRMED'`,
       [healthCenterId],
     );
@@ -42,6 +47,7 @@ export class PostgresReportsRepository implements ReportsRepository {
        FROM k1_k6_records kr
        JOIN pregnancy_milestones pm ON kr.milestone_id = pm.id
        JOIN pregnancies p ON pm.pregnancy_id = p.id
+       JOIN mothers m ON m.id = p.mother_id AND m.archived_at IS NULL
        WHERE p.health_center_id = $1 AND kr.status = 'VALIDATED'`,
       [healthCenterId],
     );
@@ -63,7 +69,8 @@ export class PostgresReportsRepository implements ReportsRepository {
          COUNT(DISTINCT CASE WHEN pm.visit_status = 'CONFIRMED' THEN pm.id END) as confirmed_visits,
          COUNT(DISTINCT CASE WHEN kr.status = 'VALIDATED' THEN kr.id END) as validated_records
        FROM villages v
-       LEFT JOIN mothers m ON m.village_id = v.id AND m.health_center_id = $1
+       LEFT JOIN mothers m
+         ON m.village_id = v.id AND m.health_center_id = $1 AND m.archived_at IS NULL
        LEFT JOIN pregnancies p ON p.mother_id = m.id
        LEFT JOIN pregnancy_milestones pm ON pm.pregnancy_id = p.id
        LEFT JOIN k1_k6_records kr ON kr.milestone_id = pm.id

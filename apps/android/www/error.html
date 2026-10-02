@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Pengingat ANC</title>
+    <style>
+      :root {
+        color: #193a34;
+        background: #f4f0e8;
+        font-family: sans-serif;
+      }
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+      }
+      main {
+        max-width: 30rem;
+        padding: 2rem;
+        text-align: center;
+      }
+      h1 {
+        font-size: 1.5rem;
+      }
+      p {
+        line-height: 1.6;
+        color: #52645f;
+      }
+      button {
+        margin-top: 0.5rem;
+        padding: 0.8rem 1.6rem;
+        font: inherit;
+        font-weight: 600;
+        color: #ffffff;
+        background: #193a34;
+        border: none;
+        border-radius: 999px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Pengingat ANC belum bisa dibuka</h1>
+      <p>
+        Periksa sambungan internet HP Anda. Jika internet lancar, server mungkin sedang sibuk; coba
+        lagi beberapa menit lagi.
+      </p>
+      <p>Jadwal periksa Anda tetap tersimpan dan tidak hilang.</p>
+      <button id="retry" type="button">Coba lagi</button>
+    </main>
+    <script src="error.js"></script>
+  </body>
+</html>

@@ -8,6 +8,8 @@ import type {
 } from "@anc/contracts";
 import { useEffect, useState } from "react";
 
+import { visitStatusLabel } from "../lib/display-format";
+
 interface PuskesmasClinicalRecordPanelProps {
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
 }
@@ -290,7 +292,7 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
           </strong>
         </div>
         <div className="metric-card">
-          <span className="metric-label">Milestone Terpilih</span>
+          <span className="metric-label">Kunjungan Terpilih</span>
           <strong className="metric-value" style={{ color: "var(--ink)" }}>
             {currentMilestone ? currentMilestone.code : "—"}
           </strong>
@@ -389,7 +391,7 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
               ) : (
                 milestones.map((ms) => (
                   <option key={ms.id} value={ms.id}>
-                    {ms.code} ({ms.trimester_label}) - Status Kunjungan: {ms.visit_status}
+                    {ms.code} ({ms.trimester_label}) - {visitStatusLabel(ms.visit_status)}
                   </option>
                 ))
               )}
@@ -418,7 +420,7 @@ export function PuskesmasClinicalRecordPanel({ userRole }: PuskesmasClinicalReco
               }}
             >
               <div>
-                <strong style={{ fontSize: "0.95rem" }}>Milestone: {currentMilestone?.code}</strong>
+                <strong style={{ fontSize: "0.95rem" }}>Kunjungan: {currentMilestone?.code}</strong>
                 <span
                   style={{
                     marginLeft: "0.6rem",

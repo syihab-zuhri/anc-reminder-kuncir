@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 
+import { useHealthCenterProfile } from "../hooks/use-health-center-profile";
+
 export function AboutAppPanel() {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const healthCenter = useHealthCenterProfile();
 
   return (
     <div className="staff-panel-card" style={{ display: "grid", gap: "2rem" }}>
@@ -13,8 +16,8 @@ export function AboutAppPanel() {
           <span className="staff-kicker">Informasi Pengembang &amp; Hak Cipta</span>
           <h2>Tentang Aplikasi Pengingat ANC</h2>
           <p className="field-hint">
-            Sistem informasi dan pengingat jadwal pemeriksaan kehamilan terintegrasi Posyandu dan
-            Puskesmas Kuncir.
+            Sistem informasi dan pengingat jadwal pemeriksaan kehamilan untuk Posyandu dan{" "}
+            {healthCenter?.name ?? "Puskesmas"}.
           </p>
         </div>
       </header>
@@ -581,9 +584,10 @@ export function AboutAppPanel() {
           <p
             style={{ margin: 0, fontSize: "0.88rem", lineHeight: 1.55, color: "var(--ink-muted)" }}
           >
-            Sistem mengadopsi 8 tahapan kunjungan antenatal terpadu Kemenkes RI dengan jadwal
-            otomatis berbasis tanggal HPHT (*server-driven dating*), verifikasi dokter di fasilitas
-            Puskesmas, serta konfirmasi kehadiran posyandu oleh Bidan Desa.
+            Sistem memakai 8 kontak pemeriksaan kehamilan (K1–K8) sesuai model ANC WHO 2016: satu
+            kali di trimester 1, dua kali di trimester 2, dan lima kali di trimester 3. Jadwal
+            dihitung otomatis dari tanggal HPHT. Sebagian kunjungan dilakukan di Puskesmas, dan
+            kunjungan di Posyandu dikonfirmasi oleh Bidan Desa.
           </p>
         </div>
       </div>
@@ -622,7 +626,7 @@ export function AboutAppPanel() {
               Enkripsi Kredensial Pasien
             </strong>
             <small style={{ color: "var(--ink-muted)", fontSize: "0.78rem" }}>
-              Salted Scrypt Key Derivation &amp; 16-Char Crockford Base32
+              Kode acak 16 karakter, disimpan hanya sebagai hash scrypt
             </small>
           </div>
 
@@ -802,7 +806,7 @@ export function AboutAppPanel() {
                 textAlign: "center",
               }}
             >
-              INSTITUT TEKNOLOGI MOJOSARI &middot; Desa Kuncir, Kec. Loceret, Kab. Nganjuk
+              INSTITUT TEKNOLOGI MOJOSARI &middot; KKN Desa Kuncir, Kec. Ngetos, Kab. Nganjuk
             </div>
           </div>
         </div>

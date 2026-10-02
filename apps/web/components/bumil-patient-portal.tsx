@@ -6,10 +6,20 @@ import type {
   PregnancyMilestoneResponse,
 } from "@anc/contracts";
 import { useEffect, useState } from "react";
+
+import { useHealthCenterProfile } from "../hooks/use-health-center-profile";
+import {
+  facilityPolicyLabel,
+  formatDate,
+  formatDateRange,
+  villageLabel,
+} from "../lib/display-format";
+
 import { fetchAllMothers } from "../lib/mothers-api";
 import { MotherListNotice } from "./mother-list-notice";
 
 export function BumilPatientPortal() {
+  const healthCenter = useHealthCenterProfile();
   const [mothers, setMothers] = useState<readonly MotherSummary[]>([]);
   const [mothersTruncated, setMothersTruncated] = useState(false);
   const [selectedMotherId, setSelectedMotherId] = useState<string>("");
@@ -187,8 +197,8 @@ export function BumilPatientPortal() {
                 <h3>{activeMother.full_name}</h3>
                 <p className="mother-profile-meta">
                   {activeMother.village_name
-                    ? `Desa ${activeMother.village_name}`
-                    : "Wilayah Puskesmas Kuncir"}
+                    ? villageLabel(activeMother.village_name)
+                    : `Wilayah ${healthCenter?.name ?? "Puskesmas"}`}
                   {activeMother.address ? ` · ${activeMother.address}` : ""}
                   {activeMother.phone_masked ? ` · ${activeMother.phone_masked}` : ""}
                 </p>
@@ -228,9 +238,9 @@ export function BumilPatientPortal() {
                   />
                 </div>
                 <div className="pregnancy-progress-markers" aria-hidden="true">
-                  <span>Trimester 1 (0-13 mg)</span>
-                  <span>Trimester 2 (14-27 mg)</span>
-                  <span>Trimester 3 (28-40 mg)</span>
+                  <span>Trimester 1 (0–12 mg)</span>
+                  <span>Trimester 2 (13–27 mg)</span>
+                  <span>Trimester 3 (28+ mg)</span>
                 </div>
               </div>
             </div>
@@ -263,7 +273,7 @@ export function BumilPatientPortal() {
               <div className="next-milestone-body">
                 <div>
                   <h4>
-                    Milestone {nextMilestone.code} ({nextMilestone.trimester_label})
+                    Kunjungan {nextMilestone.code} ({nextMilestone.trimester_label})
                   </h4>
                   <p className="milestone-facility">
                     <svg
@@ -285,8 +295,8 @@ export function BumilPatientPortal() {
                       Rekomendasi Tempat:{" "}
                       <strong>
                         {nextMilestone.required_facility_policy === "PUSKESMAS_REQUIRED"
-                          ? "Puskesmas Kuncir (Skrining Dokter Terpadu)"
-                          : "TPMB / Praktik Mandiri Bidan Setempat"}
+                          ? `${healthCenter?.name ?? "Puskesmas"} (pemeriksaan dokter)`
+                          : facilityPolicyLabel(nextMilestone.required_facility_policy)}
                       </strong>
                     </span>
                   </p>
@@ -295,8 +305,11 @@ export function BumilPatientPortal() {
                   <span>Rentang Jadwal:</span>
                   <strong>
                     {nextMilestone.target_date_start && nextMilestone.target_date_end
-                      ? `${nextMilestone.target_date_start} s/d ${nextMilestone.target_date_end}`
-                      : "Sesuai Jadwal"}
+                      ? formatDateRange(
+                          nextMilestone.target_date_start,
+                          nextMilestone.target_date_end,
+                        )
+                      : "Sesuai jadwal"}
                   </strong>
                 </div>
               </div>
@@ -372,12 +385,12 @@ export function BumilPatientPortal() {
                     <div className="timeline-detail">
                       <p className="timeline-date">
                         {isConfirmed
-                          ? "Sudah Terverifikasi"
+                          ? "Sudah terverifikasi"
                           : m.due_at
-                            ? `Jatuh Tempo: ${m.due_at.slice(0, 10)}`
+                            ? `Janji periksa: ${formatDate(m.due_at)}`
                             : m.target_date_start && m.target_date_end
-                              ? `${m.target_date_start} s/d ${m.target_date_end}`
-                              : "Sesuai Usia Kehamilan"}
+                              ? `Jadwal: ${formatDateRange(m.target_date_start, m.target_date_end)}`
+                              : "Sesuai usia kehamilan"}
                       </p>
                       <p className="timeline-facility-tag">
                         <svg
@@ -401,11 +414,7 @@ export function BumilPatientPortal() {
                           />
                           <circle cx="10" cy="7" r="1.75" />
                         </svg>
-                        <span>
-                          {m.code === "K1" || m.code === "K5"
-                            ? "Puskesmas (Dokter)"
-                            : "TPMB / Bidan"}
-                        </span>
+                        <span>{facilityPolicyLabel(m.required_facility_policy, true)}</span>
                       </p>
                     </div>
                   </div>
@@ -434,8 +443,8 @@ export function BumilPatientPortal() {
 
       <footer className="thin-client-footer" style={{ marginTop: "2rem" }}>
         <p>
-          Seluruh perhitungan usia kehamilan, tanggal rekomendasi, dan status K1–K8 dihitung
-          otomatis oleh server.
+          Usia kehamilan, jadwal, dan status K1–K8 dihitung otomatis dari tanggal HPHT yang
+          tercatat.
         </p>
       </footer>
     </div>
