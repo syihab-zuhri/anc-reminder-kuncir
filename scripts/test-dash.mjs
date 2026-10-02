@@ -25,7 +25,7 @@ async function testDash() {
 
     const bidanRes = await pool.query(
       "SELECT id, health_center_id, role, display_name, status FROM staff_users WHERE login_identifier = $1",
-      ["bidan.kuncir"],
+      ["bidan.contoh"],
     );
     const bidanUser = bidanRes.rows[0];
     const bidanActor = {

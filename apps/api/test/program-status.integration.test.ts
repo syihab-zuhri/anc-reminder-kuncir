@@ -77,7 +77,7 @@ describe("TASK-P2-014 Program Status Integration Tests", () => {
         role: "PUSKESMAS",
         healthCenterId: centerId,
       },
-      { id: bidanId, identifier: "bidan.kuncir", role: "BIDAN", healthCenterId: centerId },
+      { id: bidanId, identifier: "bidan.contoh", role: "BIDAN", healthCenterId: centerId },
       { id: superAdminId, identifier: "super.admin", role: "SUPER_ADMIN", healthCenterId: null },
       {
         id: crossCenterId,
@@ -188,7 +188,7 @@ describe("TASK-P2-014 Program Status Integration Tests", () => {
 
     it("denies rule draft creation for Bidan, Super Admin, and non-owner Puskesmas", async () => {
       const server = app.getHttpServer() as Parameters<typeof request>[0];
-      for (const identifier of ["bidan.kuncir", "super.admin", "staff.puskesmas"]) {
+      for (const identifier of ["bidan.contoh", "super.admin", "staff.puskesmas"]) {
         const token = await loginAs(identifier);
         const res = await request(server)
           .post("/api/v1/program-rules/versions")
@@ -419,7 +419,7 @@ describe("TASK-P2-014 Program Status Integration Tests", () => {
     });
 
     it("allows scoped Bidan reads but denies unreachable mothers and out-of-scope pregnancies", async () => {
-      const token = await loginAs("bidan.kuncir");
+      const token = await loginAs("bidan.contoh");
       const server = app.getHttpServer() as Parameters<typeof request>[0];
 
       const allowed = await request(server)
@@ -466,7 +466,7 @@ describe("TASK-P2-014 Program Status Integration Tests", () => {
       await createApproveActivateRule(ownerToken);
       const server = app.getHttpServer() as Parameters<typeof request>[0];
 
-      for (const identifier of ["bidan.kuncir", "super.admin", "cross.puskesmas"]) {
+      for (const identifier of ["bidan.contoh", "super.admin", "cross.puskesmas"]) {
         const token = await loginAs(identifier);
         const res = await request(server)
           .post(`/api/v1/pregnancies/${pregnancyId}/program-status/recalculate`)
@@ -560,7 +560,7 @@ describe("TASK-P2-014 Program Status Integration Tests", () => {
     });
 
     it("denies history access to Bidan", async () => {
-      const token = await loginAs("bidan.kuncir");
+      const token = await loginAs("bidan.contoh");
       const server = app.getHttpServer() as Parameters<typeof request>[0];
       const res = await request(server)
         .get(`/api/v1/pregnancies/${pregnancyId}/program-status/history`)

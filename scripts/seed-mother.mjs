@@ -66,11 +66,12 @@ async function seedMother() {
         ],
       );
 
-      // Consent record for reminder
+      // Consent records, as a registration stores them: reminders and health data processing
       await client.query(
         `INSERT INTO consent_records (id, mother_id, purpose, status, source, recorded_at)
-         VALUES ($1, $2, 'REMINDER', 'GRANTED', 'STAFF_REGISTRATION', now())`,
-        [crypto.randomUUID(), motherId],
+         VALUES ($1, $2, 'REMINDER', 'GRANTED', 'STAFF_REGISTRATION', now()),
+                ($3, $2, 'DATA_PROCESSING', 'GRANTED', 'STAFF_REGISTRATION', now())`,
+        [crypto.randomUUID(), motherId, crypto.randomUUID()],
       );
 
       // Pregnancy: HPHT = 18 weeks ago (e.g. 2026-04-10)
@@ -112,7 +113,7 @@ async function seedMother() {
       .digest("hex");
 
     const staffRes = await client.query("SELECT id FROM staff_users WHERE login_identifier = $1", [
-      "puskesmas.kuncir",
+      "puskesmas.contoh",
     ]);
     const authorId = staffRes.rows[0].id;
 

@@ -12,6 +12,8 @@ import {
 } from "@nestjs/common";
 import {
   motherDetailResponseSchema,
+  motherExportQuerySchema,
+  motherExportResponseSchema,
   motherListQuerySchema,
   motherListResponseSchema,
   motherRegistrationRequestSchema,
@@ -20,6 +22,7 @@ import {
   type MotherRecordArchiveResponse,
   type MotherRecordUpdateResponse,
   type MotherDetailResponse,
+  type MotherExportResponse,
   type MotherListResponse,
   type MotherRegistrationResponse,
 } from "@anc/contracts";
@@ -88,6 +91,18 @@ export class MotherRegistryController {
     const parsedQuery = parseRequest(motherListQuerySchema, query);
     const result = await this.queriesService.getMothers(actor, parsedQuery);
     return parseRequest(motherListResponseSchema, result);
+  }
+
+  // Declared before ":id" so "export" is never parsed as a mother id.
+  @Get("export")
+  public async exportMothers(
+    @Req() request: AuthenticatedRequest,
+    @Query() query: unknown,
+  ): Promise<MotherExportResponse> {
+    const actor = requireActor(request);
+    const parsedQuery = parseRequest(motherExportQuerySchema, query);
+    const result = await this.queriesService.exportMothers(actor, parsedQuery);
+    return parseRequest(motherExportResponseSchema, result);
   }
 
   @Get(":id")

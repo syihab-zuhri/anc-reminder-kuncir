@@ -19,6 +19,11 @@ const allowedMetadataKeys = new Set([
   "wa_actions_expired",
   "content_type",
   "template_id",
+  "row_count",
+  "truncated",
+  "village_id",
+  "pregnancy_status",
+  "search_applied",
 ]);
 const forbiddenKeyPattern = /(nik|password|secret|token|phone|address|clinical|diagnosis)/i;
 

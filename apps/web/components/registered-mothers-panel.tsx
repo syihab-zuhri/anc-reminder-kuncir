@@ -2,6 +2,7 @@
 
 import type {
   MotherAccessCredentialIssueResponse,
+  MotherExportResponse,
   MotherSummary,
   PregnancyMilestoneListResponse,
   Village,
@@ -47,6 +48,7 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // Filter & Search State
   const [searchQuery, setSearchQuery] = useState("");
@@ -251,13 +253,51 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
     }
   }, [userRole, selectedVillageId, selectedStatus, searchQuery]);
 
-  // Handle Export to CSV
-  function handleExportCSV(): void {
-    if (mothers.length === 0) {
-      toast.info("Tidak ada data untuk diekspor");
-      return;
-    }
+  // Export every mother matching the current filters, not only the rows loaded on screen. The
+  // server records each export in the audit log because the file holds addresses and phones.
+  async function handleExportExcel(): Promise<void> {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (searchQuery.trim()) params.set("search", searchQuery.trim());
+      if (selectedVillageId.trim()) params.set("village_id", selectedVillageId.trim());
+      if (selectedStatus !== "ALL") params.set("pregnancy_status", selectedStatus);
 
+      const res = await fetch(`/api/staff-proxy/mothers/export?${params.toString()}`);
+      const data = (await res.json().catch(() => null)) as
+        MotherExportResponse | { error?: { message?: string } } | null;
+      if (!res.ok || data === null || !("items" in data)) {
+        toast.error(
+          (data as { error?: { message?: string } } | null)?.error?.message ??
+            "Gagal mengambil data untuk diekspor.",
+          "Ekspor Gagal",
+        );
+        return;
+      }
+      if (data.items.length === 0) {
+        toast.info("Tidak ada data untuk diekspor");
+        return;
+      }
+
+      writeMothersWorkbook(data.items);
+      if (data.truncated) {
+        toast.warning(
+          `Hanya ${data.max_rows.toLocaleString("id-ID")} data terbaru yang diekspor. Persempit filter untuk mengekspor sisanya.`,
+          "Ekspor Sebagian",
+        );
+      } else {
+        toast.success(
+          `${data.items.length.toLocaleString("id-ID")} data ibu hamil diekspor ke file Excel.`,
+        );
+      }
+    } catch {
+      toast.error("Terjadi gangguan koneksi saat mengekspor data.", "Koneksi Terputus");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function writeMothersWorkbook(rows: readonly MotherSummary[]): void {
     const headers = [
       "No",
       "Nama Lengkap",
@@ -271,7 +311,7 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
       "Tanggal Terdaftar",
     ];
 
-    const data = mothers.map((m, idx) => {
+    const data = rows.map((m, idx) => {
       const villageName =
         m.village_name ?? villages.find((v) => v.id === m.village_id)?.name ?? "-";
       const pregnancy = m.active_pregnancy;
@@ -323,7 +363,6 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
 
     const dateStr = new Date().toISOString().split("T")[0];
     XLSX.writeFile(wb, `data-ibu-hamil-anc-${dateStr}.xlsx`);
-    toast.success("Data ibu hamil berhasil diekspor ke format Excel (.xlsx)");
   }
 
   // Handle Search Submission
@@ -787,7 +826,8 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
           <button
             type="button"
             className="btn-secondary"
-            onClick={handleExportCSV}
+            onClick={() => void handleExportExcel()}
+            disabled={exporting}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -796,7 +836,7 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
               padding: "0.25rem 0.65rem",
               minHeight: "30px",
             }}
-            title="Unduh seluruh data tabel ke file CSV/Excel"
+            title="Unduh semua data ibu hamil yang sesuai filter ke file Excel"
           >
             <svg
               viewBox="0 0 24 24"
@@ -811,7 +851,7 @@ export function RegisteredMothersPanel({ userRole, onNavigateTab }: RegisteredMo
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            <span>Ekspor Excel</span>
+            <span>{exporting ? "Menyiapkan file..." : "Ekspor Excel"}</span>
           </button>
         </div>
       )}

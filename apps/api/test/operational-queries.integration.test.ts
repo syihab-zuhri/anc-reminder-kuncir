@@ -3,6 +3,7 @@ import "reflect-metadata";
 import type { INestApplication } from "@nestjs/common";
 import {
   motherDetailResponseSchema,
+  motherExportResponseSchema,
   motherListResponseSchema,
   operationalMilestonesResponseSchema,
   type MotherDetailResponse,
@@ -167,6 +168,7 @@ class FakeOperationalQueriesRepository implements OperationalQueriesRepository {
 describe("Operational queries API", () => {
   let app: INestApplication | undefined;
   let queriesRepo: FakeOperationalQueriesRepository;
+  let audit: FakeAuditRepository;
 
   function server(): Parameters<typeof request>[0] {
     if (!app) throw new Error("Application not initialized");
@@ -181,7 +183,7 @@ describe("Operational queries API", () => {
     staffRepo.seedUser({
       id: puskesmasId,
       healthCenterId: centerId,
-      loginIdentifier: "puskesmas.kuncir",
+      loginIdentifier: "puskesmas.contoh",
       displayName: "Operator Puskesmas",
       role: "PUSKESMAS",
       status: "ACTIVE",
@@ -191,7 +193,7 @@ describe("Operational queries API", () => {
     staffRepo.seedUser({
       id: bidanId,
       healthCenterId: centerId,
-      loginIdentifier: "bidan.kuncir",
+      loginIdentifier: "bidan.contoh",
       displayName: "Bidan Kuncir",
       role: "BIDAN",
       status: "ACTIVE",
@@ -209,6 +211,7 @@ describe("Operational queries API", () => {
       assignments: [],
     });
 
+    audit = new FakeAuditRepository();
     queriesRepo = new FakeOperationalQueriesRepository();
     queriesRepo.mothers = [
       {
@@ -311,7 +314,7 @@ describe("Operational queries API", () => {
       organizationScopeRepository: new FakeOrganizationScopeRepository(),
       scopedAccessRepository: new FakeScopedAccessRepository(),
       operationalQueriesRepository: queriesRepo,
-      auditRepository: new FakeAuditRepository(),
+      auditRepository: audit,
       clock: () => now,
     });
     await app.init();
@@ -332,7 +335,7 @@ describe("Operational queries API", () => {
   }
 
   it("allows Puskesmas to query all mothers in health center", async () => {
-    const token = await login("puskesmas.kuncir");
+    const token = await login("puskesmas.contoh");
 
     const response = await request(server())
       .get("/api/v1/mothers")
@@ -349,7 +352,7 @@ describe("Operational queries API", () => {
   });
 
   it("limits Bidan to assigned area mothers", async () => {
-    const token = await login("bidan.kuncir");
+    const token = await login("bidan.contoh");
 
     const response = await request(server())
       .get("/api/v1/mothers")
@@ -362,7 +365,7 @@ describe("Operational queries API", () => {
   });
 
   it("supports search, village, and pregnancy status filters", async () => {
-    const token = await login("puskesmas.kuncir");
+    const token = await login("puskesmas.contoh");
 
     // Search filter
     const searchRes = await request(server())
@@ -393,8 +396,61 @@ describe("Operational queries API", () => {
     expect(activeParsed.items).toHaveLength(2);
   });
 
+  it("exports every matching mother beyond one page and audits the export", async () => {
+    const token = await login("puskesmas.contoh");
+    for (let index = 0; index < 150; index += 1) {
+      queriesRepo.mothers.push({
+        ...queriesRepo.mothers[2]!,
+        id: `61000000-0000-4000-8000-${index.toString().padStart(12, "0")}`,
+        full_name: `Ibu Sintetis ${index.toString()}`,
+      });
+    }
+
+    const response = await request(server())
+      .get("/api/v1/mothers/export")
+      .set("authorization", `Bearer ${token}`)
+      .query({ village_id: villageSukaId })
+      .expect(200);
+    const parsed = motherExportResponseSchema.parse(response.body);
+    // 2 seeded + 150 synthetic mothers in Desa Suka: more than the 100-row page limit.
+    expect(parsed.items).toHaveLength(152);
+    expect(parsed.truncated).toBe(false);
+
+    const exported = audit.events.filter((event) => event.action === "MOTHER_LIST_EXPORTED");
+    expect(exported).toHaveLength(1);
+    expect(exported[0]).toMatchObject({
+      actorType: "STAFF",
+      actorId: puskesmasId,
+      resourceType: "MOTHER_LIST",
+      metadata: {
+        row_count: 152,
+        truncated: false,
+        village_id: villageSukaId,
+        pregnancy_status: null,
+        search_applied: false,
+      },
+    });
+  });
+
+  it("keeps the export inside the Bidan's area and rejects paging parameters", async () => {
+    const token = await login("bidan.contoh");
+    const response = await request(server())
+      .get("/api/v1/mothers/export")
+      .set("authorization", `Bearer ${token}`)
+      .expect(200);
+    expect(motherExportResponseSchema.parse(response.body).items.map((m) => m.id)).toEqual([
+      mother1Id,
+    ]);
+
+    await request(server())
+      .get("/api/v1/mothers/export")
+      .set("authorization", `Bearer ${token}`)
+      .query({ limit: "10" })
+      .expect(400);
+  });
+
   it("returns single mother detail for scoped staff", async () => {
-    const token = await login("puskesmas.kuncir");
+    const token = await login("puskesmas.contoh");
 
     const response = await request(server())
       .get(`/api/v1/mothers/${mother1Id}`)
@@ -405,7 +461,7 @@ describe("Operational queries API", () => {
   });
 
   it("returns 404 for Bidan querying unassigned mother without leaking existence", async () => {
-    const token = await login("bidan.kuncir");
+    const token = await login("bidan.contoh");
 
     await request(server())
       .get(`/api/v1/mothers/${mother2Id}`)
@@ -414,7 +470,7 @@ describe("Operational queries API", () => {
   });
 
   it("returns scoped operational milestones list with status and milestone filters", async () => {
-    const token = await login("puskesmas.kuncir");
+    const token = await login("puskesmas.contoh");
 
     const response = await request(server())
       .get("/api/v1/operational/milestones")

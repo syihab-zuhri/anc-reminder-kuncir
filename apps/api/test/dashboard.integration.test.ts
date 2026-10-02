@@ -180,7 +180,7 @@ describe("Dashboard API", () => {
     staffRepo.seedUser({
       id: puskesmasId,
       healthCenterId: centerId,
-      loginIdentifier: "puskesmas.kuncir",
+      loginIdentifier: "puskesmas.contoh",
       displayName: "Operator Puskesmas",
       role: "PUSKESMAS",
       status: "ACTIVE",
@@ -190,7 +190,7 @@ describe("Dashboard API", () => {
     staffRepo.seedUser({
       id: bidanId,
       healthCenterId: centerId,
-      loginIdentifier: "bidan.kuncir",
+      loginIdentifier: "bidan.contoh",
       displayName: "Bidan Kuncir",
       role: "BIDAN",
       status: "ACTIVE",
@@ -239,7 +239,7 @@ describe("Dashboard API", () => {
   }
 
   it("returns Puskesmas dashboard for Puskesmas staff", async () => {
-    const token = await staffLogin("puskesmas.kuncir");
+    const token = await staffLogin("puskesmas.contoh");
 
     const response = await request(server())
       .get("/api/v1/dashboard/puskesmas")
@@ -252,7 +252,7 @@ describe("Dashboard API", () => {
   });
 
   it("returns Bidan dashboard for Bidan staff", async () => {
-    const token = await staffLogin("bidan.kuncir");
+    const token = await staffLogin("bidan.contoh");
 
     const response = await request(server())
       .get("/api/v1/dashboard/bidan")
@@ -265,8 +265,8 @@ describe("Dashboard API", () => {
   });
 
   it("denies cross-role access between Puskesmas and Bidan dashboards", async () => {
-    const puskesmasToken = await staffLogin("puskesmas.kuncir");
-    const bidanToken = await staffLogin("bidan.kuncir");
+    const puskesmasToken = await staffLogin("puskesmas.contoh");
+    const bidanToken = await staffLogin("bidan.contoh");
 
     // Puskesmas accessing Bidan dashboard -> 403
     await request(server())

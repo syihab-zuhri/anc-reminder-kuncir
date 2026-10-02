@@ -77,7 +77,7 @@ export function LoginForm({ notice }: LoginFormProps) {
           maxLength={120}
           required
           disabled={pending}
-          placeholder="contoh: bidan.kuncir"
+          placeholder="ID login dari Puskesmas"
         />
       </div>
 

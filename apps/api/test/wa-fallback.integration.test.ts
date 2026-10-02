@@ -169,7 +169,7 @@ describe("wa-fallback integration (API-WA-001..003)", () => {
     staffAuthRepo.seedUser({
       id: bidanId,
       healthCenterId: centerId,
-      loginIdentifier: "bidan.kuncir",
+      loginIdentifier: "bidan.contoh",
       passwordHash: await hasher.hash(password),
       displayName: "Bidan Desa Kuncir",
       role: "BIDAN",
@@ -208,7 +208,7 @@ describe("wa-fallback integration (API-WA-001..003)", () => {
 
     const bidanLogin = await request(server)
       .post("/api/v1/staff/auth/login")
-      .send({ login_identifier: "bidan.kuncir", password });
+      .send({ login_identifier: "bidan.contoh", password });
     bidanToken = (bidanLogin.body as { access_token: string }).access_token;
 
     const superAdminLogin = await request(server)

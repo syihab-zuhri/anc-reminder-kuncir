@@ -189,8 +189,13 @@ describe("mother private access API", () => {
       message: "Terlalu banyak permintaan. Silakan coba lagi.",
       details: { retry_after_seconds: 900 },
     });
-    expect(audit.events.filter((event) => event.action === "MOTHER_ACCESS_THROTTLED")).toHaveLength(
-      1,
+    // Blocked attempts are unbounded, so they must not grow the append-only audit log.
+    const auditCountWhileBlocked = audit.events.length;
+    await validate("Siti Aminah", oldCode, 429);
+    await validate("Nama Salah", oldCode, 429);
+    expect(audit.events).toHaveLength(auditCountWhileBlocked);
+    expect(audit.events.filter((event) => event.action === "MOTHER_ACCESS_FAILURE")).toHaveLength(
+      5,
     );
 
     currentTime = new Date(now.getTime() + 16 * 60_000);

@@ -53,7 +53,7 @@ describe("staff authentication API", () => {
       role: "PUSKESMAS",
       status: "ACTIVE",
       passwordHash,
-      loginIdentifier: "puskesmas.kuncir",
+      loginIdentifier: "puskesmas.contoh",
       assignments: [],
     });
     authRepository.seedUser({
@@ -63,7 +63,7 @@ describe("staff authentication API", () => {
       role: "BIDAN",
       status: "ACTIVE",
       passwordHash,
-      loginIdentifier: "bidan.kuncir",
+      loginIdentifier: "bidan.contoh",
       assignments: [],
     });
     authRepository.seedUser({
@@ -102,7 +102,7 @@ describe("staff authentication API", () => {
   });
 
   it("logs in, exposes only safe staff identity, rotates tokens, and logs out", async () => {
-    const first = await login("PUSKESMAS.KUNCIR", password);
+    const first = await login("PUSKESMAS.CONTOH", password);
     const me = await request(server())
       .get("/api/v1/staff/me")
       .set("authorization", `Bearer ${first.access_token}`)
@@ -146,7 +146,7 @@ describe("staff authentication API", () => {
 
   it("returns one generic failure shape for unknown and wrong-password logins", async () => {
     const unknown = await loginFrom("203.0.113.1", "not.registered", "wrong", 401);
-    const wrong = await loginFrom("203.0.113.1", "bidan.kuncir", "wrong", 401);
+    const wrong = await loginFrom("203.0.113.1", "bidan.contoh", "wrong", 401);
 
     expect(canonicalErrorEnvelopeSchema.parse(body(unknown)).error.code).toBe(
       "INVALID_CREDENTIALS",
@@ -157,10 +157,10 @@ describe("staff authentication API", () => {
   it("blocks one account from one address without locking the operator out elsewhere", async () => {
     await startApp({ staffLoginMaxFailures: 3 });
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      await loginFrom("203.0.113.1", "bidan.kuncir", "wrong", 401);
+      await loginFrom("203.0.113.1", "bidan.contoh", "wrong", 401);
     }
 
-    const blocked = await loginFrom("203.0.113.1", "bidan.kuncir", password, 429);
+    const blocked = await loginFrom("203.0.113.1", "bidan.contoh", password, 429);
     expect(errorShape(blocked)).toEqual({
       code: "RATE_LIMITED",
       message: "Terlalu banyak percobaan masuk. Silakan coba lagi nanti.",
@@ -168,8 +168,8 @@ describe("staff authentication API", () => {
     });
 
     // The real operator, on another address, is unaffected; so are other accounts here.
-    await loginFrom("198.51.100.7", "bidan.kuncir", password, 200);
-    await loginFrom("203.0.113.1", "puskesmas.kuncir", password, 200);
+    await loginFrom("198.51.100.7", "bidan.contoh", password, 200);
+    await loginFrom("203.0.113.1", "puskesmas.contoh", password, 200);
   }, 30_000);
 
   it("throttles unknown identifiers exactly like real ones", async () => {
@@ -183,13 +183,13 @@ describe("staff authentication API", () => {
 
   it("stops a distributed guess against one account across many addresses", async () => {
     await startApp({ staffLoginMaxFailures: 2, staffLoginAccountMaxFailures: 4 });
-    await loginFrom("203.0.113.1", "bidan.kuncir", "wrong", 401);
-    await loginFrom("203.0.113.1", "bidan.kuncir", "wrong", 401);
-    await loginFrom("203.0.113.2", "bidan.kuncir", "wrong", 401);
-    await loginFrom("203.0.113.2", "bidan.kuncir", "wrong", 401);
+    await loginFrom("203.0.113.1", "bidan.contoh", "wrong", 401);
+    await loginFrom("203.0.113.1", "bidan.contoh", "wrong", 401);
+    await loginFrom("203.0.113.2", "bidan.contoh", "wrong", 401);
+    await loginFrom("203.0.113.2", "bidan.contoh", "wrong", 401);
 
-    await loginFrom("203.0.113.3", "bidan.kuncir", password, 429);
-    await loginFrom("203.0.113.3", "puskesmas.kuncir", password, 200);
+    await loginFrom("203.0.113.3", "bidan.contoh", password, 429);
+    await loginFrom("203.0.113.3", "puskesmas.contoh", password, 200);
   }, 30_000);
 
   it("stops one address spraying different accounts", async () => {
@@ -198,51 +198,51 @@ describe("staff authentication API", () => {
     await loginFrom("203.0.113.1", "akun.dua", "wrong", 401);
     await loginFrom("203.0.113.1", "akun.tiga", "wrong", 401);
 
-    await loginFrom("203.0.113.1", "puskesmas.kuncir", password, 429);
-    await loginFrom("198.51.100.7", "puskesmas.kuncir", password, 200);
+    await loginFrom("203.0.113.1", "puskesmas.contoh", password, 429);
+    await loginFrom("198.51.100.7", "puskesmas.contoh", password, 200);
   }, 30_000);
 
   it("cannot be evaded by rotating spoofed left-most X-Forwarded-For entries", async () => {
     await startApp({ staffLoginMaxFailures: 3 });
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      await loginFrom(`${attempt.toString()}.66.66.66, 203.0.113.1`, "bidan.kuncir", "wrong", 401);
+      await loginFrom(`${attempt.toString()}.66.66.66, 203.0.113.1`, "bidan.contoh", "wrong", 401);
     }
 
-    await loginFrom("77.66.66.66, 203.0.113.1", "bidan.kuncir", password, 429);
+    await loginFrom("77.66.66.66, 203.0.113.1", "bidan.contoh", password, 429);
   }, 30_000);
 
   it("forgives the account-from-address counter after a successful login", async () => {
     await startApp({ staffLoginMaxFailures: 3 });
-    await loginFrom("203.0.113.1", "bidan.kuncir", "wrong", 401);
-    await loginFrom("203.0.113.1", "bidan.kuncir", "wrong", 401);
-    await loginFrom("203.0.113.1", "bidan.kuncir", password, 200);
-    await loginFrom("203.0.113.1", "bidan.kuncir", "wrong", 401);
-    await loginFrom("203.0.113.1", "bidan.kuncir", "wrong", 401);
+    await loginFrom("203.0.113.1", "bidan.contoh", "wrong", 401);
+    await loginFrom("203.0.113.1", "bidan.contoh", "wrong", 401);
+    await loginFrom("203.0.113.1", "bidan.contoh", password, 200);
+    await loginFrom("203.0.113.1", "bidan.contoh", "wrong", 401);
+    await loginFrom("203.0.113.1", "bidan.contoh", "wrong", 401);
 
     // Without the reset these four failures would already have blocked the pair at three.
-    await loginFrom("203.0.113.1", "bidan.kuncir", password, 200);
+    await loginFrom("203.0.113.1", "bidan.contoh", password, 200);
   }, 30_000);
 
   it("recovers once the block window has passed", async () => {
     await startApp({ staffLoginMaxFailures: 2 });
-    await loginFrom("203.0.113.1", "bidan.kuncir", "wrong", 401);
-    await loginFrom("203.0.113.1", "bidan.kuncir", "wrong", 401);
-    await loginFrom("203.0.113.1", "bidan.kuncir", password, 429);
+    await loginFrom("203.0.113.1", "bidan.contoh", "wrong", 401);
+    await loginFrom("203.0.113.1", "bidan.contoh", "wrong", 401);
+    await loginFrom("203.0.113.1", "bidan.contoh", password, 429);
 
     currentTime = new Date(now.getTime() + 16 * 60_000);
 
-    await loginFrom("203.0.113.1", "bidan.kuncir", password, 200);
+    await loginFrom("203.0.113.1", "bidan.contoh", password, 200);
   }, 30_000);
 
   it("refuses a blocked source before hashing the password and without growing the audit log", async () => {
     await startApp({ staffLoginMaxFailures: 2 });
-    await loginFrom("203.0.113.1", "bidan.kuncir", "wrong", 401);
-    await loginFrom("203.0.113.1", "bidan.kuncir", "wrong", 401);
+    await loginFrom("203.0.113.1", "bidan.contoh", "wrong", 401);
+    await loginFrom("203.0.113.1", "bidan.contoh", "wrong", 401);
     const failuresBefore = auditActions("STAFF_LOGIN_FAILURE");
     const verify = vi.spyOn(PasswordHasher.prototype, "verifyOrDummy");
 
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      await loginFrom("203.0.113.1", "bidan.kuncir", password, 429);
+      await loginFrom("203.0.113.1", "bidan.contoh", password, 429);
     }
 
     expect(verify).not.toHaveBeenCalled();
@@ -254,13 +254,13 @@ describe("staff authentication API", () => {
     if (bidan === undefined) throw new Error("Seed user missing");
     bidan.lockedUntil = new Date(now.getTime() + 10 * 60_000);
 
-    const locked = await loginFrom("203.0.113.1", "bidan.kuncir", password, 401);
+    const locked = await loginFrom("203.0.113.1", "bidan.contoh", password, 401);
 
     expect(canonicalErrorEnvelopeSchema.parse(body(locked)).error.code).toBe("INVALID_CREDENTIALS");
   });
 
   it("stores only hashes in the throttle buckets", async () => {
-    await loginFrom("203.0.113.1", "bidan.kuncir", "wrong", 401);
+    await loginFrom("203.0.113.1", "bidan.contoh", "wrong", 401);
 
     const keys = [...authRepository.loginRateLimits.keys()];
     expect(keys).toHaveLength(3);
@@ -270,7 +270,7 @@ describe("staff authentication API", () => {
   });
 
   it("allows only one winner when the same refresh token is used concurrently", async () => {
-    const tokens = await login("bidan.kuncir", password);
+    const tokens = await login("bidan.contoh", password);
     const attempts = await Promise.all([
       request(server())
         .post("/api/v1/staff/auth/refresh")
@@ -283,8 +283,8 @@ describe("staff authentication API", () => {
   });
 
   it("allows scoped Puskesmas revocation while denying Bidan and cross-center targets", async () => {
-    const puskesmas = await login("puskesmas.kuncir", password);
-    const bidan = await login("bidan.kuncir", password);
+    const puskesmas = await login("puskesmas.contoh", password);
+    const bidan = await login("bidan.contoh", password);
     await login("bidan.luar", password);
     const bidanSession = authRepository.sessionForUser(bidanId);
     const outsiderSession = authRepository.sessionForUser(outsiderId);

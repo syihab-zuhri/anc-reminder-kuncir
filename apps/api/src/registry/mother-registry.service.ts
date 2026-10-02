@@ -60,6 +60,7 @@ export class MotherRegistryService {
     const phoneNormalized = normalizeIndonesianPhone(input.phone_number);
     const nikCiphertext = this.nikCipher.encrypt(input.nik);
     const nikFingerprint = this.nikCipher.fingerprint(input.nik);
+    const dataProcessingConsentId = randomUUID();
 
     try {
       const outcome = await this.idempotency.runForStaff(
@@ -84,6 +85,7 @@ export class MotherRegistryService {
             motherId: randomUUID(),
             pregnancyId: randomUUID(),
             consentId: randomUUID(),
+            dataProcessingConsentId,
             healthCenterId,
             fullName: input.full_name,
             nikCiphertext,
@@ -114,7 +116,7 @@ export class MotherRegistryService {
       );
 
       if (!outcome.replayed) {
-        await this.recordRegistrationAudit(actor, outcome.value);
+        await this.recordRegistrationAudit(actor, outcome.value, dataProcessingConsentId);
       }
       return outcome.value;
     } catch (error) {
@@ -270,6 +272,7 @@ export class MotherRegistryService {
   private async recordRegistrationAudit(
     actor: StaffActor,
     registration: MotherRegistrationResponse,
+    dataProcessingConsentId: string,
   ): Promise<void> {
     await this.audit.record({
       actorType: "STAFF",
@@ -291,6 +294,13 @@ export class MotherRegistryService {
       action: "CONSENT_RECORDED",
       resourceType: "CONSENT_RECORD",
       resourceId: registration.consent.id,
+    });
+    await this.audit.record({
+      actorType: "STAFF",
+      actorId: actor.staffUserId,
+      action: "CONSENT_RECORDED",
+      resourceType: "CONSENT_RECORD",
+      resourceId: dataProcessingConsentId,
     });
   }
 }

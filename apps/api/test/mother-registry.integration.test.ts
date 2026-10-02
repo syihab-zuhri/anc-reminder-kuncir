@@ -135,6 +135,12 @@ describe("mother registry API", () => {
     expect(audit.events.map((event) => event.action)).toEqual(
       expect.arrayContaining(["MOTHER_REGISTERED", "PREGNANCY_CREATED", "CONSENT_RECORDED"]),
     );
+    // Both consents are recorded: the reminder one and the health-data processing one.
+    expect(
+      audit.events
+        .filter((event) => event.action === "CONSENT_RECORDED")
+        .map((event) => event.resourceId),
+    ).toEqual([response.consent.id, created?.dataProcessingConsentId]);
 
     const replay = await request(server())
       .post("/api/v1/mothers")
@@ -143,7 +149,26 @@ describe("mother registry API", () => {
       .expect(201);
     expect(replay.body).toEqual(first.body);
     expect(registry.created).toHaveLength(1);
-    expect(audit.events).toHaveLength(4);
+    expect(audit.events).toHaveLength(5);
+  });
+
+  it("refuses registration without explicit consent to process health data", async () => {
+    const token = await login("puskesmas");
+    for (const consent of [
+      { notification_allowed: true },
+      { notification_allowed: true, data_processing_allowed: false },
+    ]) {
+      const response = await request(server())
+        .post("/api/v1/mothers")
+        .set("authorization", `Bearer ${token}`)
+        .send({ ...registrationRequest(), consent })
+        .expect(400);
+      expect(errorCode(response)).toBe("VALIDATION_ERROR");
+      expect(JSON.stringify(response.body)).toContain(
+        "Persetujuan pemrosesan data kesehatan wajib diberikan.",
+      );
+    }
+    expect(registry.created).toHaveLength(0);
   });
 
   it("refuses to register the same NIK twice in one health center, even with a new idempotency key", async () => {
@@ -344,7 +369,7 @@ function registrationRequest(): MotherRegistrationRequest {
     address: "Jl. Mawar Nomor 1, Kuncir",
     phone_number: "0812-3456-789",
     pregnancy_start_date: "2026-05-01",
-    consent: { notification_allowed: true },
+    consent: { notification_allowed: true, data_processing_allowed: true },
   };
 }
 

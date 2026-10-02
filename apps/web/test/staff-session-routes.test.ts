@@ -41,7 +41,7 @@ describe("staff session BFF routes", () => {
       new Request("http://localhost:3000/api/staff-session/login", {
         method: "POST",
         headers: { "content-type": "application/json", origin: "http://localhost:3000" },
-        body: JSON.stringify({ login_identifier: "puskesmas.kuncir", password: "Rahasia2026A" }),
+        body: JSON.stringify({ login_identifier: "puskesmas.contoh", password: "Rahasia2026A" }),
       }),
     );
 
@@ -71,7 +71,7 @@ describe("staff session BFF routes", () => {
           "cf-connecting-ip": "203.0.113.9",
           "x-forwarded-for": "6.6.6.6, 203.0.113.9",
         },
-        body: JSON.stringify({ login_identifier: "puskesmas.kuncir", password: "Rahasia2026A" }),
+        body: JSON.stringify({ login_identifier: "puskesmas.contoh", password: "Rahasia2026A" }),
       }),
     );
 
@@ -90,7 +90,7 @@ describe("staff session BFF routes", () => {
       new Request("http://localhost:3000/api/staff-session/login", {
         method: "POST",
         headers: { "content-type": "application/json", origin: "http://localhost:3000" },
-        body: JSON.stringify({ login_identifier: "puskesmas.kuncir", password: "Rahasia2026A" }),
+        body: JSON.stringify({ login_identifier: "puskesmas.contoh", password: "Rahasia2026A" }),
       }),
     );
 
@@ -106,7 +106,7 @@ describe("staff session BFF routes", () => {
       new Request("http://localhost:3000/api/staff-session/login", {
         method: "POST",
         headers: { "content-type": "application/json", origin: "https://attacker.example" },
-        body: JSON.stringify({ login_identifier: "puskesmas.kuncir", password: "Rahasia2026A" }),
+        body: JSON.stringify({ login_identifier: "puskesmas.contoh", password: "Rahasia2026A" }),
       }),
     );
 

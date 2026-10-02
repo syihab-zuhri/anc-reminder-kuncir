@@ -47,13 +47,13 @@ describe("shared domain contracts", () => {
   it("validates staff auth and organization mutations without accepting extra fields", () => {
     expect(
       staffLoginRequestSchema.safeParse({
-        login_identifier: "bidan.kuncir",
+        login_identifier: "bidan.contoh",
         password: "candidate-password",
       }).success,
     ).toBe(true);
     expect(
       staffLoginRequestSchema.safeParse({
-        login_identifier: "bidan.kuncir",
+        login_identifier: "bidan.contoh",
         password: "candidate-password",
         role: "PUSKESMAS",
       }).success,
@@ -114,7 +114,7 @@ describe("shared domain contracts", () => {
         address: "Jl. Mawar Nomor 1",
         phone_number: "0812-3456-789",
         pregnancy_start_date: "2026-05-01",
-        consent: { notification_allowed: true },
+        consent: { notification_allowed: true, data_processing_allowed: true },
       }).success,
     ).toBe(true);
     expect(
@@ -125,9 +125,26 @@ describe("shared domain contracts", () => {
         address: "Jl. Mawar Nomor 1",
         phone_number: "0812-3456-789",
         pregnancy_start_date: "2026-02-30",
-        consent: { notification_allowed: true },
+        consent: { notification_allowed: true, data_processing_allowed: true },
       }).success,
     ).toBe(false);
+    // Registration needs explicit consent to process health data; a missing or refused one fails.
+    for (const consent of [
+      { notification_allowed: true },
+      { notification_allowed: true, data_processing_allowed: false },
+    ]) {
+      expect(
+        motherRegistrationRequestSchema.safeParse({
+          idempotency_key: "8b26fdbd-6306-4bbf-9765-3fd620888e7c",
+          full_name: "Siti Aminah",
+          nik: "3273014901010001",
+          address: "Jl. Mawar Nomor 1",
+          phone_number: "0812-3456-789",
+          pregnancy_start_date: "2026-05-01",
+          consent,
+        }).success,
+      ).toBe(false);
+    }
     expect(
       pregnancyCreateRequestSchema.safeParse({
         idempotency_key: "8b26fdbd-6306-4bbf-9765-3fd620888e7c",

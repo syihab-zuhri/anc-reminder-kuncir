@@ -86,13 +86,13 @@ describe("reminder operations integration (API-REM-007)", () => {
     for (const user of [
       {
         id: puskesmasId,
-        loginIdentifier: "puskesmas.kuncir",
+        loginIdentifier: "puskesmas.contoh",
         displayName: "Puskesmas Kuncir",
         role: "PUSKESMAS" as const,
       },
       {
         id: bidanId,
-        loginIdentifier: "bidan.kuncir",
+        loginIdentifier: "bidan.contoh",
         displayName: "Bidan Kuncir",
         role: "BIDAN" as const,
       },
@@ -122,8 +122,8 @@ describe("reminder operations integration (API-REM-007)", () => {
     await app.init();
 
     const server = app.getHttpServer() as Parameters<typeof request>[0];
-    puskesmasToken = await login(server, "puskesmas.kuncir");
-    bidanToken = await login(server, "bidan.kuncir");
+    puskesmasToken = await login(server, "puskesmas.contoh");
+    bidanToken = await login(server, "bidan.contoh");
   });
 
   afterEach(async () => {

@@ -139,9 +139,9 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
     );
   }, [availableFacilities, facilitySearchQuery]);
 
-  // Consents
-  const [consentReminder, setConsentReminder] = useState(true);
-  const [consentDataProcessing, setConsentDataProcessing] = useState(true);
+  // Consents start unticked: the mother has to agree explicitly (UU PDP).
+  const [consentReminder, setConsentReminder] = useState(false);
+  const [consentDataProcessing, setConsentDataProcessing] = useState(false);
 
   // Status & Feedback
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -215,8 +215,9 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
     if (!/^\d{4}-\d{2}-\d{2}$/u.test(pregnancyStartDate.trim())) {
       errs.pregnancyStartDate = "Tanggal awal kehamilan harus dalam format YYYY-MM-DD.";
     }
-    if (!consentReminder && !consentDataProcessing) {
-      errs.consent = "Minimal satu persetujuan (pemberitahuan atau pemrosesan) harus dipilih.";
+    if (!consentDataProcessing) {
+      errs.consent =
+        "Persetujuan pemrosesan data kesehatan wajib dicentang. Tanpa persetujuan ini, ibu tidak dapat didaftarkan.";
     }
 
     setFieldErrors(errs);
@@ -258,6 +259,7 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
           pregnancy_start_date: pregnancyStartDate.trim(),
           consent: {
             notification_allowed: consentReminder,
+            data_processing_allowed: consentDataProcessing,
           },
         }),
       });
@@ -356,8 +358,8 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
     setAddress("");
     setPhoneNumber("");
     setPregnancyStartDate("");
-    setConsentReminder(true);
-    setConsentDataProcessing(true);
+    setConsentReminder(false);
+    setConsentDataProcessing(false);
     setValidationError(null);
     setFieldErrors({});
     setSuccessResult(null);
@@ -843,9 +845,10 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
               margin: "1rem 0",
             }}
           >
-            <legend style={{ fontWeight: 600, padding: "0 0.5rem" }}>
-              Persetujuan Layanan (Consent Purposes)
-            </legend>
+            <legend style={{ fontWeight: 600, padding: "0 0.5rem" }}>Persetujuan Ibu Hamil</legend>
+            <p className="field-hint" style={{ margin: "0 0 0.75rem" }}>
+              Bacakan kedua pernyataan ini kepada ibu, lalu centang hanya yang ia setujui.
+            </p>
             <label
               className="checkbox-label"
               style={{
@@ -857,16 +860,17 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
             >
               <input
                 type="checkbox"
-                checked={consentReminder}
+                checked={consentDataProcessing}
+                aria-invalid={fieldErrors.consent ? true : undefined}
                 onChange={(e) => {
-                  setConsentReminder(e.target.checked);
+                  setConsentDataProcessing(e.target.checked);
                   if (fieldErrors.consent)
                     setFieldErrors((prev) => ({ ...prev, consent: undefined }));
                 }}
               />
               <span>
-                Ibu hamil menyetujui pengiriman pesan pengingat jadwal ANC via WhatsApp/Push
-                Notification (REMINDER)
+                Ibu menyetujui data kesehatan kehamilannya dicatat dan diolah oleh Puskesmas dan
+                Bidan setempat untuk pemantauan kehamilan (wajib)
               </span>
             </label>
             <label
@@ -875,16 +879,12 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
             >
               <input
                 type="checkbox"
-                checked={consentDataProcessing}
-                onChange={(e) => {
-                  setConsentDataProcessing(e.target.checked);
-                  if (fieldErrors.consent)
-                    setFieldErrors((prev) => ({ ...prev, consent: undefined }));
-                }}
+                checked={consentReminder}
+                onChange={(e) => setConsentReminder(e.target.checked)}
               />
               <span>
-                Ibu hamil menyetujui pemrosesan data kesehatan kehamilan oleh Puskesmas &amp; Bidan
-                setempat (DATA_PROCESSING)
+                Ibu bersedia menerima pengingat jadwal periksa kehamilan lewat WhatsApp atau
+                notifikasi aplikasi (tidak wajib)
               </span>
             </label>
             {fieldErrors.consent && (
@@ -957,9 +957,15 @@ export function MotherRegistrationPanel({ userRole, onNavigateTab }: MotherRegis
             </div>
             <div>
               <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>
+                Persetujuan Pemrosesan Data Kesehatan
+              </dt>
+              <dd>Disetujui</dd>
+            </div>
+            <div>
+              <dt style={{ fontWeight: 600, color: "var(--color-ink-muted)" }}>
                 Persetujuan Pengingat
               </dt>
-              <dd>{consentReminder ? "Disetujui" : "Ditolak"}</dd>
+              <dd>{consentReminder ? "Disetujui" : "Tidak bersedia"}</dd>
             </div>
           </dl>
 

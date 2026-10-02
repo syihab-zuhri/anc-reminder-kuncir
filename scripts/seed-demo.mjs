@@ -54,7 +54,7 @@ async function seedData() {
     const bidanHash = await hasher.hash(demoPassword);
     const bidanRes = await client.query(
       "INSERT INTO staff_users (id, health_center_id, role, login_identifier, display_name, password_hash, status) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (login_identifier) DO UPDATE SET display_name = EXCLUDED.display_name RETURNING id",
-      [bidanId, hcId, "BIDAN", "bidan.kuncir", "Bidan Siti Rahayu, A.Md.Keb.", bidanHash, "ACTIVE"],
+      [bidanId, hcId, "BIDAN", "bidan.contoh", "Bidan Siti Rahayu, A.Md.Keb.", bidanHash, "ACTIVE"],
     );
     const actualBidanId = bidanRes.rows[0].id;
 
@@ -78,7 +78,7 @@ async function seedData() {
       const planId = crypto.randomUUID();
       const staffRes = await client.query(
         "SELECT id FROM staff_users WHERE login_identifier = $1",
-        ["puskesmas.kuncir"],
+        ["puskesmas.contoh"],
       );
       const authorId = staffRes.rows[0].id;
 
