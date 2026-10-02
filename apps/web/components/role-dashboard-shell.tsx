@@ -773,6 +773,7 @@ export function RoleDashboardShell({ userRole }: RoleDashboardShellProps) {
             className="staff-input"
             type="text"
             placeholder="Ketik nama atau telepon..."
+            aria-label="Cari ibu hamil terdaftar"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />

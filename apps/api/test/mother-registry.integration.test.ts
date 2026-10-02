@@ -125,6 +125,10 @@ describe("mother registry API", () => {
     const created = registry.created[0];
     expect(created?.phoneNormalized).toBe("628123456789");
     expect(created?.nikCiphertext).not.toContain(body.nik);
+    expect(created?.nikFingerprint).toMatch(/^[a-f0-9]{64}$/u);
+    expect(created?.nikFingerprint).toBe(
+      new NikCipher(apiConfigFixture().nikEncryptionKey).fingerprint(body.nik),
+    );
     expect(
       new NikCipher(apiConfigFixture().nikEncryptionKey).decrypt(created?.nikCiphertext ?? ""),
     ).toBe(body.nik);
@@ -140,6 +144,63 @@ describe("mother registry API", () => {
     expect(replay.body).toEqual(first.body);
     expect(registry.created).toHaveLength(1);
     expect(audit.events).toHaveLength(4);
+  });
+
+  it("refuses to register the same NIK twice in one health center, even with a new idempotency key", async () => {
+    const token = await login("puskesmas");
+    const first = registrationRequest();
+    await request(server())
+      .post("/api/v1/mothers")
+      .set("authorization", `Bearer ${token}`)
+      .send(first)
+      .expect(201);
+
+    const duplicate = await request(server())
+      .post("/api/v1/mothers")
+      .set("authorization", `Bearer ${token}`)
+      .send({
+        ...first,
+        idempotency_key: "9c37fbd0-6306-4bbf-9765-3fd620888e7d",
+        full_name: "Siti A. (pendaftaran kedua)",
+      })
+      .expect(409);
+
+    const error = (duplicate.body as { error: { code: string; message: string } }).error;
+    expect(error.code).toBe("MOTHER_NIK_ALREADY_REGISTERED");
+    expect(error.message).toContain("NIK ini sudah terdaftar");
+    expect(JSON.stringify(duplicate.body)).not.toContain(first.nik);
+    expect(registry.created).toHaveLength(1);
+  });
+
+  it("does not mistake an unrelated unique violation for a duplicate NIK", async () => {
+    const token = await login("puskesmas");
+    registry.failNextWith({ code: "23505", constraint: "some_other_unique_idx" });
+
+    const response = await request(server())
+      .post("/api/v1/mothers")
+      .set("authorization", `Bearer ${token}`)
+      .send(registrationRequest())
+      .expect(409);
+
+    expect((response.body as { error: { code: string } }).error.code).toBe("REGISTRATION_CONFLICT");
+  });
+
+  it("allows the NIK again once the earlier record is archived", async () => {
+    const token = await login("puskesmas");
+    const first = registrationRequest();
+    await request(server())
+      .post("/api/v1/mothers")
+      .set("authorization", `Bearer ${token}`)
+      .send(first)
+      .expect(201);
+    registry.archiveAll();
+
+    await request(server())
+      .post("/api/v1/mothers")
+      .set("authorization", `Bearer ${token}`)
+      .send({ ...first, idempotency_key: "9c37fbd0-6306-4bbf-9765-3fd620888e7d" })
+      .expect(201);
+    expect(registry.created).toHaveLength(2);
   });
 
   it("rejects invalid contact/date inputs and keeps Puskesmas-only registry permission", async () => {
@@ -282,12 +343,42 @@ class FakeMotherRegistryRepository implements MotherRegistryRepository {
   public failWithoutActivePlan = false;
   public hasActivePregnancy = false;
 
+  private queuedError: { code: string; constraint: string } | null = null;
+  private readonly archivedMotherIds = new Set<string>();
+
+  public failNextWith(error: { code: string; constraint: string }): void {
+    this.queuedError = error;
+  }
+
+  public archiveAll(): void {
+    for (const input of this.created) this.archivedMotherIds.add(input.motherId);
+  }
+
   public async create(
     client: TransactionClient,
     input: CreateMotherRegistrationInput,
   ): Promise<MotherRegistrationResponse> {
     void client;
     if (this.failWithoutActivePlan) throw new ActiveAncPlanUnavailableError();
+    if (this.queuedError !== null) {
+      const { code, constraint } = this.queuedError;
+      this.queuedError = null;
+      throw Object.assign(new Error("simulated unique violation"), { code, constraint });
+    }
+    // Mirrors mothers_active_nik_unique_idx: one non-archived record per (center, fingerprint).
+    if (
+      this.created.some(
+        (existing) =>
+          existing.healthCenterId === input.healthCenterId &&
+          existing.nikFingerprint === input.nikFingerprint &&
+          !this.archivedMotherIds.has(existing.motherId),
+      )
+    ) {
+      throw Object.assign(new Error("duplicate key value violates unique constraint"), {
+        code: "23505",
+        constraint: "mothers_active_nik_unique_idx",
+      });
+    }
     this.created.push(input);
     const registration: MotherRegistrationResponse = {
       mother: {

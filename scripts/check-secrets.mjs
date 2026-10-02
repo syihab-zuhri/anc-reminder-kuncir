@@ -9,6 +9,10 @@ const patterns = [
   { name: "GitHub token", regex: /\bgh[pousr]_[A-Za-z0-9_]{30,}\b/u },
   { name: "Slack token", regex: /\bxox[baprs]-[A-Za-z0-9-]{20,}\b/u },
   { name: "AWS access key", regex: /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/u },
+  {
+    name: "hardcoded Gradle signing password",
+    regex: /\b(?:storePassword|keyPassword)\s*[=\s]\s*["'][^"'$]+["']/u,
+  },
 ];
 
 function listCandidateFiles() {

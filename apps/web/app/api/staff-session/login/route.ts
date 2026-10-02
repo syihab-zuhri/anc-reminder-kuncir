@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { staffLoginRequestSchema } from "@anc/contracts";
 
+import { clientIpFromHeaders } from "../../../../lib/client-ip";
 import { staffApiLogin, staffApiLogout, staffApiMe } from "../../../../lib/staff-api";
 import {
   rejectUntrustedMutation,
@@ -22,7 +23,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  const login = await staffApiLogin(input.data);
+  const login = await staffApiLogin(input.data, clientIpFromHeaders(request.headers));
   if (!login.ok) return NextResponse.json(login.error, { status: login.status });
 
   const identity = await staffApiMe(login.value.access_token);

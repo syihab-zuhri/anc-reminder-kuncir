@@ -14,6 +14,7 @@ out/
 *.key
 *.jks
 *.keystore
+keystore.properties
 *service-account*.json
 *firebase-adminsdk*.json
 *-adminsdk-*.json
@@ -101,4 +102,4 @@ login-info.txt
 .snapshots/
 
 # Cancelled unapplied migrations
-packages/database/migrations/000018_add_registration_status.cjs
+# (none currently excluded)

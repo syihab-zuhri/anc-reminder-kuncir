@@ -55,6 +55,49 @@ describe("staff session BFF routes", () => {
     expect(setCookie).not.toContain("Rahasia2026A");
   });
 
+  it("forwards the browser address to the API so failed logins are throttled per source", async () => {
+    const apiFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(tokens(accessToken, refreshToken)))
+      .mockResolvedValueOnce(jsonResponse(identity));
+    vi.stubGlobal("fetch", apiFetch);
+
+    await login(
+      new Request("http://localhost:3000/api/staff-session/login", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "http://localhost:3000",
+          "cf-connecting-ip": "203.0.113.9",
+          "x-forwarded-for": "6.6.6.6, 203.0.113.9",
+        },
+        body: JSON.stringify({ login_identifier: "puskesmas.kuncir", password: "Rahasia2026A" }),
+      }),
+    );
+
+    const [, loginInit] = apiFetch.mock.calls[0] ?? [];
+    expect(new Headers(loginInit?.headers).get("x-forwarded-for")).toBe("203.0.113.9");
+  });
+
+  it("sends no forwarding header when the browser address is unknown", async () => {
+    const apiFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(tokens(accessToken, refreshToken)))
+      .mockResolvedValueOnce(jsonResponse(identity));
+    vi.stubGlobal("fetch", apiFetch);
+
+    await login(
+      new Request("http://localhost:3000/api/staff-session/login", {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+        body: JSON.stringify({ login_identifier: "puskesmas.kuncir", password: "Rahasia2026A" }),
+      }),
+    );
+
+    const [, loginInit] = apiFetch.mock.calls[0] ?? [];
+    expect(new Headers(loginInit?.headers).has("x-forwarded-for")).toBe(false);
+  });
+
   it("rejects cross-origin login before contacting the API", async () => {
     const apiFetch = vi.fn<typeof fetch>();
     vi.stubGlobal("fetch", apiFetch);

@@ -32,6 +32,7 @@ export const motherSummarySchema = z
     health_center_id: z.string().uuid(),
     full_name: z.string().min(1),
     phone_masked: z.string().min(1),
+    phone_number: z.string().min(1),
     address: z.string().min(1),
     village_id: z.string().uuid().nullable(),
     village_name: z.string().min(1).nullable(),

@@ -24,6 +24,24 @@ Set-Location apps/android/android
 .\gradlew.bat assembleRelease
 ```
 
+## Penandatanganan build release
+
+Kredensial keystore tidak disimpan di repositori. Salin
+`apps/android/android/keystore.properties.example` menjadi `keystore.properties` (diabaikan Git) lalu
+isi nilainya, atau berikan lewat variabel lingkungan `ANC_ANDROID_KEYSTORE_FILE`,
+`ANC_ANDROID_KEYSTORE_PASSWORD`, `ANC_ANDROID_KEY_ALIAS`, dan `ANC_ANDROID_KEY_PASSWORD`.
+Tanpa kredensial tersebut `assembleRelease` menghasilkan APK yang belum ditandatangani, sedangkan
+`assembleDebug` tidak terpengaruh.
+
+## Registrasi push notification
+
+Shell ini hanya memuat portal web (`server.url`), jadi registrasi token FCM dilakukan oleh halaman web
+itu sendiri: `apps/web/app/mother/mother-dashboard.tsx` memanggil `window.Capacitor.Plugins.PushNotifications`
+dan mengirim token ke `/api/mother-proxy/mother/me/devices/android`. Dependensi
+`@capacitor/push-notifications` tetap diperlukan agar plugin native ikut tersinkron (`cap sync`).
+Tidak ada kode TypeScript di shell ini yang di-bundle ke WebView; satu-satunya modul di `src/` adalah
+`trusted-origin.ts` untuk memvalidasi `CAPACITOR_SERVER_URL`.
+
 ## Push notification Firebase
 
 Untuk mengaktifkan push notification pada build produksi, simpan file Firebase yang asli sebagai

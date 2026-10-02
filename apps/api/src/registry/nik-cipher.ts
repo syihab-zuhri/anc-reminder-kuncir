@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHmac, hkdfSync, randomBytes } from "node:crypto";
 
 const algorithm = "aes-256-gcm";
 const version = "v1";
@@ -12,6 +12,7 @@ const associatedData = Buffer.from("anc:mother:nik:v1", "utf8");
  */
 export class NikCipher {
   private readonly key: Buffer;
+  private readonly fingerprintKey: Buffer;
 
   public constructor(base64Key: string) {
     const decoded = Buffer.from(base64Key, "base64");
@@ -19,6 +20,21 @@ export class NikCipher {
       throw new Error("NIK encryption key must be a canonical base64-encoded 32-byte key");
     }
     this.key = decoded;
+    // A separate key, derived from the same secret, so the fingerprint can never be used to
+    // attack the encryption (and vice versa).
+    this.fingerprintKey = Buffer.from(
+      hkdfSync("sha256", decoded, Buffer.alloc(0), "anc:mother:nik-fingerprint:v1", 32),
+    );
+  }
+
+  /**
+   * Deterministic keyed fingerprint of a NIK, stored beside the randomized ciphertext only so the
+   * database can enforce "one active record per NIK per health center". Encryption is randomized
+   * (two ciphertexts of one NIK differ), so ciphertext cannot be compared. The fingerprint is an
+   * HMAC: without the key it cannot be reversed or brute-forced from the 16-digit NIK space.
+   */
+  public fingerprint(nik: string): string {
+    return createHmac("sha256", this.fingerprintKey).update(nik, "utf8").digest("hex");
   }
 
   public encrypt(nik: string): string {

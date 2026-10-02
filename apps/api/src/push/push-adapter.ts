@@ -4,12 +4,42 @@ const firebaseMessagingScope = "https://www.googleapis.com/auth/firebase.messagi
 const retryableHttpStatuses = new Set([429, 500, 503]);
 const retryableFcmStatuses = new Set(["RESOURCE_EXHAUSTED", "UNAVAILABLE", "INTERNAL"]);
 
-export interface PushMessage {
+interface PushMessageBase {
   readonly token: string;
   readonly title: string;
   readonly body: string;
+}
+
+export interface ReminderPushMessage extends PushMessageBase {
   readonly reminderCycleId: string;
   readonly milestoneCode: string;
+}
+
+export interface AnnouncementPushMessage extends PushMessageBase {
+  readonly announcementId: string;
+}
+
+export type PushMessage = ReminderPushMessage | AnnouncementPushMessage;
+
+function isAnnouncementMessage(message: PushMessage): message is AnnouncementPushMessage {
+  return "announcementId" in message;
+}
+
+/** Stable per-source key so FCM collapses repeats of the same reminder or announcement. */
+function collapseKeyFor(message: PushMessage): string {
+  return isAnnouncementMessage(message)
+    ? `announcement-${message.announcementId}`
+    : message.reminderCycleId;
+}
+
+function fcmDataFor(message: PushMessage): Record<string, string> {
+  return isAnnouncementMessage(message)
+    ? { announcement_id: message.announcementId, destination: "/mother" }
+    : {
+        reminder_cycle_id: message.reminderCycleId,
+        milestone_code: message.milestoneCode,
+        destination: "/mother",
+      };
 }
 
 export type PushDeliveryResult =
@@ -74,15 +104,11 @@ export class FcmHttpV1PushAdapter implements PushDeliveryAdapter {
             message: {
               token: message.token,
               notification: { title: message.title, body: message.body },
-              data: {
-                reminder_cycle_id: message.reminderCycleId,
-                milestone_code: message.milestoneCode,
-                destination: "/mother",
-              },
+              data: fcmDataFor(message),
               android: {
-                collapse_key: message.reminderCycleId,
+                collapse_key: collapseKeyFor(message),
                 priority: "high",
-                notification: { channel_id: "anc_reminders", tag: message.reminderCycleId },
+                notification: { channel_id: "anc_reminders", tag: collapseKeyFor(message) },
               },
             },
           }),
@@ -138,92 +164,36 @@ export class NoopPushAdapter implements PushDeliveryAdapter {
   }
 }
 
-export class NtfyPushAdapter implements PushDeliveryAdapter {
-  public constructor(
-    private readonly baseUrl: string = "https://ntfy.posyandukkn26.my.id",
-    private readonly fetchImplementation: typeof fetch = fetch,
-  ) {}
-
-  public async send(message: PushMessage): Promise<PushDeliveryResult> {
-    try {
-      const targetUrl = this.baseUrl.replace(/\/+$/u, "");
-      const response = await this.fetchImplementation(targetUrl, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json; charset=utf-8",
-        },
-        body: JSON.stringify({
-          topic: message.token,
-          title: message.title,
-          message: message.body,
-          priority: 4,
-          tags: ["maternity", "calendar", message.milestoneCode.toLowerCase()],
-          click: "https://posyandukkn26.my.id/mother",
-          actions: [
-            {
-              action: "view",
-              label: "Buka Portal Ibu",
-              url: "https://posyandukkn26.my.id/mother",
-              clear: true,
-            },
-          ],
-        }),
-      });
-
-      const payload = await readJsonResponse(response);
-      if (response.ok) {
-        const providerMessageId = stringProperty(payload, "id") ?? "ntfy-" + Date.now().toString();
-        return { status: "SUCCESS", providerMessageId };
-      }
-
-      const retryAfterSeconds = parseRetryAfter(response.headers.get("retry-after"));
-      if (retryableHttpStatuses.has(response.status)) {
-        return {
-          status: "RETRYABLE_FAILURE",
-          errorCode: `HTTP_${response.status}`,
-          invalidateDevice: false,
-          ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
-        };
-      }
-
-      return {
-        status: "TERMINAL_FAILURE",
-        errorCode: `HTTP_${response.status}`,
-        invalidateDevice: response.status === 404,
-      };
-    } catch {
-      return {
-        status: "RETRYABLE_FAILURE",
-        errorCode: "NETWORK_UNAVAILABLE",
-        invalidateDevice: false,
-      };
-    }
-  }
+export interface FcmCredentials {
+  readonly projectId: string;
+  readonly serviceAccountJson: string;
 }
 
-export function createNtfyPushAdapter(
-  baseUrl?: string,
-  fetchImplementation?: typeof fetch,
-): PushDeliveryAdapter {
-  return new NtfyPushAdapter(baseUrl, fetchImplementation);
+/** Both the Firebase project id and the service-account JSON must be present and non-blank. */
+export function resolveFcmCredentials(
+  projectId: string | undefined,
+  rawServiceAccountJson: string | undefined,
+): FcmCredentials | null {
+  if (projectId === undefined || rawServiceAccountJson === undefined) return null;
+  const trimmedProjectId = projectId.trim();
+  if (trimmedProjectId === "" || rawServiceAccountJson.trim() === "") return null;
+  return { projectId: trimmedProjectId, serviceAccountJson: rawServiceAccountJson };
 }
 
+/**
+ * FCM is the only push channel. Without credentials every send fails terminally with
+ * FCM_NOT_CONFIGURED and never leaves the process, so device tokens cannot reach another
+ * service and the failure stays visible in delivery history.
+ */
 export function createFcmPushAdapter(
   projectId?: string,
   rawServiceAccountJson?: string,
 ): PushDeliveryAdapter {
-  if (
-    projectId === undefined ||
-    projectId.trim() === "" ||
-    projectId === "test-project-123" ||
-    rawServiceAccountJson === undefined ||
-    rawServiceAccountJson.trim() === ""
-  ) {
-    return new NtfyPushAdapter();
-  }
+  const credentials = resolveFcmCredentials(projectId, rawServiceAccountJson);
+  if (credentials === null) return new NoopPushAdapter();
   return new FcmHttpV1PushAdapter(
-    projectId,
-    new GoogleServiceAccountAccessTokenProvider(rawServiceAccountJson),
+    credentials.projectId,
+    new GoogleServiceAccountAccessTokenProvider(credentials.serviceAccountJson),
   );
 }
 

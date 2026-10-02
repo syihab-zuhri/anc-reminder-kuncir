@@ -8,7 +8,9 @@ import type {
   Village,
 } from "@anc/contracts";
 import { useEffect, useState } from "react";
+import { fetchAllMothers } from "../lib/mothers-api";
 import { useToast } from "../lib/toast-context";
+import { MotherListNotice } from "./mother-list-notice";
 
 interface BidanVisitConfirmationPanelProps {
   readonly userRole: "PUSKESMAS" | "BIDAN" | "SUPER_ADMIN";
@@ -27,6 +29,7 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
   const toast = useToast();
   // Loaded data states
   const [mothers, setMothers] = useState<readonly MotherSummary[]>([]);
+  const [mothersTruncated, setMothersTruncated] = useState(false);
   const [villages, setVillages] = useState<readonly Village[]>([]);
   const [facilities, setFacilities] = useState<readonly Facility[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(false);
@@ -57,15 +60,18 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
     async function loadData(signal: AbortSignal): Promise<void> {
       setLoadingInitial(true);
       try {
-        const [mRes, fRes, vRes] = await Promise.all([
-          fetch("/api/staff-proxy/mothers", { signal }),
+        const [allMothers, fRes, vRes] = await Promise.all([
+          fetchAllMothers({ signal }).catch((err: unknown) => {
+            if (err instanceof DOMException && err.name === "AbortError") throw err;
+            return null;
+          }),
           fetch("/api/staff-proxy/staff/organization/facilities", { signal }),
           fetch("/api/staff-proxy/staff/organization/villages", { signal }).catch(() => null),
         ]);
 
-        if (mRes.ok) {
-          const mData = (await mRes.json()) as { items: readonly MotherSummary[] };
-          setMothers(mData.items ?? []);
+        if (allMothers !== null) {
+          setMothers(allMothers.items);
+          setMothersTruncated(allMothers.truncated);
         }
         if (fRes.ok) {
           const fData = (await fRes.json()) as readonly Facility[];
@@ -405,6 +411,7 @@ export function BidanVisitConfirmationPanel({ userRole }: BidanVisitConfirmation
               <small className="field-hint">
                 Saring daftar ibu hamil berdasarkan desa domisili.
               </small>
+              <MotherListNotice truncated={mothersTruncated} />
             </div>
 
             {/* 2. Pilih Pasien Ibu Hamil */}

@@ -1,10 +1,36 @@
+> # ⚠️ DOKUMEN INI TIDAK AKURAT — JANGAN DIJADIKAN RUJUKAN
+>
+> Dokumen ini ditulis otomatis dan tidak pernah dicocokkan dengan kode. Beberapa isinya salah dan
+> berkaitan dengan keamanan, sehingga bisa menyesatkan pembaca (misalnya auditor atau pembimbing).
+> Diperiksa terhadap repositori pada 2026-10-02:
+>
+> - **Tidak ada** Redis, Angular, WhatsApp Business API, SMTP/email, `jsonwebtoken`, `passport`, `bcrypt`,
+>   atau pustaka OTP di proyek ini. Token memakai string acak opak yang di-HMAC; kata sandi memakai scrypt.
+> - **MFA/2FA tidak diimplementasikan** (ditunda; lihat `docs/IMPLEMENTATION_DECISIONS.md`), padahal dokumen
+>   ini mencentangnya. "OAuth 2.0" juga tidak dipakai.
+> - Endpoint yang tercantum (`/api/staff-session/refresh`, `/api/mothers/:id/checkup`, `/health/db`,
+>   `/health/worker`, `/health/cache`, `/api-docs`, ...) **tidak ada** di kode. Rute sebenarnya ada di
+>   `apps/api/src/**/*.controller.ts` dan kontraknya di `packages/contracts`; health check hanya
+>   `/api/v1/health/live` dan `/api/v1/health/ready`.
+> - Nama variabel lingkungan (`JWT_SECRET_KEY`, `BCRYPT_ROUNDS`, `SMTP_*`, ...) dan hostname
+>   (`anc.beranda-demo`, `api.anc-reminder.kuncir`, ...) **karangan**. Daftar sebenarnya ada di
+>   `packages/config/src/environment.ts`; domain produksi adalah `posyandukkn26.my.id`.
+> - Status "Production Ready" tidak didukung bukti apa pun di dokumen ini.
+>
+> Rujukan yang akurat: [`README.md`](../README.md), [`deploy.md`](../deploy.md),
+> [`IMPLEMENTATION_DECISIONS.md`](./IMPLEMENTATION_DECISIONS.md),
+> [`OPERATIONS_MONITORING.md`](./OPERATIONS_MONITORING.md), dan [`MIGRATION.md`](./MIGRATION.md).
+> Dokumen asli di bawah dipertahankan apa adanya hanya sebagai arsip.
+
+---
+
 # SECCURED COMPREHENSIVE DOCUMENTATION - ANC Reminder
 
 ## Version: 2.0.0
 
 ## Timestamp: 2026-08-19
 
-## Status: Production Ready
+## Status: ~~Production Ready~~ (tidak terbukti; lihat peringatan di atas)
 
 ---
 

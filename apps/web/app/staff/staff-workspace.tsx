@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AboutAppPanel } from "@/components/about-app-panel";
+import { AnnouncementPanel } from "@/components/announcement-panel";
 import { BidanVisitConfirmationPanel } from "@/components/bidan-visit-confirmation-panel";
 import { BrandMark } from "@/components/brand-mark";
 import { BumilPatientPortal } from "@/components/bumil-patient-portal";
@@ -32,6 +33,7 @@ export type ModuleTab =
   | "clinical"
   | "confirm"
   | "bumil"
+  | "announcements"
   | "admin"
   | "content"
   | "about";
@@ -103,6 +105,13 @@ const TAB_DEFINITIONS: readonly TabDefinition[] = [
     shortLabel: "Portal",
     allowedRoles: ["PUSKESMAS", "BIDAN"],
     description: "Simulasi tampilan linimasa mandiri dari sudut pandang pasien.",
+  },
+  {
+    id: "announcements",
+    label: "Pengumuman",
+    shortLabel: "Siar",
+    allowedRoles: ["PUSKESMAS"],
+    description: "Kirim pengumuman siaran sebagai notifikasi push ke ibu hamil.",
   },
   {
     id: "admin",
@@ -288,6 +297,23 @@ function TabIcon({
         aria-hidden="true"
       >
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
+    );
+  }
+  if (id === "announcements") {
+    return (
+      <svg
+        className={className}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m3 11 18-5v12L3 14v-3z" />
+        <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
       </svg>
     );
   }
@@ -622,6 +648,10 @@ export function StaffWorkspace({ initialTab = "summary" }: StaffWorkspaceProps) 
 
         {effectiveTab === "content" && staff.role === "PUSKESMAS" && (
           <ContentManagementPanel userRole={staff.role} />
+        )}
+
+        {effectiveTab === "announcements" && staff.role === "PUSKESMAS" && (
+          <AnnouncementPanel userRole={staff.role} />
         )}
 
         {effectiveTab === "about" && <AboutAppPanel />}

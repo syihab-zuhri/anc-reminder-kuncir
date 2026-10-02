@@ -33,6 +33,7 @@ describe("operational query contracts", () => {
           health_center_id: "20000000-0000-4000-8000-000000000001",
           full_name: "Siti Aminah",
           phone_masked: "0812****5678",
+          phone_number: "081234565678",
           address: "Jl. Kuncir No. 1",
           village_id: "30000000-0000-4000-8000-000000000001",
           village_name: "Desa Kuncir",
@@ -51,6 +52,11 @@ describe("operational query contracts", () => {
       has_more: false,
     };
     expect(motherListResponseSchema.safeParse(validResponse).success).toBe(true);
+
+    const withoutPhoneNumber = { ...validResponse.items[0]!, phone_number: undefined };
+    expect(
+      motherListResponseSchema.safeParse({ ...validResponse, items: [withoutPhoneNumber] }).success,
+    ).toBe(false);
   });
 
   it("validates operational milestones query and response", () => {

@@ -126,8 +126,14 @@ export const apiEnvironmentSchema = z
     NIK_ENCRYPTION_KEY: nikEncryptionKey,
     STAFF_ACCESS_TOKEN_TTL_MINUTES: positiveInteger("15"),
     STAFF_REFRESH_TOKEN_TTL_DAYS: positiveInteger("7"),
+    // Failed logins allowed per (account, source address) before that pair is blocked.
     STAFF_LOGIN_MAX_FAILURES: positiveInteger("5"),
     STAFF_LOGIN_LOCK_MINUTES: positiveInteger("15"),
+    // Failures across all sources before one account is blocked for everyone.
+    STAFF_LOGIN_ACCOUNT_MAX_FAILURES: positiveInteger("20"),
+    // Failures across all accounts before one source address is blocked.
+    STAFF_LOGIN_IP_MAX_FAILURES: positiveInteger("30"),
+    STAFF_LOGIN_RATE_WINDOW_MINUTES: positiveInteger("15"),
     MOTHER_SESSION_TTL_DAYS: positiveInteger("30"),
     MOTHER_ACCESS_IP_MAX_FAILURES: positiveInteger("10"),
     MOTHER_ACCESS_CODE_MAX_FAILURES: positiveInteger("5"),
@@ -135,11 +141,6 @@ export const apiEnvironmentSchema = z
     MOTHER_ACCESS_BLOCK_MINUTES: positiveInteger("15"),
     FCM_PROJECT_ID: optionalUrl.or(requiredText).optional(),
     FCM_SERVICE_ACCOUNT_JSON: requiredText.optional(),
-    SCHEDULER_ENABLED: z
-      .enum(["true", "false"])
-      .default("true")
-      .transform((value) => value === "true"),
-    SCHEDULER_INTERVAL_SECONDS: positiveInteger("300"),
   })
   .superRefine((environment, context) => {
     requireProductionDatabaseTls(environment, context);
@@ -216,6 +217,9 @@ export const apiEnvironmentSchema = z
     staffRefreshTokenTtlDays: environment.STAFF_REFRESH_TOKEN_TTL_DAYS,
     staffLoginMaxFailures: environment.STAFF_LOGIN_MAX_FAILURES,
     staffLoginLockMinutes: environment.STAFF_LOGIN_LOCK_MINUTES,
+    staffLoginAccountMaxFailures: environment.STAFF_LOGIN_ACCOUNT_MAX_FAILURES,
+    staffLoginIpMaxFailures: environment.STAFF_LOGIN_IP_MAX_FAILURES,
+    staffLoginRateWindowMinutes: environment.STAFF_LOGIN_RATE_WINDOW_MINUTES,
     motherSessionTtlDays: environment.MOTHER_SESSION_TTL_DAYS,
     motherAccessIpMaxFailures: environment.MOTHER_ACCESS_IP_MAX_FAILURES,
     motherAccessCodeMaxFailures: environment.MOTHER_ACCESS_CODE_MAX_FAILURES,
@@ -233,8 +237,6 @@ export const apiEnvironmentSchema = z
     ...(environment.FCM_SERVICE_ACCOUNT_JSON === undefined
       ? {}
       : { fcmServiceAccountJson: environment.FCM_SERVICE_ACCOUNT_JSON }),
-    schedulerEnabled: environment.SCHEDULER_ENABLED,
-    schedulerIntervalSeconds: environment.SCHEDULER_INTERVAL_SECONDS,
     ...(environment.SENTRY_DSN === undefined ? {} : { sentryDsn: environment.SENTRY_DSN }),
   }));
 

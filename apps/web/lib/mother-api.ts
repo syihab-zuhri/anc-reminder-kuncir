@@ -15,12 +15,18 @@ export type MotherApiResult<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly status: number; readonly error: CanonicalErrorEnvelope };
 
+/**
+ * `clientIp` is the browser's address as seen by this BFF. The API throttles failed attempts per
+ * source address, so without it every visitor would share the BFF's own address.
+ */
 export function motherApiValidate(
   input: MotherAccessValidateRequest,
+  clientIp?: string,
 ): Promise<MotherApiResult<MotherSessionResponse>> {
   return motherApiRequest("/mother-access/validate", motherSessionResponseSchema, {
     method: "POST",
     body: JSON.stringify(input),
+    ...(clientIp === undefined ? {} : { headers: { "x-forwarded-for": clientIp } }),
   });
 }
 

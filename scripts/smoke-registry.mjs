@@ -261,6 +261,7 @@ try {
   const stored = await pool.query(
     `SELECT
        mother.nik_ciphertext,
+       mother.nik_fingerprint,
        mother.phone_normalized,
        pregnancy.status AS pregnancy_status,
        pregnancy.dating_basis,
@@ -276,6 +277,8 @@ try {
     row === undefined ||
     !String(row.nik_ciphertext).startsWith("v1.") ||
     String(row.nik_ciphertext).includes(syntheticNik) ||
+    !/^[a-f0-9]{64}$/u.test(String(row.nik_fingerprint)) ||
+    String(row.nik_fingerprint).includes(syntheticNik) ||
     row.phone_normalized !== "628123456789" ||
     row.pregnancy_status !== "ACTIVE" ||
     row.dating_basis !== "PREGNANCY_START_DATE" ||
@@ -284,6 +287,28 @@ try {
     throw new Error(
       "Registry persistence did not preserve the protected atomic registration state",
     );
+  }
+
+  const duplicateNik = await readErrorShape(
+    await request("/mothers", {
+      method: "POST",
+      headers: { authorization },
+      body: JSON.stringify({ ...registrationRequest, idempotency_key: randomUUID() }),
+    }),
+    409,
+    "Duplicate NIK registration",
+  );
+  if (duplicateNik.code !== "MOTHER_NIK_ALREADY_REGISTERED") {
+    throw new Error(
+      `Duplicate NIK returned ${duplicateNik.code}; expected MOTHER_NIK_ALREADY_REGISTERED`,
+    );
+  }
+  const duplicateCount = await pool.query(
+    "SELECT count(*)::int AS n FROM mothers WHERE nik_fingerprint = $1",
+    [row.nik_fingerprint],
+  );
+  if (duplicateCount.rows[0]?.n !== 1) {
+    throw new Error("A rejected duplicate NIK registration left a second mother record behind");
   }
 
   const milestoneTimeline = await readJson(

@@ -33,6 +33,9 @@ export function MotherEditModal({
   onSubmit,
   onClose,
 }: MotherEditModalProps) {
+  const phoneRaw = mother.phone_number || mother.phone_masked || "-";
+  const phoneDisplay = phoneRaw.startsWith("62") ? "0" + phoneRaw.slice(2) : phoneRaw;
+
   return (
     <div className="staff-modal-backdrop" role="presentation">
       <div className="staff-modal-dialog modal-md" role="dialog" aria-modal="true">
@@ -41,7 +44,7 @@ export function MotherEditModal({
             <span className="staff-modal-kicker">Koreksi Data Administrasi</span>
             <h3 className="staff-modal-title">Edit Data Pasien</h3>
             <p className="staff-modal-subtitle">
-              {mother.full_name} ({mother.phone_masked})
+              {mother.full_name} ({phoneDisplay})
             </p>
           </div>
           <button

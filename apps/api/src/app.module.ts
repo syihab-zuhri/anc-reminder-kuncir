@@ -1,5 +1,4 @@
 import { Module, type DynamicModule } from "@nestjs/common";
-import { ScheduleModule } from "@nestjs/schedule";
 import type { ApiConfig } from "@anc/config";
 import {
   checkDatabaseReadiness,
@@ -7,10 +6,7 @@ import {
   DeviceTokenCrypto,
   type DatabasePool,
 } from "@anc/database";
-import {
-  InternalSchedulerService,
-  type PushDeliveryAdapter,
-} from "./scheduler/scheduler.service.js";
+import { createFcmPushAdapter, type PushDeliveryAdapter } from "./push/push-adapter.js";
 import { HealthController } from "./health/health.controller.js";
 import { HealthService, type DatabaseReadinessCheck } from "./health/health.service.js";
 import {
@@ -46,8 +42,16 @@ import {
   REMINDER_OPERATIONS_REPOSITORY,
   CONTENT_MANAGEMENT_REPOSITORY,
   DEVICE_REGISTRATION_REPOSITORY,
+  ANNOUNCEMENT_REPOSITORY,
+  PUSH_DELIVERY_ADAPTER,
 } from "./infrastructure/tokens.js";
 import { DeviceRegistrationController } from "./device-registration/device-registration.controller.js";
+import { AnnouncementController } from "./announcements/announcement.controller.js";
+import { AnnouncementService } from "./announcements/announcement.service.js";
+import {
+  PostgresAnnouncementRepository,
+  type AnnouncementRepository,
+} from "./announcements/announcement.repository.js";
 import {
   PostgresDeviceRegistrationRepository,
   type DeviceRegistrationRepository,
@@ -197,11 +201,11 @@ export interface AppModuleOptions {
   readonly reminderOperationsRepository?: ReminderOperationsRepository;
   readonly contentManagementRepository?: ContentManagementRepository;
   readonly deviceRegistrationRepository?: DeviceRegistrationRepository;
+  readonly announcementRepository?: AnnouncementRepository;
   readonly auditRepository?: AuditRepository;
   readonly idempotencyService?: IdempotencyService;
   readonly clock?: Clock;
   readonly pushDeliveryAdapter?: PushDeliveryAdapter;
-  readonly internalSchedulerService?: InternalSchedulerService;
 }
 
 @Module({})
@@ -209,7 +213,6 @@ export class AppModule {
   public static register(options: AppModuleOptions): DynamicModule {
     return {
       module: AppModule,
-      imports: [ScheduleModule.forRoot()],
       controllers: [
         HealthController,
         StaffAuthController,
@@ -231,6 +234,7 @@ export class AppModule {
         ReminderOperationsController,
         ContentManagementController,
         DeviceRegistrationController,
+        AnnouncementController,
       ],
       providers: [
         { provide: API_CONFIG, useValue: options.config },
@@ -444,6 +448,47 @@ export class AppModule {
           inject: [DATABASE_POOL],
         },
         {
+          provide: ANNOUNCEMENT_REPOSITORY,
+          useFactory: (pool: DatabasePool) =>
+            options.announcementRepository ?? new PostgresAnnouncementRepository(pool),
+          inject: [DATABASE_POOL],
+        },
+        {
+          provide: PUSH_DELIVERY_ADAPTER,
+          useFactory: (config: ApiConfig) =>
+            options.pushDeliveryAdapter ??
+            createFcmPushAdapter(config.fcmProjectId, config.fcmServiceAccountJson),
+          inject: [API_CONFIG],
+        },
+        {
+          provide: AnnouncementService,
+          useFactory: (
+            repository: AnnouncementRepository,
+            policy: AuthorizationPolicy,
+            audit: AuditService,
+            pushAdapter: PushDeliveryAdapter,
+            clock: Clock,
+            idempotency: IdempotencyService,
+          ) =>
+            new AnnouncementService(
+              repository,
+              policy,
+              new DeviceTokenCrypto(options.config.pushTokenEncryptionKey),
+              pushAdapter,
+              audit,
+              clock,
+              idempotency,
+            ),
+          inject: [
+            ANNOUNCEMENT_REPOSITORY,
+            AuthorizationPolicy,
+            AUDIT_SERVICE,
+            PUSH_DELIVERY_ADAPTER,
+            CLOCK,
+            IDEMPOTENCY_SERVICE,
+          ],
+        },
+        {
           provide: DeviceRegistrationService,
           useFactory: (
             repository: DeviceRegistrationRepository,
@@ -457,13 +502,6 @@ export class AppModule {
               clock,
             ),
           inject: [DEVICE_REGISTRATION_REPOSITORY, AUDIT_SERVICE, CLOCK],
-        },
-        {
-          provide: InternalSchedulerService,
-          useFactory: (config: ApiConfig, pool: DatabasePool) =>
-            options.internalSchedulerService ??
-            new InternalSchedulerService(config, pool, options.pushDeliveryAdapter, options.clock),
-          inject: [API_CONFIG, DATABASE_POOL],
         },
       ],
     };

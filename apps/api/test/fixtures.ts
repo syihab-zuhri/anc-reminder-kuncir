@@ -17,6 +17,9 @@ export function apiConfigFixture(): ApiConfig {
     staffRefreshTokenTtlDays: 7,
     staffLoginMaxFailures: 5,
     staffLoginLockMinutes: 15,
+    staffLoginAccountMaxFailures: 20,
+    staffLoginIpMaxFailures: 30,
+    staffLoginRateWindowMinutes: 15,
     motherSessionTtlDays: 30,
     motherAccessIpMaxFailures: 10,
     motherAccessCodeMaxFailures: 5,
@@ -28,7 +31,5 @@ export function apiConfigFixture(): ApiConfig {
     waFallbackEscalationHours: 24,
     primaryTimezone: "Asia/Jakarta",
     logLevel: "info",
-    schedulerEnabled: false,
-    schedulerIntervalSeconds: 300,
   };
 }

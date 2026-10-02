@@ -18,8 +18,14 @@ export class StaffAuthController {
 
   @Post("auth/login")
   @HttpCode(HttpStatus.OK)
-  public login(@Body() body: unknown): Promise<StaffTokenResponse> {
-    return this.authService.login(parseRequest(staffLoginRequestSchema, body));
+  public login(
+    @Req() request: AuthenticatedRequest,
+    @Body() body: unknown,
+  ): Promise<StaffTokenResponse> {
+    return this.authService.login(
+      parseRequest(staffLoginRequestSchema, body),
+      request.ip ?? request.socket.remoteAddress,
+    );
   }
 
   @Post("auth/refresh")

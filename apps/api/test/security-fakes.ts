@@ -23,6 +23,7 @@ import type {
   StaffAssignmentClaim,
   StaffCredentialRecord,
 } from "../src/auth/staff-auth.types.js";
+import type { StaffLoginBucket } from "../src/auth/staff-login-throttle.js";
 import type { ScopedAccessRepository } from "../src/authorization/scoped-access.repository.js";
 import type {
   AssignmentTarget,
@@ -61,6 +62,15 @@ export interface SeedUserInput extends Omit<MutableUser, "failedLoginAttempts" |
 export class FakeStaffAuthRepository implements StaffAuthRepository {
   public readonly users = new Map<string, MutableUser>();
   public readonly sessions = new Map<string, MutableSession>();
+  public readonly loginRateLimits = new Map<
+    string,
+    {
+      scope: StaffLoginBucket["scope"];
+      count: number;
+      windowStartedAt: Date;
+      blockedUntil: Date | null;
+    }
+  >();
 
   public seedUser(input: SeedUserInput): void {
     this.users.set(input.id, {
@@ -80,15 +90,54 @@ export class FakeStaffAuthRepository implements StaffAuthRepository {
     return user === undefined ? null : credential(user);
   }
 
-  public async recordLoginFailure(
-    staffUserId: string,
-    threshold: number,
-    lockedUntil: Date,
+  public async loginRetryAfterSeconds(
+    bucketHashes: readonly string[],
+    requestedAt: Date,
+  ): Promise<number> {
+    let retryAfter = 0;
+    for (const hash of bucketHashes) {
+      const blockedUntil = this.loginRateLimits.get(hash)?.blockedUntil;
+      if (blockedUntil !== null && blockedUntil !== undefined && blockedUntil > requestedAt) {
+        retryAfter = Math.max(
+          retryAfter,
+          Math.ceil((blockedUntil.getTime() - requestedAt.getTime()) / 1000),
+        );
+      }
+    }
+    return retryAfter;
+  }
+
+  public async recordLoginFailures(
+    buckets: readonly StaffLoginBucket[],
+    requestedAt: Date,
+    windowMinutes: number,
+    blockMinutes: number,
   ): Promise<void> {
-    const user = this.users.get(staffUserId);
-    if (user === undefined) return;
-    user.failedLoginAttempts += 1;
-    if (user.failedLoginAttempts >= threshold) user.lockedUntil = lockedUntil;
+    for (const bucket of buckets) {
+      const existing = this.loginRateLimits.get(bucket.hash);
+      const expiredWindow =
+        existing === undefined ||
+        existing.windowStartedAt.getTime() <= requestedAt.getTime() - windowMinutes * 60_000;
+      const count = expiredWindow ? 1 : existing.count + 1;
+      const stillBlocked =
+        existing?.blockedUntil !== null &&
+        existing?.blockedUntil !== undefined &&
+        existing.blockedUntil > requestedAt;
+      this.loginRateLimits.set(bucket.hash, {
+        scope: bucket.scope,
+        count,
+        windowStartedAt: expiredWindow ? new Date(requestedAt) : existing.windowStartedAt,
+        blockedUntil: stillBlocked
+          ? existing.blockedUntil
+          : count >= bucket.limit
+            ? new Date(requestedAt.getTime() + blockMinutes * 60_000)
+            : null,
+      });
+    }
+  }
+
+  public async clearLoginBuckets(bucketHashes: readonly string[]): Promise<void> {
+    for (const hash of bucketHashes) this.loginRateLimits.delete(hash);
   }
 
   public async createSession(input: CreateStaffSessionInput): Promise<void> {

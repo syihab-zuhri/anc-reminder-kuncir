@@ -1,8 +1,17 @@
 import { createDatabasePool } from "../packages/database/dist/index.js";
 import { PasswordHasher } from "../apps/api/dist/auth/password-hasher.js";
 import crypto from "node:crypto";
+import { assertDemoSeedAllowed } from "./lib/demo-seed-guard.mjs";
 
+// Local development only. Required environment:
+//   SEED_DEMO_CONFIRM=SEED_DEMO_DATA   explicit acknowledgement (see lib/demo-seed-guard.mjs)
+//   SEED_DEMO_PASSWORD=<12+ chars>     password for the demo Bidan account (never committed)
 async function seedData() {
+  assertDemoSeedAllowed("seed-demo");
+  const demoPassword = process.env.SEED_DEMO_PASSWORD;
+  if (demoPassword === undefined || demoPassword.length < 12) {
+    throw new Error("SEED_DEMO_PASSWORD (at least 12 characters) is required.");
+  }
   const databaseUrl =
     process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/anc_posyandu_kuncir";
   const pool = createDatabasePool(databaseUrl);
@@ -42,7 +51,7 @@ async function seedData() {
     // 3. Bidan User
     const bidanId = crypto.randomUUID();
     const hasher = new PasswordHasher();
-    const bidanHash = await hasher.hash("PosyanduKuncir2026!");
+    const bidanHash = await hasher.hash(demoPassword);
     const bidanRes = await client.query(
       "INSERT INTO staff_users (id, health_center_id, role, login_identifier, display_name, password_hash, status) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (login_identifier) DO UPDATE SET display_name = EXCLUDED.display_name RETURNING id",
       [bidanId, hcId, "BIDAN", "bidan.kuncir", "Bidan Siti Rahayu, A.Md.Keb.", bidanHash, "ACTIVE"],
@@ -195,4 +204,7 @@ async function seedData() {
   }
 }
 
-seedData();
+seedData().catch((err) => {
+  console.error(err instanceof Error ? err.message : err);
+  process.exitCode = 1;
+});

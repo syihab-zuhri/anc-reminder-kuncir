@@ -22,6 +22,7 @@ export interface CreateMotherRegistrationInput {
   readonly healthCenterId: string;
   readonly fullName: string;
   readonly nikCiphertext: string;
+  readonly nikFingerprint: string;
   readonly address: string;
   readonly phoneNormalized: string;
   readonly pregnancyStartDate: string;
@@ -129,13 +130,14 @@ export class PostgresMotherRegistryRepository implements MotherRegistryRepositor
 
     await client.query(
       `INSERT INTO mothers (
-         id, health_center_id, full_name, nik_ciphertext, address, phone_normalized, village_id, registration_facility_id
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+         id, health_center_id, full_name, nik_ciphertext, nik_fingerprint, address, phone_normalized, village_id, registration_facility_id
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
         input.motherId,
         input.healthCenterId,
         input.fullName,
         input.nikCiphertext,
+        input.nikFingerprint,
         input.address,
         input.phoneNormalized,
         input.villageId ?? null,

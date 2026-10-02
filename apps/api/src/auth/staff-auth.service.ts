@@ -23,6 +23,7 @@ import { PasswordHasher } from "./password-hasher.js";
 import type { StaffAuthRepository } from "./staff-auth.repository.js";
 import type { StaffActor } from "./staff-auth.types.js";
 import type { SessionTokenService } from "./session-token.service.js";
+import { normalizeSourceIp, staffLoginBuckets } from "./staff-login-throttle.js";
 
 export type Clock = () => Date;
 
@@ -38,14 +39,31 @@ export class StaffAuthService {
     private readonly authorization: AuthorizationPolicy,
   ) {}
 
-  public async login(input: StaffLoginRequest): Promise<StaffTokenResponse> {
+  public async login(input: StaffLoginRequest, sourceIp?: string): Promise<StaffTokenResponse> {
     const now = this.clock();
     const identifier = normalizeLoginIdentifier(input.login_identifier);
+    const buckets = staffLoginBuckets(
+      this.config.sessionSecret,
+      identifier,
+      normalizeSourceIp(sourceIp),
+      this.config,
+    );
+
+    // Refuse before the expensive password hash so a blocked source cannot keep burning CPU.
+    // Rejections here are deliberately not audited: they are unbounded, and the append-only
+    // audit log records the (bounded) failures that led to the block.
+    const retryAfterSeconds = await this.repository.loginRetryAfterSeconds(
+      buckets.map((bucket) => bucket.hash),
+      now,
+    );
+    if (retryAfterSeconds > 0) throw rateLimited(retryAfterSeconds);
+
     const user = await this.repository.findUserByLoginIdentifier(identifier);
     const passwordValid = await this.passwordHasher.verifyOrDummy(
       input.password,
       user?.passwordHash,
     );
+    // A lock set directly on the account (e.g. by an administrator) still applies.
     const locked =
       user?.lockedUntil !== null && user?.lockedUntil !== undefined
         ? user.lockedUntil.getTime() > now.getTime()
@@ -53,13 +71,12 @@ export class StaffAuthService {
     const accepted = user !== null && user.status === "ACTIVE" && !locked && passwordValid;
 
     if (!accepted) {
-      if (user !== null && user.status === "ACTIVE" && !locked && !passwordValid) {
-        await this.repository.recordLoginFailure(
-          user.id,
-          this.config.staffLoginMaxFailures,
-          new Date(now.getTime() + this.config.staffLoginLockMinutes * 60_000),
-        );
-      }
+      await this.repository.recordLoginFailures(
+        buckets,
+        now,
+        this.config.staffLoginRateWindowMinutes,
+        this.config.staffLoginLockMinutes,
+      );
       await this.audit.record({
         actorType: user === null ? "PUBLIC" : "STAFF",
         actorId: user?.id ?? null,
@@ -82,6 +99,10 @@ export class StaffAuthService {
       refreshExpiresAt: tokens.refreshExpiresAt,
       now,
     });
+    // Only this account-from-this-address counter is forgiven on success; the account-wide and
+    // address-wide counters keep any abuse history from other sources.
+    const pairBucket = buckets.find((bucket) => bucket.scope === "ACCOUNT_IP");
+    if (pairBucket !== undefined) await this.repository.clearLoginBuckets([pairBucket.hash]);
     await this.audit.record({
       actorType: "STAFF",
       actorId: user.id,
@@ -208,6 +229,15 @@ function invalidCredentials(): ApiException {
     status: HttpStatus.UNAUTHORIZED,
     code: "INVALID_CREDENTIALS",
     message: "Kredensial tidak valid.",
+  });
+}
+
+function rateLimited(retryAfterSeconds: number): ApiException {
+  return new ApiException({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    code: "RATE_LIMITED",
+    message: "Terlalu banyak percobaan masuk. Silakan coba lagi nanti.",
+    details: { retry_after_seconds: retryAfterSeconds },
   });
 }
 

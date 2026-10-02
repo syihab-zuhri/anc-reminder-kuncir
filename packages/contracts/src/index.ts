@@ -18,3 +18,4 @@ export * from "./wa-fallback.js";
 export * from "./reminder-operations.js";
 export * from "./content-management.js";
 export * from "./reports.js";
+export * from "./announcements.js";

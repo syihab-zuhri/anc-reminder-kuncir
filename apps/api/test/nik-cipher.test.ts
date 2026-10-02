@@ -1,3 +1,5 @@
+import { createHmac } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
 
 import { NikCipher } from "../src/registry/nik-cipher.js";
@@ -23,5 +25,36 @@ describe("NikCipher", () => {
     expect(() => cipher.decrypt([version, iv, alteredTag, ciphertext].join("."))).toThrow(
       "authentication failed",
     );
+  });
+
+  it("derives a deterministic keyed fingerprint that reveals neither the NIK nor the ciphertext", () => {
+    const cipher = new NikCipher(apiConfigFixture().nikEncryptionKey);
+    const nik = "3273014901010001";
+    const fingerprint = cipher.fingerprint(nik);
+
+    expect(fingerprint).toMatch(/^[a-f0-9]{64}$/u);
+    expect(cipher.fingerprint(nik)).toBe(fingerprint);
+    expect(cipher.fingerprint("3273014901010002")).not.toBe(fingerprint);
+    expect(fingerprint).not.toContain(nik);
+    // Unlike the randomized ciphertext, equal NIKs always collide, which is the point.
+    expect(cipher.encrypt(nik)).not.toBe(cipher.encrypt(nik));
+  });
+
+  it("depends on the secret, so a database leak alone cannot confirm a guessed NIK", () => {
+    const other = Buffer.from("q".repeat(32)).toString("base64");
+    const nik = "3273014901010001";
+
+    expect(new NikCipher(other).fingerprint(nik)).not.toBe(
+      new NikCipher(apiConfigFixture().nikEncryptionKey).fingerprint(nik),
+    );
+  });
+
+  it("uses a key distinct from the encryption key", () => {
+    const key = apiConfigFixture().nikEncryptionKey;
+    const plainHmac = createHmac("sha256", Buffer.from(key, "base64"))
+      .update("3273014901010001", "utf8")
+      .digest("hex");
+
+    expect(new NikCipher(key).fingerprint("3273014901010001")).not.toBe(plainHmac);
   });
 });

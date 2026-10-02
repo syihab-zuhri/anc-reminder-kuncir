@@ -23,6 +23,9 @@ export function MotherAccessCodeModal({
   onCopyCode,
   onClose,
 }: MotherAccessCodeModalProps) {
+  const phoneRaw = mother.phone_number || mother.phone_masked || "-";
+  const phoneDisplay = phoneRaw.startsWith("62") ? "0" + phoneRaw.slice(2) : phoneRaw;
+
   return (
     <div
       className="staff-modal-backdrop"
@@ -38,7 +41,7 @@ export function MotherAccessCodeModal({
               Kode Akses Pasien
             </h3>
             <p className="staff-modal-subtitle">
-              {mother.full_name} ({mother.phone_masked})
+              {mother.full_name} ({phoneDisplay})
             </p>
           </div>
           <button
@@ -73,19 +76,20 @@ export function MotherAccessCodeModal({
           )}
 
           {issuedCode ? (
-            <div style={{ display: "grid", gap: "1rem" }}>
+            <div style={{ display: "grid", gap: "0.75rem" }}>
               <div
                 style={{
-                  padding: "1.35rem 1rem",
+                  padding: "1rem 0.75rem",
                   background: "#0f172a",
                   color: "#38bdf8",
-                  fontSize: "1.6rem",
+                  fontSize: "clamp(1.1rem, 4.5vw, 1.55rem)",
                   fontWeight: 900,
                   fontFamily: "monospace",
-                  letterSpacing: "2.5px",
+                  letterSpacing: "1.5px",
                   textAlign: "center",
                   borderRadius: "10px",
                   boxShadow: "inset 0 2px 4px rgba(0,0,0,0.5)",
+                  wordBreak: "break-all",
                 }}
               >
                 <code>{issuedCode}</code>
@@ -93,13 +97,13 @@ export function MotherAccessCodeModal({
 
               <div
                 style={{
-                  padding: "0.85rem 1rem",
+                  padding: "0.65rem 0.85rem",
                   background: "#fff1f2",
                   border: "1px solid #fecdd3",
                   borderRadius: "8px",
                   color: "#be123c",
-                  fontSize: "0.82rem",
-                  lineHeight: 1.45,
+                  fontSize: "0.78rem",
+                  lineHeight: 1.4,
                 }}
               >
                 <strong>PERHATIAN KEAMANAN:</strong> Kode ini <u>HANYA DITAMPILKAN SATU KALI</u>.

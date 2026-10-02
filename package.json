@@ -2,7 +2,7 @@
   "name": "anc-reminder",
   "version": "0.1.0",
   "private": true,
-  "description": "Sistem Pengingat ANC Ibu Hamil \u2014 server-driven Web dan Android WebView.",
+  "description": "Sistem Pengingat ANC Ibu Hamil — server-driven Web dan Android WebView.",
   "license": "UNLICENSED",
   "packageManager": "npm@11.14.0",
   "engines": {
@@ -31,6 +31,7 @@
     "test:smoke:auth": "node scripts/smoke-auth.mjs",
     "test:smoke:idempotency": "node scripts/smoke-idempotency.mjs",
     "test:smoke:registry": "node scripts/smoke-registry.mjs",
+    "test:smoke:pagination": "node scripts/smoke-mother-pagination.mjs",
     "test:smoke:web-session": "node scripts/smoke-web-session.mjs",
     "db:migrate": "npm run migrate:up --workspace=@anc/database",
     "db:migrate:prod": "node packages/database/scripts/migrate-production.mjs",
@@ -45,18 +46,19 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@swc-node/register": "1.12.1",
+    "@swc/core": "1.16.2",
     "@types/node": "24.13.3",
     "eslint": "10.8.1",
     "prettier": "3.9.6",
     "typescript": "6.0.3",
     "typescript-eslint": "8.67.0",
-    "vitest": "4.1.10"
+    "vitest": "4.1.11"
   },
   "overrides": {
     "@xmldom/xmldom": "0.9.12",
     "qs": "6.16.0",
-    "multer": "2.3.0",
-    "next": "16.3.5",
+    "next": "16.3.8",
     "sharp": "0.35.4",
     "js-yaml": "4.3.2"
   }

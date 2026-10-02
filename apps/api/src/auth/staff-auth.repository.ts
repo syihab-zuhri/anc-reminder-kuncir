@@ -1,6 +1,7 @@
 import type { StaffRole, StaffUserStatus } from "@anc/contracts";
 import type { DatabasePool } from "@anc/database";
 
+import type { StaffLoginBucket } from "./staff-login-throttle.js";
 import type {
   SessionTarget,
   StaffActor,
@@ -45,6 +46,12 @@ interface SessionTargetRow extends QueryRow {
   readonly revoked_at: Date | null;
 }
 
+interface RetryRow extends QueryRow {
+  readonly retry_after_seconds: number;
+}
+
+const staleBucketRetentionMs = 24 * 60 * 60_000;
+
 interface SessionIdRow extends QueryRow {
   readonly id: string;
 }
@@ -77,7 +84,14 @@ export interface RevokeStaffSessionInput {
 
 export interface StaffAuthRepository {
   findUserByLoginIdentifier(loginIdentifier: string): Promise<StaffCredentialRecord | null>;
-  recordLoginFailure(staffUserId: string, threshold: number, lockedUntil: Date): Promise<void>;
+  loginRetryAfterSeconds(bucketHashes: readonly string[], now: Date): Promise<number>;
+  recordLoginFailures(
+    buckets: readonly StaffLoginBucket[],
+    now: Date,
+    windowMinutes: number,
+    blockMinutes: number,
+  ): Promise<void>;
+  clearLoginBuckets(bucketHashes: readonly string[]): Promise<void>;
   createSession(input: CreateStaffSessionInput): Promise<void>;
   findActiveActorByAccessTokenHash(accessTokenHash: string, now: Date): Promise<StaffActor | null>;
   rotateSession(input: RotateStaffSessionInput): Promise<StaffActor | null>;
@@ -123,20 +137,87 @@ export class PostgresStaffAuthRepository implements StaffAuthRepository {
         };
   }
 
-  public async recordLoginFailure(
-    staffUserId: string,
-    threshold: number,
-    lockedUntil: Date,
+  public async loginRetryAfterSeconds(bucketHashes: readonly string[], now: Date): Promise<number> {
+    const result = await this.pool.query<RetryRow>(
+      `SELECT COALESCE(
+         CEIL(EXTRACT(EPOCH FROM (MAX(blocked_until) - $2))),
+         0
+       )::int AS retry_after_seconds
+       FROM staff_login_rate_limits
+      WHERE bucket_hash = ANY($1::text[])
+        AND blocked_until > $2`,
+      [bucketHashes, now],
+    );
+    return Math.max(0, result.rows[0]?.retry_after_seconds ?? 0);
+  }
+
+  public async recordLoginFailures(
+    buckets: readonly StaffLoginBucket[],
+    now: Date,
+    windowMinutes: number,
+    blockMinutes: number,
   ): Promise<void> {
+    const client = await this.pool.connect();
+    const windowCutoff = new Date(now.getTime() - windowMinutes * 60_000);
+    const blockedUntil = new Date(now.getTime() + blockMinutes * 60_000);
+    const staleBefore = new Date(now.getTime() - staleBucketRetentionMs);
+    try {
+      await client.query("BEGIN");
+      // Fixed lock order across concurrent attempts avoids deadlocks between shared buckets.
+      for (const bucket of [...buckets].sort((left, right) =>
+        left.hash.localeCompare(right.hash),
+      )) {
+        await client.query(
+          `INSERT INTO staff_login_rate_limits AS current (
+             bucket_hash, scope, failure_count, window_started_at, blocked_until, updated_at
+           ) VALUES (
+             $1, $2, 1, $3,
+             CASE WHEN $4::int <= 1 THEN $5::timestamptz ELSE NULL END,
+             $3
+           )
+           ON CONFLICT (bucket_hash) DO UPDATE
+             SET scope = EXCLUDED.scope,
+                 failure_count = CASE
+                   WHEN current.window_started_at <= $6 THEN 1
+                   ELSE current.failure_count + 1
+                 END,
+                 window_started_at = CASE
+                   WHEN current.window_started_at <= $6 THEN $3
+                   ELSE current.window_started_at
+                 END,
+                 blocked_until = CASE
+                   WHEN current.blocked_until > $3 THEN current.blocked_until
+                   WHEN (
+                     CASE
+                       WHEN current.window_started_at <= $6 THEN 1
+                       ELSE current.failure_count + 1
+                     END
+                   ) >= $4 THEN $5::timestamptz
+                   ELSE NULL
+                 END,
+                 updated_at = $3`,
+          [bucket.hash, bucket.scope, now, bucket.limit, blockedUntil, windowCutoff],
+        );
+      }
+      // Buckets are created for any submitted identifier, so prune idle ones to keep the table bounded.
+      await client.query(
+        `DELETE FROM staff_login_rate_limits
+          WHERE updated_at < $1 AND (blocked_until IS NULL OR blocked_until < $2)`,
+        [staleBefore, now],
+      );
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  public async clearLoginBuckets(bucketHashes: readonly string[]): Promise<void> {
     await this.pool.query(
-      `UPDATE staff_users
-       SET failed_login_attempts = failed_login_attempts + 1,
-           locked_until = CASE
-             WHEN failed_login_attempts + 1 >= $2 THEN $3
-             ELSE locked_until
-           END
-       WHERE id = $1 AND status = 'ACTIVE'`,
-      [staffUserId, threshold, lockedUntil],
+      `DELETE FROM staff_login_rate_limits WHERE bucket_hash = ANY($1::text[])`,
+      [bucketHashes],
     );
   }
 

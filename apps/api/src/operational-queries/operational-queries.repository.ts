@@ -48,6 +48,8 @@ interface MotherQueryResultRow {
   readonly village_id: string | null;
   readonly village_name: string | null;
   readonly created_at: Date;
+  /** created_at at full microsecond precision; a JS Date would truncate to milliseconds. */
+  readonly created_at_cursor?: string;
   readonly active_pregnancy_id: string | null;
   readonly active_pregnancy_dating_date: string | null;
   readonly active_pregnancy_status: PregnancyStatus | null;
@@ -92,7 +94,7 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
     const parsedCursor = decodeMotherCursor(query.cursor);
     const asOfDate = dateOnlyInTimezone(now, timezone);
 
-    const searchPattern = query.search ? `%${query.search}%` : null;
+    const searchPattern = query.search ? `%${escapeLikePattern(query.search)}%` : null;
 
     const result = await this.pool.query<MotherQueryResultRow>(
       `SELECT
@@ -104,6 +106,8 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
          m.village_id,
          v.name AS village_name,
          m.created_at,
+         to_char(m.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+           AS created_at_cursor,
          p.id AS active_pregnancy_id,
          p.dating_date::text AS active_pregnancy_dating_date,
          p.status AS active_pregnancy_status,
@@ -128,7 +132,7 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
              )
            )
          )
-         AND ($4::text IS NULL OR (m.full_name ILIKE $4 OR m.phone_normalized ILIKE $4))
+         AND ($4::text IS NULL OR (m.full_name ILIKE $4 ESCAPE '\\' OR m.phone_normalized ILIKE $4 ESCAPE '\\'))
          AND ($5::uuid IS NULL OR m.village_id = $5)
          AND ($6::pregnancy_status IS NULL OR (
            CASE
@@ -165,7 +169,10 @@ export class PostgresOperationalQueriesRepository implements OperationalQueriesR
     let nextCursor: string | null = null;
     if (hasMore && rows.length > 0) {
       const last = rows.at(-1)!;
-      nextCursor = encodeMotherCursor(last.created_at, last.id);
+      nextCursor = encodeMotherCursor(
+        last.created_at_cursor ?? last.created_at.toISOString(),
+        last.id,
+      );
     }
 
     return {
@@ -451,6 +458,7 @@ function mapMotherRowToSummary(row: MotherQueryResultRow, asOfDate: string): Mot
     health_center_id: row.health_center_id,
     full_name: row.full_name,
     phone_masked: maskPhone(row.phone_normalized),
+    phone_number: row.phone_normalized,
     address: row.address,
     village_id: row.village_id,
     village_name: row.village_name,
@@ -530,24 +538,38 @@ function dateOnlyToEpoch(date: string): number {
   return Date.parse(`${date}T00:00:00.000Z`);
 }
 
-function encodeMotherCursor(createdAt: Date, id: string): string {
-  return Buffer.from(JSON.stringify({ createdAt: createdAt.toISOString(), id })).toString(
-    "base64url",
-  );
+/** Makes user input match literally inside LIKE/ILIKE: `%`, `_` and the escape character itself. */
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/gu, (character) => `\\${character}`);
 }
+
+/**
+ * The keyset cursor carries created_at as text with microseconds, exactly as stored. Round-tripping
+ * through a JS Date drops everything below the millisecond, so rows sharing a millisecond (bulk
+ * registration, one transaction) fell between pages and were never returned.
+ */
+function encodeMotherCursor(createdAt: string, id: string): string {
+  return Buffer.from(JSON.stringify({ createdAt, id })).toString("base64url");
+}
+
+const cursorTimestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/u;
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
 function decodeMotherCursor(
   cursor?: string,
-): { readonly createdAt: Date; readonly id: string } | null {
+): { readonly createdAt: string; readonly id: string } | null {
   if (!cursor) return null;
   try {
     const raw = Buffer.from(cursor, "base64url").toString("utf8");
-    const parsed = JSON.parse(raw) as { createdAt?: string; id?: string };
-    if (typeof parsed.createdAt === "string" && typeof parsed.id === "string") {
-      const createdAt = new Date(parsed.createdAt);
-      if (!Number.isNaN(createdAt.getTime())) {
-        return { createdAt, id: parsed.id };
-      }
+    const parsed = JSON.parse(raw) as { createdAt?: unknown; id?: unknown };
+    if (
+      typeof parsed.createdAt === "string" &&
+      typeof parsed.id === "string" &&
+      cursorTimestampPattern.test(parsed.createdAt) &&
+      uuidPattern.test(parsed.id)
+    ) {
+      // Millisecond-only cursors issued before this change still match the pattern.
+      return { createdAt: parsed.createdAt, id: parsed.id };
     }
   } catch {
     // Ignore invalid cursor format safely
