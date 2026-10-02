@@ -114,3 +114,8 @@ Phase 0 menyediakan workspace Capacitor, validasi trusted origin, dan halaman fa
 - Status turunan `BEFORE_REGISTRATION` ("Sebelum terdaftar") dipakai untuk kunjungan yang belum dikonfirmasi dan jendelanya sudah ditutup sebelum kehamilan didaftarkan (`pregnancies.created_at` pada zona `PRIMARY_TIMEZONE`). Status ini hanya dihitung saat dibaca (`anc-derived-state.ts` dan SQL daftar operasional) dan tidak pernah disimpan, sehingga enum `visit_status` di database tidak berubah.
 - Kunjungan seperti ini tidak dihitung "Terlewat" di dashboard, tidak masuk antrean prioritas, dan tidak pernah dijadikan kunjungan berikutnya. Kunjungan yang jendelanya baru habis setelah ibu terdaftar tetap "Terlewat".
 - Konfirmasi tetap boleh: bila Buku KIA menunjukkan ibu sudah periksa sebelum terdaftar, petugas bisa mencatatnya seperti biasa.
+
+## 2026-10-03 - Ekspor dan cetak di aplikasi Android
+
+- Aplikasi Android memuat portal di WebView, yang membuang unduhan file dan mengabaikan `window.print()`. Plugin lokal `AncDevice` di APK menyimpan ekspor ke `Download/Pengingat ANC` lewat MediaStore (Android 10+; Android 7–9 lewat menu bagikan) dan membuka dialog cetak Android untuk halaman yang sedang tampil.
+- Web memilih jalurnya lewat `apps/web/lib/native-device.ts`: browser memakai unduhan dan `window.print()` biasa, APK baru memakai plugin, dan APK lama tanpa plugin mendapat pesan untuk memperbarui aplikasi. Pengecekan dilakukan sebelum data diminta, sehingga ekspor yang tidak bisa disimpan tidak tercatat di audit.

@@ -3,6 +3,8 @@
 import type { MotherSummary, PregnancyMilestoneListResponse } from "@anc/contracts";
 
 import { useHealthCenterProfile } from "../../hooks/use-health-center-profile";
+import { deviceEnvironment, OUTDATED_APP_MESSAGE } from "../../lib/native-device";
+import { useToast } from "../../lib/toast-context";
 import {
   facilityPolicyLabel,
   formatDate,
@@ -31,6 +33,7 @@ export function MotherDetailModal({
   isPuskesmas,
 }: MotherDetailModalProps) {
   const healthCenter = useHealthCenterProfile();
+  const toast = useToast();
   const healthCenterName = healthCenter?.name ?? "Puskesmas";
   const phoneRaw = mother.phone_number || mother.phone_masked || "-";
   const phoneDisplay = phoneRaw.startsWith("62") ? "0" + phoneRaw.slice(2) : phoneRaw;
@@ -60,11 +63,27 @@ export function MotherDetailModal({
     minute: "2-digit",
   });
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    const jobName = `Rekam_ANC_${mother.full_name.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+    // Inside the Android app window.print() does nothing; the app's print dialog is used instead.
+    const device = deviceEnvironment();
+    if (device.kind === "outdated-app") {
+      toast.warning(OUTDATED_APP_MESSAGE, "Perbarui Aplikasi");
+      return;
+    }
     const prevTitle = document.title;
-    document.title = `Rekam_ANC_${mother.full_name.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
-    window.print();
-    document.title = prevTitle;
+    document.title = jobName;
+    try {
+      if (device.kind === "app") await device.plugin.print({ jobName });
+      else window.print();
+    } catch (err) {
+      toast.error(
+        err instanceof Error && err.message ? err.message : "Dialog cetak tidak bisa dibuka.",
+        "Cetak Gagal",
+      );
+    } finally {
+      document.title = prevTitle;
+    }
   };
 
   return (
@@ -519,7 +538,7 @@ export function MotherDetailModal({
           <button
             type="button"
             className="btn-secondary"
-            onClick={handlePrint}
+            onClick={() => void handlePrint()}
             style={{
               display: "inline-flex",
               alignItems: "center",
